@@ -734,6 +734,9 @@ app.post('/account/login', async (req, res) => {
     }
 });
 
+// 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
+require('./profile')(app, { getPool, verifyToken });
+
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {
     try {

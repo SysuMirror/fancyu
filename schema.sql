@@ -114,6 +114,19 @@ CREATE TABLE IF NOT EXISTS `verification_codes` (
     INDEX `idx_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Personal homepage fields are independent of surveys and login usernames.
+CREATE TABLE IF NOT EXISTS `account_profiles` (
+    `account_id` INT PRIMARY KEY,
+    `profile_id` VARCHAR(24) NOT NULL UNIQUE,
+    `avatar` MEDIUMTEXT NOT NULL,
+    `bio` VARCHAR(1200) NOT NULL DEFAULT '',
+    `tags` JSON NOT NULL,
+    `photos` MEDIUMTEXT NOT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_profile_account` FOREIGN KEY (`account_id`)
+        REFERENCES `accounts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- queryByUserId 的 LEFT JOIN 依赖此表
 CREATE TABLE IF NOT EXISTS `account_emails` (
     `account_id` INT NOT NULL,

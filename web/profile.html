@@ -211,6 +211,17 @@
         <div class="profile-school" id="profileSchool" style="display:none;"></div>
     </div>
 
+    <div class="section">
+        <div class="section-title"><div class="section-icon">✦</div>个人主页</div>
+        <div class="card survey-card">
+            <div class="survey-info">
+                <div class="survey-title" id="homepageId">展示真实的自己</div>
+                <div class="survey-status">设置头像、主页 ID、照片、简介和标签</div>
+            </div>
+            <a href="homepage.html" class="survey-btn" style="margin-left:12px;white-space:nowrap;">我的主页</a>
+        </div>
+    </div>
+
     <!-- 账号管理 -->
     <div class="section">
         <div class="section-title"><div class="section-icon">⚙️</div>账号管理</div>
@@ -439,9 +450,26 @@ async function autoGuestLogin() {
     function init() {
         if (!checkAuth()) return;
         renderProfile();
+        loadHomepageSummary();
         loadSurveyStatus();
         loadMatchResults();
         loadMatchingStatus();
+    }
+
+    async function loadHomepageSummary() {
+        try {
+            const response = await fetch('/api/account/profile?summary=1', { headers: getAuthHeaders() });
+            const result = await response.json();
+            if (result.code !== 200) return;
+            if (result.profile.profile_id) document.getElementById('homepageId').textContent = '@' + result.profile.profile_id;
+            if (result.profile.avatar) {
+                const image = new Image();
+                image.src = result.profile.avatar;
+                image.alt = '我的头像';
+                image.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+                document.getElementById('profileAvatar').replaceChildren(image);
+            }
+        } catch (error) { console.error('Homepage summary unavailable'); }
     }
 
     async function loadMatchingStatus() {

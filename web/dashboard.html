@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FancyU · 用户中心</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #00552E 0%, #00853E 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; }
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header .username { font-size: 14px; opacity: 0.9; }
+        .btn-logout {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #00552E;
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .serial-list { list-style: none; }
+        .serial-list li {
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .serial-list li code {
+            font-family: monospace;
+            font-size: 14px;
+            color: #333;
+        }
+        .serial-list li .actions { display: flex; gap: 8px; }
+        .serial-list li .actions a {
+            padding: 6px 12px;
+            background: #00853E;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .serial-list li .actions a:hover { background: #006B30; }
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+        .empty-state a { color: #00853E; text-decoration: none; }
+        .account-info {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 12px;
+            font-size: 14px;
+        }
+        .account-info dt { color: #666; }
+        .account-info dd { color: #333; display: flex; align-items: center; gap: 8px; }
+        .btn-edit {
+            padding: 2px 8px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+        }
+        .btn-edit:hover { background: #e0e0e0; }
+        .nav-links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+        .nav-links a {
+            padding: 10px 20px;
+            background: #00853E;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .nav-links a:hover { background: #006B30; }
+        .nav-links a.secondary { background: #f5f5f5; color: #333; }
+        .nav-links a.secondary:hover { background: #e0e0e0; }
+        .loading { text-align: center; padding: 40px; color: #999; }
+        .settings-list { list-style: none; }
+        .settings-list li {
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-list li:last-child { border-bottom: none; }
+        .settings-list li .label { font-size: 14px; color: #333; }
+        .settings-list li .desc { font-size: 12px; color: #999; margin-top: 2px; }
+        .btn-action {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            background: white;
+            color: #333;
+        }
+        .btn-action:hover { background: #f5f5f5; }
+        .btn-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover { background: #dc3545; color: white; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            color: #00552E;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+        .modal .form-group { margin-bottom: 14px; }
+        .modal label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        .modal input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .modal input:focus { outline: none; border-color: #00853E; }
+        .modal .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+        .modal .btn-primary {
+            flex: 1;
+            padding: 10px;
+            background: #00853E;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .modal .btn-primary:hover { background: #006B30; }
+        .modal .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+        .modal .btn-cancel {
+            flex: 1;
+            padding: 10px;
+            background: #f5f5f5;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .modal .btn-cancel:hover { background: #e0e0e0; }
+        .modal .msg {
+            margin-top: 10px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .modal .msg.success { color: #00853E; }
+        .modal .msg.error { color: #dc3545; }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc;
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: #00853E; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+        /* ========== 平板适配 ========== */
+        @media (max-width: 768px) {
+            .container { padding: 16px; margin: 20px auto; }
+            .card { padding: 20px; }
+            .nav-links { gap: 10px; }
+            .nav-links a { padding: 10px 16px; font-size: 13px; }
+            .modal { max-width: 380px; }
+        }
+
+        /* ========== 小屏手机 ========== */
+        @media (max-width: 480px) {
+            .header { flex-direction: column; gap: 10px; padding: 14px 16px; }
+            .header h1 { font-size: 20px; }
+            .header .user-info { gap: 10px; }
+            .header .username { font-size: 13px; }
+            .btn-logout { padding: 6px 12px; font-size: 13px; }
+            .container { padding: 12px; margin: 12px auto; }
+            .card { padding: 16px; margin-bottom: 12px; border-radius: 10px; }
+            .card h2 { font-size: 16px; padding-bottom: 10px; }
+            .account-info { grid-template-columns: 1fr; gap: 6px; font-size: 13px; }
+            .account-info dt { font-weight: 600; }
+            .account-info dd { gap: 6px; }
+            .btn-edit { padding: 2px 6px; font-size: 11px; }
+            .nav-links { flex-direction: column; gap: 8px; }
+            .nav-links a { text-align: center; padding: 12px; font-size: 14px; min-height: 48px; }
+            .serial-list li { flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px; }
+            .serial-list li code { font-size: 12px; word-break: break-all; }
+            .serial-list li .actions { width: 100%; justify-content: flex-end; }
+            .serial-list li .actions a { padding: 8px 14px; font-size: 13px; }
+            .settings-list li { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 0; }
+            .settings-list li .label { font-size: 13px; }
+            .settings-list li .desc { font-size: 11px; }
+            .btn-action { padding: 8px 14px; font-size: 12px; }
+            .modal { width: 92%; padding: 20px; border-radius: 10px; }
+            .modal h3 { font-size: 16px; }
+            .modal input { padding: 10px 12px; font-size: 16px; min-height: 48px; }
+            .modal .btn-primary, .modal .btn-cancel { padding: 12px; font-size: 14px; min-height: 48px; }
+            .empty-state { padding: 28px; font-size: 13px; }
+            .loading { padding: 28px; font-size: 13px; }
+        }
+
+        /* ========== 超小屏 ========== */
+        @media (max-width: 360px) {
+            .header h1 { font-size: 18px; }
+            .card { padding: 14px; }
+            .card h2 { font-size: 15px; }
+            .nav-links a { font-size: 13px; padding: 10px; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            body { background: #0f1a14; }
+            .header { background: linear-gradient(135deg, #001a0f 0%, #00331a 100%); }
+            .card { background: #1a2e24; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+            .card h2 { color: #4ade80; border-bottom-color: #2a4a3a; }
+            .container { color: #e8f0eb; }
+            .account-info dt { color: #a8b8ae; }
+            .account-info dd { color: #e8f0eb; }
+            .serial-list li { background: #0f1a14; }
+            .serial-list li code { color: #e8f0eb; }
+            .empty-state { color: #6a7a70; }
+            .nav-links a.secondary { background: #0f1a14; color: #c8d8ce; }
+            .nav-links a.secondary:hover { background: #1a2e24; }
+            .settings-list li { border-bottom-color: #2a4a3a; }
+            .settings-list li .label { color: #c8d8ce; }
+            .settings-list li .desc { color: #6a7a70; }
+            .btn-action { background: #1a2e24; color: #c8d8ce; border-color: #2a4a3a; }
+            .btn-action:hover { background: #0f1a14; }
+            .btn-edit { background: #0f1a14; border-color: #2a4a3a; color: #a8b8ae; }
+            .btn-edit:hover { background: #1a2e24; }
+            .modal { background: #1a2e24; }
+            .modal h3 { color: #4ade80; }
+            .modal input { background: #0f1a14; border-color: #2a4a3a; color: #e8f0eb; }
+            .modal input:focus { border-color: #4ade80; }
+            .modal .btn-cancel { background: #0f1a14; color: #c8d8ce; }
+            .modal .btn-cancel:hover { background: #1a2e24; }
+            .modal .msg.error { color: #ff6b7a; }
+            .modal .msg.success { color: #4ade80; }
+            .toggle-slider { background: #2a4a3a; }
+        }
+
+        /* ========== 减少动画 ========== */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FancyU</h1>
+        <div class="user-info">
+            <span class="username" id="displayName"></span>
+            <button class="btn-logout" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>账号信息</h2>
+            <dl class="account-info">
+                <dt>用户名</dt>
+                <dd><span id="username">-</span> <button class="btn-edit" onclick="openModal('usernameModal')">修改</button></dd>
+                <dt>验证邮箱</dt>
+                <dd id="email">-</dd>
+                <dt>联系邮箱</dt>
+                <dd><span id="contactEmail">-</span> <button class="btn-edit" onclick="openModal('contactEmailModal')">修改</button></dd>
+                <dt>注册时间</dt>
+                <dd id="createdAt">-</dd>
+            </dl>
+        </div>
+        
+        <div class="card">
+            <h2>我的序列号</h2>
+            <div id="serialContainer">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>快捷操作</h2>
+            <div class="nav-links">
+                <a href="survey.html">填写问卷</a>
+                <a href="modify.html">修改资料</a>
+                <a href="query.html">查询匹配</a>
+                <a href="bind.html" class="secondary">绑定新序列号</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>匹配设置</h2>
+            <ul class="settings-list">
+                <li>
+                    <div>
+                        <div class="label">参与本轮匹配</div>
+                        <div class="desc" id="matchingDesc">开启后你的资料将参与本周匹配</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="joinMatching" checked onchange="toggleMatching()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>账号设置</h2>
+            <ul class="settings-list">
+                <li>
+                    <div>
+                        <div class="label">修改密码</div>
+                        <div class="desc">修改账号登录密码</div>
+                    </div>
+                    <button class="btn-action" onclick="openModal('passwordModal')">修改</button>
+                </li>
+                <li>
+                    <div>
+                        <div class="label">注销账号</div>
+                        <div class="desc">永久删除账号及所有关联数据，此操作不可恢复</div>
+                    </div>
+                    <button class="btn-action btn-danger" onclick="openModal('deleteModal')">注销</button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <h3>修改密码</h3>
+            <div class="form-group">
+                <label>旧密码</label>
+                <input type="password" id="oldPassword" placeholder="输入当前密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="newPassword" placeholder="至少6位">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="password" id="confirmPassword" placeholder="再次输入新密码">
+            </div>
+            <div class="msg" id="passwordMsg"></div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeModal('passwordModal')">取消</button>
+                <button class="btn-primary" id="passwordBtn" onclick="changePassword()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="usernameModal">
+        <div class="modal">
+            <h3>修改用户名</h3>
+            <div class="form-group">
+                <label>新用户名</label>
+                <input type="text" id="newUsername" placeholder="字母、数字、下划线或中文" maxlength="20">
+            </div>
+            <div class="msg" id="usernameMsg"></div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeModal('usernameModal')">取消</button>
+                <button class="btn-primary" id="usernameBtn" onclick="changeUsername()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="contactEmailModal">
+        <div class="modal">
+            <h3>修改联系邮箱</h3>
+            <div class="form-group">
+                <label>新联系邮箱</label>
+                <input type="email" id="newContactEmail" placeholder="用于接收匹配结果通知">
+            </div>
+            <div class="msg" id="contactEmailMsg"></div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeModal('contactEmailModal')">取消</button>
+                <button class="btn-primary" id="contactEmailBtn" onclick="changeContactEmail()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3 style="color:#dc3545">⚠️ 注销账号</h3>
+            <p style="font-size:14px;color:#666;margin-bottom:16px">此操作将永久删除你的账号及所有关联数据（问卷资料、序列号等），且不可恢复。</p>
+            <div class="form-group">
+                <label>请输入密码确认</label>
+                <input type="password" id="deletePassword" placeholder="输入当前密码">
+            </div>
+            <div class="msg" id="deleteMsg"></div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeModal('deleteModal')">取消</button>
+                <button class="btn-primary" id="deleteBtn" style="background:#dc3545" onclick="deleteAccount()">确认注销</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api';
+
+// ===== 部署补丁: 免登录自动登录 =====
+async function autoGuestLogin() {
+    if (window.__guestBusy) return;
+    window.__guestBusy = true;
+    try {
+        let login = localStorage.getItem('guest_login');
+        if (!login) { login = 'guest-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('guest_login', login); }
+        const r = await fetch('/api/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password: 'guest' }) });
+        const d = await r.json();
+        if (d.code === 200) {
+            localStorage.setItem('token', d.token);
+            localStorage.setItem('user', JSON.stringify(d.user));
+            location.reload();
+        } else {
+            autoGuestLogin();
+        }
+    } catch (e) {
+        autoGuestLogin();
+    }
+}
+
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            autoGuestLogin();
+        }
+        
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                autoGuestLogin();
+                return false;
+            }
+            return token;
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function setMsg(id, text, type) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.className = 'msg ' + (type || '');
+        }
+
+        async function changePassword() {
+            const oldPw = document.getElementById('oldPassword').value;
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmPassword').value;
+            const btn = document.getElementById('passwordBtn');
+
+            if (!oldPw || !newPw) {
+                setMsg('passwordMsg', '请填写旧密码和新密码', 'error');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                setMsg('passwordMsg', '两次输入的新密码不一致', 'error');
+                return;
+            }
+            if (newPw.length < 6) {
+                setMsg('passwordMsg', '新密码长度不能少于6位', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '修改中...';
+            setMsg('passwordMsg', '', '');
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/account/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ old_password: oldPw, new_password: newPw })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    setMsg('passwordMsg', '密码修改成功', 'success');
+                    setTimeout(() => { closeModal('passwordModal'); document.getElementById('oldPassword').value = ''; document.getElementById('newPassword').value = ''; document.getElementById('confirmPassword').value = ''; }, 1500);
+                } else {
+                    setMsg('passwordMsg', data.msg, 'error');
+                }
+            } catch (err) {
+                setMsg('passwordMsg', '网络错误', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认修改';
+            }
+        }
+
+        async function changeUsername() {
+            const newUsername = document.getElementById('newUsername').value.trim();
+            const btn = document.getElementById('usernameBtn');
+
+            if (!newUsername) {
+                setMsg('usernameMsg', '用户名不能为空', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '修改中...';
+            setMsg('usernameMsg', '', '');
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/account/change-username', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ new_username: newUsername })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    localStorage.setItem('token', data.token);
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    user.username = data.username;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    document.getElementById('username').textContent = data.username;
+                    document.getElementById('displayName').textContent = data.username;
+                    setMsg('usernameMsg', '用户名修改成功', 'success');
+                    setTimeout(() => closeModal('usernameModal'), 1500);
+                } else {
+                    setMsg('usernameMsg', data.msg, 'error');
+                }
+            } catch (err) {
+                setMsg('usernameMsg', '网络错误', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认修改';
+            }
+        }
+
+        async function changeContactEmail() {
+            const newEmail = document.getElementById('newContactEmail').value.trim();
+            const btn = document.getElementById('contactEmailBtn');
+
+            if (!newEmail) {
+                setMsg('contactEmailMsg', '联系邮箱不能为空', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '修改中...';
+            setMsg('contactEmailMsg', '', '');
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/account/change-contact-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ contact_email: newEmail })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    document.getElementById('contactEmail').textContent = newEmail;
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    user.contact_email = newEmail;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    setMsg('contactEmailMsg', '联系邮箱修改成功', 'success');
+                    setTimeout(() => closeModal('contactEmailModal'), 1500);
+                } else {
+                    setMsg('contactEmailMsg', data.msg, 'error');
+                }
+            } catch (err) {
+                setMsg('contactEmailMsg', '网络错误', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认修改';
+            }
+        }
+
+        async function deleteAccount() {
+            const password = document.getElementById('deletePassword').value;
+            const btn = document.getElementById('deleteBtn');
+
+            if (!password) {
+                setMsg('deleteMsg', '请输入密码确认', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '注销中...';
+            setMsg('deleteMsg', '', '');
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/account/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    setMsg('deleteMsg', '账号已注销，即将跳转...', 'success');
+                    setTimeout(() => { localStorage.removeItem('token'); localStorage.removeItem('user'); autoGuestLogin(); }, 2000);
+                } else {
+                    setMsg('deleteMsg', data.msg, 'error');
+                }
+            } catch (err) {
+                setMsg('deleteMsg', '网络错误', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '确认注销';
+            }
+        }
+        
+        function updateMatchingDesc(isOn) {
+            document.getElementById('matchingDesc').textContent = isOn ? '开启后你的资料将参与本周匹配' : '已关闭，本周不会参与匹配';
+        }
+
+        async function toggleMatching() {
+            const toggle = document.getElementById('joinMatching');
+            const value = toggle.checked;
+            toggle.disabled = true;
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/account/toggle-matching', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ join_matching: value })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    updateMatchingDesc(value);
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    user.join_matching = value;
+                    localStorage.setItem('user', JSON.stringify(user));
+                } else {
+                    toggle.checked = !value;
+                    updateMatchingDesc(!value);
+                }
+            } catch (err) {
+                toggle.checked = !value;
+                updateMatchingDesc(!value);
+            } finally {
+                toggle.disabled = false;
+            }
+        }
+
+        async function loadUser() {
+            const token = checkAuth();
+            if (!token) return;
+            
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            document.getElementById('displayName').textContent = user.username || user.email;
+            document.getElementById('username').textContent = user.username || '-';
+            document.getElementById('email').textContent = user.email || '-';
+            document.getElementById('contactEmail').textContent = user.contact_email || '-';
+            
+            try {
+                const res = await fetch(API_BASE + '/account/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                const data = await res.json();
+                
+                if (data.code === 200) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    document.getElementById('username').textContent = data.user.username;
+                    document.getElementById('email').textContent = data.user.email;
+                    document.getElementById('contactEmail').textContent = data.user.contact_email || '-';
+                    const toggle = document.getElementById('joinMatching');
+                    toggle.checked = data.user.join_matching !== false;
+                    updateMatchingDesc(data.user.join_matching !== false);
+                    if (data.user.created_at) {
+                        document.getElementById('createdAt').textContent = new Date(data.user.created_at).toLocaleString('zh-CN');
+                    }
+                    renderSerials(data.user.serials || []);
+                } else if (data.code === 401) {
+                    logout();
+                }
+            } catch (err) {
+                document.getElementById('serialContainer').innerHTML = '<div class="empty-state">加载失败，请刷新重试</div>';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function renderSerials(serials) {
+            const container = document.getElementById('serialContainer');
+            
+            if (serials.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>你还没有绑定任何序列号</p>
+                        <p style="margin-top:8px"><a href="bind.html">绑定序列号</a> 或 <a href="survey.html">填写问卷</a></p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<ul class="serial-list">';
+            serials.forEach(serial => {
+                const escapedSerial = escapeHtml(serial);
+                html += `
+                    <li>
+                        <code>${escapedSerial}</code>
+                        <div class="actions">
+                            <a href="modify.html?serial=${encodeURIComponent(serial)}">修改资料</a>
+                            <a href="query.html?serial=${encodeURIComponent(serial)}">查看匹配</a>
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', e => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+        
+        loadUser();
+    </script>
+</body>
+</html>

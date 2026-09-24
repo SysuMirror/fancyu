@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>交友问卷 | FancyU · 中意你</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --sysu-green: #005826;
+            --sysu-green-light: #007A3D;
+            --sysu-green-dark: #003D1A;
+            --sysu-red: #A6372D;
+            --bg-paper: #F8F6F1;
+            --bg-paper-light: #FAFAF8;
+            --card-white: #FFFFFF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #4A4A4A;
+            --text-muted: #8A8A8A;
+            --border-soft: #E8E6E1;
+            --shadow-soft: 0 4px 20px rgba(0, 58, 26, 0.06);
+            --shadow-hover: 0 8px 30px rgba(0, 58, 26, 0.10);
+        }
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-paper);
+            min-height: 100vh;
+            color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+            padding-bottom: 100px;
+        }
+        .container { max-width: 480px; margin: 0 auto; padding: 24px 20px; position: relative; z-index: 1; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 24px; }
+        .logo { font-family: 'Noto Serif SC', serif; font-size: 24px; font-weight: 700; color: var(--sysu-green); letter-spacing: 1px; }
+        .step-indicator { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .step-text { font-family: 'Noto Serif SC', serif; font-size: 13px; color: var(--sysu-green); font-weight: 600; letter-spacing: 2px; }
+        .step-progress { flex: 1; height: 3px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+        .step-progress-fill { height: 100%; background: linear-gradient(90deg, var(--sysu-green) 70%, var(--sysu-red) 100%); border-radius: 2px; transition: width 0.4s ease; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--sysu-green); text-decoration: none; font-size: 14px; margin-bottom: 16px; padding: 8px 12px; background: var(--card-white); border-radius: 10px; transition: all 0.2s ease; box-shadow: var(--shadow-soft); }
+        .back-link:hover { box-shadow: var(--shadow-hover); }
+        .page-title { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 32px; line-height: 1.4; }
+        .card { background: var(--card-white); border-radius: 20px; padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow-soft); transition: all 0.3s ease; }
+        .card:hover { box-shadow: var(--shadow-hover); }
+        .card-label { font-family: 'Noto Sans SC', sans-serif; font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card-label .required-mark { color: var(--sysu-red); font-size: 12px; }
+        .sub-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+        .input-wrapper { flex: 1; }
+        .input-field { width: 100%; padding: 14px 0; font-size: 16px; font-family: 'Noto Sans SC', sans-serif; border: none; border-bottom: 2px solid var(--border-soft); background: transparent; outline: none; transition: border-color 0.3s ease; color: var(--text-primary); }
+        .input-field:focus { border-bottom-color: var(--sysu-green); }
+        .input-field::placeholder { color: var(--text-muted); }
+        .input-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+        .option-group { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn { padding: 12px 16px; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.25s ease; background: var(--bg-paper); color: var(--text-secondary); border: none; text-align: center; }
+        .option-btn:hover { background: var(--bg-paper-light); }
+        .option-btn.selected { background: var(--sysu-green); color: white; font-weight: 600; }
+        .option-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .option-row .option-btn { flex: 1; min-width: 60px; padding: 10px 8px; font-size: 14px; }
+        .select-wrapper { position: relative; margin-bottom: 12px; }
+        .select-wrapper:last-child { margin-bottom: 0; }
+        .select-field { width: 100%; padding: 14px 40px 14px 16px; font-size: 15px; font-family: 'Noto Sans SC', sans-serif; border: none; border-radius: 12px; background: var(--bg-paper); color: var(--text-primary); cursor: pointer; appearance: none; outline: none; transition: all 0.2s ease; }
+        .select-field:focus { background: var(--bg-paper-light); box-shadow: 0 0 0 2px var(--sysu-green); }
+        .select-arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; font-size: 12px; }
+        .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag-btn { padding: 10px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.25s ease; background: var(--bg-paper); color: var(--text-secondary); border: 1px solid var(--border-soft); }
+        .tag-btn:hover { border-color: var(--sysu-green); }
+        .tag-btn.selected { background: var(--sysu-green); color: white; border-color: var(--sysu-green); font-weight: 600; }
+        .tag-btn.quick-btn { background: #fff3e0; border-color: #ff9800; color: #e65100; font-size: 12px; padding: 6px 12px; }
+        .tag-btn.quick-btn.selected { background: #ff9800; border-color: #e65100; color: white; }
+        .textarea-field { width: 100%; padding: 16px; font-size: 15px; font-family: 'Noto Sans SC', sans-serif; border: 1px solid var(--border-soft); border-radius: 16px; background: var(--bg-paper); color: var(--text-primary); outline: none; transition: all 0.2s ease; resize: vertical; min-height: 100px; line-height: 1.6; }
+        .textarea-field:focus { border-color: var(--sysu-green); background: var(--bg-paper-light); }
+        .textarea-field::placeholder { color: var(--text-muted); }
+        .page-hint { text-align: center; padding: 16px; color: var(--text-muted); font-size: 13px; line-height: 1.6; background: linear-gradient(135deg, rgba(0,88,38,0.03) 0%, rgba(0,88,38,0.01) 100%); border-radius: 12px; margin-top: 8px; }
+        .page-hint-icon { color: var(--sysu-green); margin-right: 4px; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px 20px 24px; background: linear-gradient(to top, var(--bg-paper) 80%, transparent); z-index: 100; }
+        .bottom-btn-wrapper { max-width: 480px; margin: 0 auto; display: flex; gap: 12px; }
+        .prev-btn { padding: 18px 24px; background: var(--card-white); color: var(--text-secondary); border: 1px solid var(--border-soft); border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+        .prev-btn:hover { border-color: var(--sysu-green); color: var(--sysu-green); }
+        .next-btn { flex: 1; padding: 18px 0; background: var(--sysu-green); color: white; border: none; border-radius: 24px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(0, 88, 26, 0.25); }
+        .next-btn:hover { background: var(--sysu-green-light); transform: scale(1.02); }
+        .next-btn:active { transform: scale(0.98); }
+        .next-btn:disabled { background: var(--border-soft); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
+        .next-btn.submit-btn { background: linear-gradient(135deg, var(--sysu-green) 0%, var(--sysu-green-light) 100%); }
+        .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-20px); padding: 14px 28px; border-radius: 16px; background: var(--sysu-green); color: white; font-size: 15px; font-weight: 500; z-index: 200; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.error { background: var(--sysu-red); }
+        .success-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 300; }
+        .success-modal.show { display: flex; }
+        .success-content { background: var(--card-white); padding: 48px 36px; border-radius: 28px; text-align: center; max-width: 360px; box-shadow: 0 20px 60px rgba(0, 58, 26, 0.15); animation: modalIn 0.4s ease; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .success-icon { width: 80px; height: 80px; margin: 0 auto 24px; background: var(--sysu-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 36px; }
+        .success-title { font-family: 'Noto Serif SC', serif; font-size: 26px; color: var(--text-primary); margin-bottom: 12px; font-weight: 700; }
+        .success-desc { color: var(--text-secondary); font-size: 15px; margin-bottom: 28px; line-height: 1.7; }
+        .success-btn { display: inline-block; padding: 14px 36px; background: var(--sysu-green); color: white; border-radius: 20px; text-decoration: none; font-weight: 600; transition: all 0.3s ease; }
+        .success-btn:hover { background: var(--sysu-green-light); }
+        .step-content { display: none; }
+        .step-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .upload-area { border: 2px dashed var(--border-soft); border-radius: 16px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; background: var(--bg-paper); }
+        .upload-area:hover { border-color: var(--sysu-green); background: var(--bg-paper-light); }
+        .upload-icon { font-size: 36px; margin-bottom: 12px; }
+        .upload-text { font-size: 15px; color: var(--text-secondary); font-weight: 500; margin-bottom: 8px; }
+        .upload-hint { font-size: 12px; color: var(--text-muted); }
+        .upload-preview { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+        .preview-item { position: relative; width: 100px; height: 100px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-soft); }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(0, 0, 0, 0.6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+        .preview-remove:hover { background: var(--sysu-red); }
+
+        /* 校区选择样式 */
+        .expect-school-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .expect-school-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8f9fa; border: 1px solid var(--border-soft); border-radius: 10px; }
+        .expect-school-name { font-size: 14px; font-weight: 500; color: var(--text-primary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+        .expect-school-name:hover { white-space: normal; overflow: visible; max-width: none; }
+        .expect-school-delete { cursor: pointer; color: #999; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 50%; transition: all 0.2s; }
+        .expect-school-delete:hover { color: #e53e3e; background: #fff5f5; }
+        .expect-campus-group { margin-top: 8px; padding: 8px 0; border-top: 1px dashed var(--border-soft); }
+
+        /* 性格滑块样式 */
+        .personality-row {
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border-soft);
+            padding-bottom: 20px;
+        }
+        .personality-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .personality-question { font-weight: 600; color: var(--text-primary); margin-bottom: 16px; font-size: 14px; }
+        .personality-item { margin-bottom: 20px; }
+        .personality-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .no-preference-btn {
+            background: var(--bg-paper);
+            border: 1px solid var(--border-soft);
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .no-preference-btn:hover {
+            border-color: var(--sysu-green);
+            color: var(--sysu-green);
+        }
+        .no-preference-btn.active {
+            background: var(--sysu-green);
+            color: white;
+            border-color: var(--sysu-green);
+        }
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-left { font-size: 13px; color: var(--text-secondary); min-width: 70px; text-align: left; }
+        .slider-right { font-size: 13px; color: var(--text-secondary); min-width: 70px; text-align: right; }
+        .slider-track {
+            flex: 1;
+            position: relative;
+        }
+        .slider-input {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: var(--border-soft);
+            border-radius: 3px;
+            outline: none;
+            margin: 0;
+            padding: 0;
+        }
+        .slider-input.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--sysu-green);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 88, 26, 0.3);
+            border: none;
+            margin-top: -6px;
+        }
+        .slider-marks {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            padding: 0 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .slider-mark {
+            text-align: center;
+            flex: 1;
+        }
+        .slider-mark.active { color: var(--sysu-green); font-weight: 600; }
+
+        /* 兴趣选择器样式 */
+        .interest-selector {
+            background: var(--bg-paper);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-soft);
+        }
+        .interest-selector-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .interest-number {
+            width: 28px;
+            height: 28px;
+            background: var(--sysu-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .interest-category {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border-soft);
+            border-radius: 24px;
+            background: var(--card-white);
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .interest-category .placeholder { color: var(--text-muted); }
+        .interest-category .selected-value { color: var(--sysu-green); font-weight: 500; }
+        .interest-category .arrow { color: var(--text-muted); font-size: 12px; }
+        .category-tags-panel {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-soft);
+        }
+        .category-tags-panel.show { display: block; }
+        .category-search {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid var(--border-soft);
+            border-radius: 24px;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        .category-search:focus { border-color: var(--sysu-green); }
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .category-tag {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--card-white);
+            border: 1px solid var(--border-soft);
+            transition: all 0.2s;
+        }
+        .category-tag:hover { border-color: var(--sysu-green); }
+        .category-tag.selected { background: var(--sysu-green); color: white; border-color: var(--sysu-green); }
+        .interest-detail {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-soft);
+        }
+        .detail-row { margin-bottom: 16px; }
+        .detail-row:last-child { margin-bottom: 0; }
+        .detail-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .sub-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .sub-tag {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--bg-paper);
+            border: 1px solid var(--border-soft);
+        }
+        .sub-tag:hover { border-color: var(--sysu-green); }
+        .sub-tag.selected { background: var(--sysu-green); color: white; border-color: var(--sysu-green); }
+        .sub-search {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--border-soft);
+            border-radius: 20px;
+            margin-bottom: 8px;
+            outline: none;
+        }
+        .sub-search:focus { border-color: var(--sysu-green); }
+        .selected-sub-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .selected-sub-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--sysu-green);
+            color: white;
+            border-radius: 16px;
+            font-size: 12px;
+        }
+        .selected-sub-tag .remove {
+            cursor: pointer;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        .selected-sub-tag .remove:hover { opacity: 1; }
+        .sub-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+        .other-input {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .other-input input {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--border-soft);
+            border-radius: 20px;
+            background: var(--card-white);
+            outline: none;
+        }
+        .other-input input:focus { border-color: var(--sysu-green); }
+        .other-input button {
+            padding: 8px 16px;
+            background: var(--sysu-green);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* 联系方式模块 */
+        .contact-add-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .contact-method-select { flex: 0 0 120px; padding: 12px 36px 12px 12px; font-size: 14px; font-family: 'Noto Sans SC', sans-serif; border: none; border-radius: 12px; background: var(--bg-paper); color: var(--text-primary); cursor: pointer; appearance: none; outline: none; transition: all 0.2s ease; }
+        .contact-method-select:focus { background: var(--bg-paper-light); box-shadow: 0 0 0 2px var(--sysu-green); }
+        .contact-value-input { flex: 1; min-width: 120px; padding: 12px 14px; font-size: 14px; font-family: 'Noto Sans SC', sans-serif; border: none; border-radius: 12px; background: var(--bg-paper); color: var(--text-primary); outline: none; transition: all 0.2s ease; }
+        .contact-value-input:focus { background: var(--bg-paper-light); box-shadow: 0 0 0 2px var(--sysu-green); }
+        .contact-value-input::placeholder { color: var(--text-muted); }
+        .contact-add-btn { padding: 10px 20px; background: var(--sysu-green); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .contact-add-btn:hover { background: var(--sysu-green-light); }
+        .contact-entry { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; margin: 8px 0; background: #f8f9fa; border: 1px solid var(--border-soft); border-radius: 10px; }
+        .contact-entry-info { display: flex; align-items: center; gap: 8px; }
+        .contact-entry-type { font-size: 13px; color: var(--sysu-green); font-weight: 600; min-width: 50px; }
+        .contact-entry-value { font-size: 14px; color: var(--text-primary); }
+        .contact-entry-delete { cursor: pointer; color: #999; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 50%; transition: all 0.2s; }
+        .contact-entry-delete:hover { color: #e53e3e; background: #fff5f5; }
+
+        @media (max-width: 480px) {
+            .container { padding: 16px; }
+            .page-title { font-size: 24px; }
+            .card { padding: 20px; border-radius: 16px; }
+            .option-row { flex-direction: column; }
+            .option-row .option-btn { min-width: 100%; }
+            .bottom-btn-wrapper { flex-direction: column-reverse; }
+            .preview-item { width: 80px; height: 80px; }
+            .slider-left, .slider-right { min-width: 55px; font-size: 11px; }
+            .contact-method-select { width: 100%; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            body { background: #0f1a14; }
+            .container { color: #e8f0eb; }
+            .header { border-bottom-color: #2a4a3a; }
+            .logo { color: #4ade80; }
+            .back-link { color: #4ade80; }
+            .back-link:hover { background: rgba(0, 133, 62, 0.1); }
+            .page-title { color: #4ade80; }
+            .step-indicator { color: #6a7a70; }
+            .step-indicator .current { color: #4ade80; }
+            .card { background: #1a2e24; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+            .card h2 { color: #4ade80; border-bottom-color: #2a4a3a; }
+            .form-group label { color: #c8d8ce; }
+            .form-group input, .form-group select, .form-group textarea {
+                background: #0f1a14;
+                border-color: #2a4a3a;
+                color: #e8f0eb;
+            }
+            .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #4ade80; }
+            .option-btn { background: #0f1a14; border-color: #2a4a3a; color: #c8d8ce; }
+            .option-btn:hover { background: #1a2e24; border-color: #4ade80; }
+            .option-btn.selected { background: rgba(0, 133, 62, 0.2); border-color: #4ade80; color: #4ade80; }
+            .prev-btn { background: #0f1a14; border-color: #2a4a3a; color: #c8d8ce; }
+            .prev-btn:hover { background: #1a2e24; }
+            .btn-primary { background: #00853E; }
+            .btn-primary:hover { background: #006B30; }
+            .hint { color: #6a7a70; }
+            .preview-item { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+            .msg.error { color: #ff6b7a; }
+            .msg.success { color: #4ade80; }
+            .select-field, .input-field, .textarea-field { background: #0f1a14; border-color: #2a4a3a; color: #e8f0eb; }
+            .tag-btn { background: #0f1a14; border-color: #2a4a3a; color: #c8d8ce; }
+            .tag-btn.selected { background: rgba(0, 133, 62, 0.2); border-color: #4ade80; color: #4ade80; }
+            .expect-school-item { background: #1a2e24; border-color: #2a4a3a; }
+            .contact-entry { background: #1a2e24; border-color: #2a4a3a; }
+            .interest-selector { background: #1a2e24; border-color: #2a4a3a; }
+            .interest-category { background: #0f1a14; border-color: #2a4a3a; color: #e8f0eb; }
+            .category-tag, .sub-tag { background: #0f1a14; border-color: #2a4a3a; color: #c8d8ce; }
+            .category-search, .sub-search, .other-input input { background: #0f1a14; border-color: #2a4a3a; color: #e8f0eb; }
+        }
+
+        /* ========== 减少动画 ========== */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">FancyU · 中意你</div>
+    </div>
+    <div class="step-indicator">
+        <span class="step-text" id="stepText">STEP 01 / 06</span>
+        <div class="step-progress">
+            <div class="step-progress-fill" id="progressFill" style="width: 16.67%"></div>
+        </div>
+    </div>
+    <a href="index.html" class="back-link">← 返回首页</a>
+
+    <!-- ========== STEP 01: 基础背景 ========== -->
+    <div class="step-content active" id="step1">
+        <h1 class="page-title">基础背景</h1>
+        <div class="card">
+            <div class="card-label">基本信息 <span class="required-mark">*必填</span></div>
+            <div class="sub-label">你的性别</div>
+            <div class="option-row" data-field="sex">
+                <button class="option-btn" data-value="男">男</button>
+                <button class="option-btn" data-value="女">女</button>
+            </div>
+            <div class="input-hint" style="margin-top: 12px;">期望交友对象性别</div>
+            <div class="tags-container" data-field="sex_prefer" data-multi="true">
+                <button class="tag-btn" data-value="男">男生</button>
+                <button class="tag-btn" data-value="女">女生</button>
+                <button class="tag-btn" data-value="不限">不限</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">年级与校区 <span class="required-mark">*必填</span></div>
+            <div class="sub-label">你的年级</div>
+            <div class="select-wrapper">
+                <select class="select-field" data-field="grade">
+                    <option value="">选择年级</option>
+                    <optgroup label="本科">
+                        <option value="大一">大一</option><option value="大二">大二</option>
+                        <option value="大三">大三</option><option value="大四">大四</option>
+                        <option value="大五（医学）">大五（医学）</option>
+                    </optgroup>
+                    <optgroup label="研究生">
+                        <option value="研0">研0</option><option value="研一">研一</option>
+                        <option value="研二">研二</option><option value="研三">研三</option>
+                        <option value="博士">博士</option>
+                    </optgroup>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+            <div class="input-hint" style="margin-top: 12px;">期望对方年级（可多选）</div>
+            <div class="tags-container" data-field="grade_prefer" data-multi="true">
+                <button class="tag-btn" data-value="不限">不限</button>
+                <button class="tag-btn" data-value="大一">大一</button><button class="tag-btn" data-value="大二">大二</button>
+                <button class="tag-btn" data-value="大三">大三</button><button class="tag-btn" data-value="大四">大四</button>
+                <button class="tag-btn" data-value="研一">研一</button><button class="tag-btn" data-value="研二">研二</button>
+                <button class="tag-btn" data-value="研三">研三</button><button class="tag-btn" data-value="博士">博士</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">专业与家乡</div>
+            <div class="sub-label">你的专业</div>
+            <div class="select-wrapper">
+                <select class="select-field" data-field="major">
+                    <option value="">选择专业大类</option>
+                    <option value="人文社科类">人文社科类</option><option value="经济管理类">经济管理类</option>
+                    <option value="理学类">理学类</option><option value="工学类">工学类</option>
+                    <option value="医学类">医学类</option><option value="艺术体育类">艺术体育类</option><option value="其他">其他</option>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+            <div class="input-hint" style="margin-top: 12px;">期望对方专业（可多选）</div>
+            <div class="tags-container" data-field="major_prefer" data-multi="true">
+                <button class="tag-btn" data-value="不限">不限</button>
+                <button class="tag-btn" data-value="人文社科类">人文社科类</button><button class="tag-btn" data-value="经济管理类">经济管理类</button>
+                <button class="tag-btn" data-value="理学类">理学类</button><button class="tag-btn" data-value="工学类">工学类</button>
+                <button class="tag-btn" data-value="医学类">医学类</button><button class="tag-btn" data-value="艺术体育类">艺术体育类</button>
+                <button class="tag-btn" data-value="其他">其他</button>
+            </div>
+            <div class="sub-label" style="margin-top: 16px;">你的家乡</div>
+            <div class="select-wrapper">
+                <select class="select-field" data-field="hometown">
+                    <option value="">选择地区</option>
+                    <optgroup label="内地省份">
+                        <option value="广东">广东</option><option value="北京">北京</option><option value="上海">上海</option>
+                        <option value="浙江">浙江</option><option value="江苏">江苏</option><option value="四川">四川</option>
+                        <option value="湖北">湖北</option><option value="湖南">湖南</option><option value="福建">福建</option>
+                        <option value="山东">山东</option><option value="河南">河南</option><option value="安徽">安徽</option>
+                        <option value="江西">江西</option><option value="广西">广西</option><option value="海南">海南</option>
+                        <option value="云南">云南</option><option value="贵州">贵州</option><option value="陕西">陕西</option>
+                        <option value="甘肃">甘肃</option><option value="青海">青海</option><option value="内蒙古">内蒙古</option>
+                        <option value="新疆">新疆</option><option value="西藏">西藏</option><option value="宁夏">宁夏</option>
+                        <option value="天津">天津</option><option value="重庆">重庆</option><option value="辽宁">辽宁</option>
+                        <option value="吉林">吉林</option><option value="黑龙江">黑龙江</option><option value="河北">河北</option>
+                        <option value="山西">山西</option>
+                    </optgroup>
+                    <optgroup label="港澳台地区"><option value="香港">香港</option><option value="澳门">澳门</option><option value="台湾">台湾</option></optgroup>
+                    <optgroup label="其他"><option value="国外">国外</option></optgroup>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">学校 <span class="required-mark">*必填</span></div>
+            <div class="select-wrapper">
+                <select class="select-field" data-field="school" id="schoolSelect">
+                    <option value="">选择学校</option>
+                    <option value="中山大学">中山大学</option>
+                    <option value="华南理工大学">华南理工大学</option>
+                    <option value="暨南大学">暨南大学</option>
+                    <option value="华南师范大学">华南师范大学</option>
+                    <option value="华南农业大学">华南农业大学</option>
+                    <option value="广州中医药大学">广州中医药大学</option>
+                    <option value="广州医科大学">广州医科大学</option>
+                    <option value="星海音乐学院">星海音乐学院</option>
+                    <option value="广州美术学院">广州美术学院</option>
+                    <option value="广东药科大学">广东药科大学</option>
+                    <option value="广东工业大学">广东工业大学</option>
+                    <option value="广州大学">广州大学</option>
+                    <option value="广东外语外贸大学">广东外语外贸大学</option>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+            <div class="input-hint">当前学校功能仍在开发中，如果暂时找不到你的学校实在抱歉，我们正在持续完善～</div>
+        </div>
+        <div class="card" id="ownCampusCard" style="display: none;">
+            <div class="card-label">所在校区 <span class="required-mark">*必填</span></div>
+            <div class="sub-label">选择学校后，请选择你的校区（单选）</div>
+            <div class="select-wrapper">
+                <select class="select-field" id="ownCampus">
+                    <option value="">选择校区</option>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+        </div>
+        <div class="card" id="expectCampusCard">
+            <div class="card-label">期望对方的学校和校区（可多选）</div>
+            <div class="sub-label">选择快捷选项或指定具体学校+校区</div>
+            <div class="tags-container" id="expectQuickTags" style="margin-bottom: 12px;">
+                <button class="tag-btn quick-btn" data-value="不限">不限</button>
+                <button class="tag-btn quick-btn" data-value="广州所有校区">广州所有校区</button>
+                <button class="tag-btn quick-btn" data-value="大学城所有校区">大学城所有校区</button>
+            </div>
+            <div class="select-wrapper">
+                <select class="select-field" id="expectSchool">
+                    <option value="">+ 添加期望学校</option>
+                    <option value="中山大学">中山大学</option>
+                    <option value="华南理工大学">华南理工大学</option>
+                    <option value="暨南大学">暨南大学</option>
+                    <option value="华南师范大学">华南师范大学</option>
+                    <option value="华南农业大学">华南农业大学</option>
+                    <option value="广州中医药大学">广州中医药大学</option>
+                    <option value="广州医科大学">广州医科大学</option>
+                    <option value="星海音乐学院">星海音乐学院</option>
+                    <option value="广州美术学院">广州美术学院</option>
+                    <option value="广东药科大学">广东药科大学</option>
+                    <option value="广东工业大学">广东工业大学</option>
+                    <option value="广州大学">广州大学</option>
+                    <option value="广东外语外贸大学">广东外语外贸大学</option>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+            <div id="expectSchoolsContainer"></div>
+        </div>
+        <div class="card">
+            <div class="card-label">交流方式偏好</div>
+            <div class="option-group" data-field="online_offline">
+                <button class="option-btn" data-value="线上为主">线上为主</button>
+                <button class="option-btn" data-value="线下为主">线下为主</button>
+                <button class="option-btn" data-value="都行">都行</button>
+            </div>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>填写越详细越真诚，匹配成功率越高哦～</div>
+    </div>
+
+    <!-- ========== STEP 02: 个人特质 ========== -->
+    <div class="step-content" id="step2">
+        <h1 class="page-title">个人特质</h1>
+        <div class="card">
+            <div class="card-label">MBTI</div>
+            <div class="select-wrapper">
+                <select class="select-field" data-field="mbti">
+                    <option value="">选择MBTI</option>
+                    <option value="INTJ">INTJ - 建筑师</option><option value="INTP">INTP - 逻辑学家</option>
+                    <option value="ENTJ">ENTJ - 指挥官</option><option value="ENTP">ENTP - 辩论家</option>
+                    <option value="INFJ">INFJ - 提倡者</option><option value="INFP">INFP - 调解员</option>
+                    <option value="ENFJ">ENFJ - 主人公</option><option value="ENFP">ENFP - 竞选者</option>
+                    <option value="ISTJ">ISTJ - 检查员</option><option value="ISTP">ISTP - 工匠</option>
+                    <option value="ESTJ">ESTJ - 执行官</option><option value="ESTP">ESTP - 企业家</option>
+                    <option value="ISFJ">ISFJ - 守卫者</option><option value="ISFP">ISFP - 探险家</option>
+                    <option value="ESFJ">ESFJ - 供给者</option><option value="ESFP">ESFP - 表演者</option>
+                    <option value="不确定">不确定</option>
+                </select>
+                <span class="select-arrow">▼</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">性格窥探</div>
+            <div class="personality-row" data-q="1">
+                <div class="personality-question">交流倾向</div>
+                <div class="personality-item">
+                    <div class="personality-label">你话多吗？</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">Speaker</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_1" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">Listener</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="1">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">Speaker</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_1" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">Listener</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+            <div class="personality-row" data-q="2">
+                <div class="personality-question">社交偏好</div>
+                <div class="personality-item">
+                    <div class="personality-label">你爱凑热闹吗？</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">燥起来！</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_2" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">我想静静</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="2">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">燥起来！</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_2" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">我想静静</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+            <div class="personality-row" data-q="3">
+                <div class="personality-question">决策方式</div>
+                <div class="personality-item">
+                    <div class="personality-label">你理性吗？</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">理性分析</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_3" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">直觉感受</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="3">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">理性分析</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_3" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">直觉感受</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+            <div class="personality-row" data-q="4">
+                <div class="personality-question">新事物态度</div>
+                <div class="personality-item">
+                    <div class="personality-label">你的性格</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">尝试新鲜</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_4" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">安于熟悉</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="4">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">尝试新鲜</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_4" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">安于熟悉</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+            <div class="personality-row" data-q="5">
+                <div class="personality-question">事后态度</div>
+                <div class="personality-item">
+                    <div class="personality-label">当活动结束……</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">习惯回味复盘</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_5" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">随它去吧</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="5">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">习惯回味复盘</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_5" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">随它去吧</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+            <div class="personality-row" data-q="6">
+                <div class="personality-question">生活方式</div>
+                <div class="personality-item">
+                    <div class="personality-label">你会计划吗</div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">事无巨细</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_self_6" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">随便好啦</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+                <div class="personality-item">
+                    <div class="personality-label">
+                        <span>希望对方</span>
+                        <button class="no-preference-btn" data-expect="6">无所谓</button>
+                    </div>
+                    <div class="slider-wrapper">
+                        <span class="slider-left">事无巨细</span>
+                        <div class="slider-track">
+                            <input type="range" class="slider-input" id="personality_expect_6" min="1" max="5" value="3">
+                        </div>
+                        <span class="slider-right">随便好啦</span>
+                    </div>
+                    <div class="slider-marks">
+                        <span class="slider-mark" data-val="1">1</span>
+                        <span class="slider-mark" data-val="2">2</span>
+                        <span class="slider-mark" data-val="3">3(中立)</span>
+                        <span class="slider-mark" data-val="4">4</span>
+                        <span class="slider-mark" data-val="5">5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">交友目的 <span class="required-mark">*必填</span></div>
+            <div class="option-group" data-field="friend_goal">
+                <button class="option-btn" data-value="学习搭子">学习搭子</button>
+                <button class="option-btn" data-value="饭搭子">饭搭子</button>
+                <button class="option-btn" data-value="运动搭子">运动搭子</button>
+                <button class="option-btn" data-value="游戏搭子">游戏搭子</button>
+                <button class="option-btn" data-value="聊天搭子">聊天搭子</button>
+                <button class="option-btn" data-value="综合交友">综合交友</button>
+            </div>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>你的回答将帮助我们推荐性格相合的朋友～</div>
+    </div>
+
+    <!-- ========== STEP 03: 兴趣爱好 ========== -->
+    <div class="step-content" id="step3">
+        <h1 class="page-title">找搭子</h1>
+        <div class="card">
+            <div class="card-label">选择你的兴趣大类（按顺序来，优先考虑1哦）</div>
+            <div id="interestsContainer"></div>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>每个兴趣需要填写细分领域（最多3个）、熟练程度和期望交流频次～</div>
+    </div>
+
+    <!-- ========== STEP 04: 自我介绍 ========== -->
+    <div class="step-content" id="step4">
+        <h1 class="page-title">自我介绍</h1>
+        <div class="card">
+            <div class="card-label">关于我</div>
+            <div class="input-hint" style="margin-bottom: 12px;">简单介绍一下自己，让对方更好地了解你</div>
+            <textarea class="textarea-field" data-field="self_description" placeholder="例如：性格特点、生活习惯、日常作息等"></textarea>
+        </div>
+        <div class="card">
+            <div class="card-label">期望的朋友</div>
+            <textarea class="textarea-field" data-field="ideal_friend" placeholder="描述你期望交到什么样的朋友..."></textarea>
+        </div>
+        <div class="card">
+            <div class="card-label">特殊要求</div>
+            <textarea class="textarea-field" data-field="special_request" placeholder="如果有其他想说的，可以写在这里..."></textarea>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>真诚的介绍更容易吸引到合适的朋友</div>
+    </div>
+
+    <!-- ========== STEP 05: 上传照片 ========== -->
+    <div class="step-content" id="step5">
+        <h1 class="page-title">上传照片</h1>
+        <div class="card">
+            <div class="card-label">个人照片（可选）</div>
+            <div class="input-hint" style="margin-bottom: 12px;">上传照片可以让你的资料更真实可信</div>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">点击上传1～3张照片</div>
+                <div class="upload-hint">支持 JPG、PNG 格式</div>
+                <input type="file" id="photoInput" accept="image/*" multiple style="display: none;">
+            </div>
+            <div class="upload-preview" id="photoPreview"></div>
+        </div>
+        <div class="card">
+            <div class="card-label">关于展示（不填默认全部）</div>
+            <div class="tags-container" data-field="display_self" data-multi="true">
+                <button class="tag-btn" data-value="基础背景">基础背景</button>
+                <button class="tag-btn" data-value="个人特质">个人特质</button>
+                <button class="tag-btn" data-value="兴趣爱好">兴趣爱好</button>
+                <button class="tag-btn" data-value="自我介绍">自我介绍</button>
+                <button class="tag-btn" data-value="照片">照片</button>
+            </div>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>照片能让对方更快记住你</div>
+    </div>
+
+    <!-- ========== STEP 06: 联系方式 ========== -->
+    <div class="step-content" id="step6">
+        <h1 class="page-title">联系方式</h1>
+        <div class="card">
+            <div class="card-label">添加联系方式 <span class="required-mark">*必填</span></div>
+            <div class="sub-label">至少填写一种联系方式</div>
+            <div class="contact-add-row">
+                <select class="contact-method-select" id="contactMethodAdd">
+                    <option value="">选择方式</option>
+                    <option value="微信">微信</option>
+                    <option value="QQ">QQ</option>
+                    <option value="小红书">小红书</option>
+                    <option value="邮箱">邮箱</option>
+                    <option value="其他">其他</option>
+                </select>
+                <input type="text" class="contact-value-input" id="contactValueAdd" placeholder="输入账号或邮箱">
+                <button type="button" class="contact-add-btn" id="contactAddBtn">添加</button>
+            </div>
+        </div>
+        <div id="contactEntries"></div>
+        <div class="card" style="background: linear-gradient(135deg, rgba(0,88,38,0.05) 0%, rgba(0,88,38,0.02) 100%); border: 1px solid rgba(0,88,38,0.1);">
+            <div style="text-align: center; padding: 20px 0;">
+                <div style="font-family: 'Noto Serif SC', serif; font-size: 20px; color: var(--sysu-green); margin-bottom: 12px;">🎉 即将完成</div>
+                <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">点击提交后，你的交友问卷将被加入匹配池<br>我们将在匹配后通知你结果</div>
+            </div>
+        </div>
+        <div class="page-hint"><span class="page-hint-icon">💡</span>联系方式仅在双方同意交换后才会展示给对方</div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <div class="bottom-btn-wrapper">
+        <button class="prev-btn" id="prevBtn" style="display: none;"><span>←</span><span>上一页</span></button>
+        <button class="next-btn" id="nextBtn"><span>下一页</span><span>→</span></button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="success-modal" id="successModal">
+    <div class="success-content">
+        <div class="success-icon">✓</div>
+        <div class="success-title">提交成功</div>
+        <div class="success-desc">你的交友问卷已成功提交<br>我们将在每周匹配后<br>通知你结果</div>
+        <a href="index.html" class="success-btn">返回首页</a>
+    </div>
+</div>
+
+<script>
+    const API_URL = "/api";
+
+// ===== 部署补丁: 免登录自动登录 =====
+async function autoGuestLogin() {
+    if (window.__guestBusy) return;
+    window.__guestBusy = true;
+    try {
+        let login = localStorage.getItem('guest_login');
+        if (!login) { login = 'guest-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('guest_login', login); }
+        const r = await fetch('/api/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password: 'guest' }) });
+        const d = await r.json();
+        if (d.code === 200) {
+            localStorage.setItem('token', d.token);
+            localStorage.setItem('user', JSON.stringify(d.user));
+            location.reload();
+        } else {
+            autoGuestLogin();
+        }
+    } catch (e) {
+        autoGuestLogin();
+    }
+}
+
+    const TOTAL_STEPS = 6;
+    let currentStep = 1;
+    let formData = JSON.parse(localStorage.getItem('friendSurveyData') || '{}');
+    let userAccount = null;
+    let authToken = null;
+
+    // 学校-校区映射
+    const SCHOOL_CAMPUSES = {
+        "中山大学": ["广州海珠南校", "广州天河东校", "广州越秀北校", "深圳校区", "珠海校区"],
+        "华南理工大学": ["广州天河五山", "广州番禺大学城", "广州花都国际"],
+        "暨南大学": ["广州天河石牌", "广州番禺校区", "广州增城广园东", "珠海校区", "深圳校区"],
+        "华南师范大学": ["广州天河石牌", "广州番禺大学城", "佛山南海校区"],
+        "华南农业大学": ["广州天河校区"],
+        "广州中医药大学": ["广州番禺大学城", "广州白云三元里"],
+        "广州医科大学": ["广州番禺校区", "广州越秀校区"],
+        "星海音乐学院": ["广州番禺大学城", "广州天河沙河"],
+        "广州美术学院": ["广州番禺大学城", "广州海珠昌岗"],
+        "广东药科大学": ["广州番禺大学城", "中山校区", "云浮校区"],
+        "广东工业大学": ["广州番禺大学城", "广州越秀东风东", "广州天河龙洞", "广州番禺校区", "揭阳校区"],
+        "广州大学": ["广州番禺大学城", "广州越秀桂花岗"],
+        "广东外语外贸大学": ["广州白云校区", "广州番禺大学城", "广州天河校区"]
+    };
+
+    // 兴趣大类列表
+    const INTEREST_CATEGORIES = [
+        "球类运动", "田径类运动", "其他运动", "棋类", "健身健美", "音乐", "乐器", "书法", "绘画", "阅读",
+        "摄影", "电影", "纪录片", "电视剧", "娱乐圈", "舞蹈", "美食(吃）", "烹饪", "手游",
+        "端游", "主机", "桌游", "旅游", "小动物", "美妆时装", "ACG", "体育赛事", "手工", "博客", "娱乐活动", "其他爱好"
+    ];
+
+    // 兴趣细分选项映射
+    const INTEREST_SUBCATEGORIES = {
+        "球类运动": ["篮球", "足球", "羽毛球", "乒乓球", "网球", "排球", "匹克球", "高尔夫", "棒球"],
+        "田径类运动": ["短跑", "长跑", "竞走", "跳高", "跳远", "铅球", "铁饼", "标枪", "马拉松"],
+        "其他运动": ["游泳", "瑜伽", "普拉提", "搏击", "攀岩", "滑雪", "滑板", "骑行", "钓鱼", "冲浪", "飞盘"],
+        "健身健美": ["减脂", "增肌", "塑形", "运动表现"],
+        "棋类": ["围棋", "中国象棋", "国际象棋", "五子棋", "跳棋", "军棋", "将棋"],
+        "音乐": ["流行", "摇滚", "古典", "电子", "民谣", "爵士", "R&B", "说唱", "金属", "古风", "蓝调"],
+        "乐器": ["钢琴", "吉他", "小提琴", "古筝", "二胡", "架子鼓", "长笛", "口琴", "葫芦丝", "尤克里里", "贝斯", "萨克斯", "大提琴", "双簧管", "扬琴", "琵琶"],
+        "书法": ["楷书", "行书", "草书", "隶书", "篆书", "硬笔书法"],
+        "绘画": ["素描", "水彩", "油画", "国画", "漫画", "板绘", "彩铅", "丙烯"],
+        "阅读": ["网文", "小说", "Non-fiction", "散文", "随笔", "古典/经典", "热销/流行", "戏剧", "神话/史诗/传说"],
+        "摄影": ["人像", "风光", "鸟", "纪实", "扫街", "微距", "星空", "建筑", "气象"],
+        "电影": ["爱情", "喜剧", "动作", "科幻", "悬疑", "恐怖", "纪录", "动画", "文艺", "历史"],
+        "纪录片": ["自然", "历史", "科技", "社会", "美食", "人文", "探险"],
+        "电视剧": ["国产", "美剧", "日剧", "韩剧", "英剧", "港台剧", "短剧", "长剧", "悬疑/推理", "古装/仙侠", "爱情/偶像", "科幻/奇幻", "喜剧/搞笑", "家庭/伦理", "职场", "历史", "校园/青春"],
+        "娱乐圈": ["内娱", "韩娱", "欧美", "追线下", "物料党", "喜八卦"],
+        "舞蹈": ["街舞", "拉丁", "芭蕾", "民族舞", "现代舞", "爵士舞", "宅舞", "广场舞"],
+        "美食(吃）": ["中餐", "西餐", "日料", "韩餐", "甜品", "小吃", "火锅", "烧烤", "饮品"],
+        "烹饪": ["中餐", "西餐", "烘焙", "甜品", "日料", "减脂餐", "家常菜"],
+        "手游": ["Moba", "Fps", "单机", "开放世界", "卡牌", "建筑经营策略", "乙游", "跑酷", "休闲", "体育竞技", "解密", "王者", "吃鸡", "瓦", "洲", "第五人格", "原神", "崩坏", "部落冲突/皇室战争"],
+        "端游": ["3A", "Moba", "Fps", "沙盒"],
+        "主机": ["Steam", "任天堂", "Xbox", "索尼"],
+        "桌游": ["狼人杀", "剧本杀", "三国杀", "大富翁", "阿瓦隆", "UNO", "卡坦岛"],
+        "旅游": ["自然风光", "历史文化", "城市探索", "海岛度假", "自驾", "穷游", "热门打卡"],
+        "小动物": ["狗", "猫", "兔", "仓鼠", "鸟", "鱼", "爬宠", "昆虫"],
+        "美妆时装": ["美妆", "护肤", "穿搭", "球鞋", "配饰", "发型"],
+        "ACG": ["日漫", "国漫", "轻小说", "Cosplay", "手办", "声优", "二创"],
+        "体育赛事": ["世界杯", "斯诺克", "F1", "NBA", "欧冠", "温网", "环法", "UFC", "WRC", "MotoGP", "勒芒24时"],
+        "手工": ["拼豆", "插花", "黏土", "编织", "木工", "皮具", "滴胶", "折纸"],
+        "博客": ["技术博客", "生活博客", "美食博客", "旅游博客", "读书博客", "影评博客"],
+        "娱乐活动": ["麻将", "纸牌", "台球", "KTV", "喝酒", "散步", "咖啡"],
+        "其他爱好": ["学习", "咖啡", "植物", "气象", "剪辑", "相声", "脱口秀", "话剧", "音乐会"]
+    };
+
+    // 熟练程度选项
+    const SKILL_LEVELS = ["完全小白", "云玩家", "入门", "一般般", "精通"];
+    const SKILL_LEVELS_WITH_NA = ["完全小白", "云玩家", "入门", "一般般", "精通", "没要求"];
+    // 期望交流频次选项
+    const FREQ_OPTIONS = ["每日", "每周", "每月", "每学期"];
+    const FREQ_OPTIONS_WITH_NA = ["每日", "每周", "每月", "每学期", "没要求"];
+
+    // 存储三个兴趣的数据
+    let interestsData = [
+        { category: '', subcategories: [], skillLevel: '', skillLevelExpect: [], frequency: '' },
+        { category: '', subcategories: [], skillLevel: '', skillLevelExpect: [], frequency: '' },
+        { category: '', subcategories: [], skillLevel: '', skillLevelExpect: [], frequency: '' }
+    ];
+
+    // 存储性格"无所谓"状态
+    let personalityNoPreference = [false, false, false, false, false, false];
+
+    function checkAuth() {
+        authToken = localStorage.getItem('token');
+        if (!authToken) {
+            autoGuestLogin();
+            return false;
+        }
+        const userStr = localStorage.getItem('user');
+        if (userStr) userAccount = JSON.parse(userStr);
+        return true;
+    }
+
+    function getAuthHeaders() {
+        return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+    }
+
+    function handleApiResponse(data) {
+        if (data.code === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            autoGuestLogin();
+            return true;
+        }
+        return false;
+    }
+
+    function getSchoolFromEmail(email) {
+        if (!email) return '';
+        if (email.endsWith('sysu.edu.cn')) return '中山大学';
+        if (email.endsWith('scut.edu.cn')) return '华南理工大学';
+        if (email.endsWith('jnu.edu.cn')) return '暨南大学';
+        if (email.endsWith('m.scnu.edu.cn')) return '华南师范大学';
+        if (email.endsWith('stu.scau.edu.cn')) return '华南农业大学';
+        if (email.endsWith('gzhmu.edu.cn')) return '广州医科大学';
+        if (email.endsWith('gzucm.edu.cn')) return '广州中医药大学';
+        if (email.endsWith('gdut.edu.cn')) return '广东工业大学';
+        if (email.endsWith('oamail.gdufs.edu.cn')) return '广东外语外贸大学';
+        if (email.endsWith('e.gzhu.edu.cn')) return '广州大学';
+        if (email.endsWith('stu.gdpu.edu.cn')) return '广东药科大学';
+        if (email.endsWith('xhcom.edu.cn')) return '星海音乐学院';
+        if (email.endsWith('gzarts.edu.cn')) return '广州美术学院';
+        return '';
+    }
+
+    const stepRequiredFields = {
+        1: ['sex', 'grade', 'school'],
+        2: ['friend_goal'],
+        3: [],
+        4: [],
+        5: [],
+        6: ['contact_entries']
+    };
+
+    function init() {
+        if (!checkAuth()) return;
+
+        if (userAccount) {
+            formData['user_id'] = userAccount.id || userAccount.user_id || '';
+            formData['email'] = userAccount.email || '';
+            formData['my_school'] = getSchoolFromEmail(userAccount.email);
+            if (userAccount.nickname && !formData['nickname']) {
+                formData['nickname'] = userAccount.nickname;
+            }
+        }
+
+        initOptionButtons();
+        initMultiSelectTags();
+        initSelectFields();
+        initInputFields();
+        initTextareaFields();
+        initPhotoUpload();
+        initSchoolCampusLogic();
+        initPersonalitySliders();
+        initPersonalityNoPreferenceBtns();
+        initInterestsModule();
+        initContactFields();
+        restoreDraft();
+        restoreFormData();
+        updateStepUI();
+    }
+
+    function initOptionButtons() {
+        document.querySelectorAll('.option-group, .option-row').forEach(group => {
+            const field = group.dataset.field;
+            group.querySelectorAll('.option-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    group.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    formData[field] = btn.dataset.value;
+                    saveData();
+                });
+            });
+        });
+    }
+
+    function initMultiSelectTags() {
+        document.querySelectorAll('.tags-container[data-multi="true"]').forEach(container => {
+            const field = container.dataset.field;
+            if (!field) return;
+            container.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const isSelected = btn.classList.contains('selected');
+                    if (btn.dataset.value === '不限') {
+                        container.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+                        if (!isSelected) btn.classList.add('selected');
+                    } else {
+                        const unlimitedBtn = container.querySelector('.tag-btn[data-value="不限"]');
+                        if (unlimitedBtn) unlimitedBtn.classList.remove('selected');
+                        btn.classList.toggle('selected');
+                    }
+                    const selected = [...container.querySelectorAll('.tag-btn.selected')].map(b => b.dataset.value);
+                    formData[field] = selected.length > 0 ? selected : null;
+                    saveData();
+                });
+            });
+        });
+    }
+
+    function initSelectFields() {
+        document.querySelectorAll('.select-field').forEach(select => {
+            select.addEventListener('change', () => {
+                formData[select.dataset.field] = select.value;
+                saveData();
+            });
+        });
+    }
+
+    function initInputFields() {
+        document.querySelectorAll('.input-field').forEach(input => {
+            input.addEventListener('input', () => {
+                formData[input.dataset.field] = input.value;
+                saveData();
+            });
+        });
+    }
+
+    function initTextareaFields() {
+        document.querySelectorAll('.textarea-field').forEach(textarea => {
+            textarea.addEventListener('input', () => {
+                formData[textarea.dataset.field] = textarea.value;
+                saveData();
+            });
+        });
+    }
+
+    function initPhotoUpload() {
+        const uploadArea = document.getElementById('uploadArea');
+        const photoInput = document.getElementById('photoInput');
+        const preview = document.getElementById('photoPreview');
+        if (!formData['photos']) formData['photos'] = [];
+
+        uploadArea?.addEventListener('click', () => photoInput?.click());
+        photoInput?.addEventListener('change', () => handleFiles(photoInput.files));
+
+        function handleFiles(files) {
+            const maxPhotos = 3;
+            const currentCount = formData['photos'].length;
+            Array.from(files).slice(0, maxPhotos - currentCount).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const img = new Image();
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    img.onload = () => {
+                        let width = img.width, height = img.height;
+                        const maxWidth = 800;
+                        if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+                        formData['photos'].push(compressedData);
+                        saveData();
+                        const item = document.createElement('div');
+                        item.className = 'preview-item';
+                        item.innerHTML = `<img src="${compressedData}" alt="照片"><div class="preview-remove">×</div>`;
+                        preview.appendChild(item);
+                        item.querySelector('.preview-remove').addEventListener('click', () => {
+                            const idx = formData['photos'].indexOf(compressedData);
+                            if (idx > -1) { formData['photos'].splice(idx, 1); saveData(); }
+                            item.remove();
+                        });
+                    };
+                    img.src = URL.createObjectURL(file);
+                }
+            });
+        }
+
+        if (formData['photos']?.length > 0) {
+            formData['photos'].forEach(src => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.innerHTML = `<img src="${src}" alt="照片"><div class="preview-remove">×</div>`;
+                preview.appendChild(item);
+                item.querySelector('.preview-remove').addEventListener('click', () => {
+                    const idx = formData['photos'].indexOf(src);
+                    if (idx > -1) { formData['photos'].splice(idx, 1); saveData(); }
+                    item.remove();
+                });
+            });
+        }
+    }
+
+    // 学校-校区联动逻辑
+    function initSchoolCampusLogic() {
+        const schoolSelect = document.getElementById('schoolSelect');
+        const ownCampusCard = document.getElementById('ownCampusCard');
+        const ownCampusSelect = document.getElementById('ownCampus');
+        const expectSchoolDropdown = document.getElementById('expectSchool');
+        const expectQuickTags = document.getElementById('expectQuickTags');
+        const expectSchoolsContainer = document.getElementById('expectSchoolsContainer');
+
+        let selectedSchools = formData.expect_schools || [];
+        let schoolCampuses = formData.expect_school_campuses || {};
+        let quickSelected = formData.expect_quick || null;
+
+        // 自己的校区
+        schoolSelect.addEventListener('change', () => {
+            const school = schoolSelect.value;
+            formData.school = school;
+            formData.own_campus = '';
+            ownCampusSelect.innerHTML = '<option value="">选择校区</option>';
+
+            if (school && SCHOOL_CAMPUSES[school]) {
+                ownCampusCard.style.display = 'block';
+                const campuses = SCHOOL_CAMPUSES[school];
+                campuses.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c; opt.textContent = c;
+                    ownCampusSelect.appendChild(opt);
+                });
+            } else {
+                ownCampusCard.style.display = 'none';
+            }
+            saveData();
+        });
+
+        ownCampusSelect.addEventListener('change', () => {
+            formData.own_campus = ownCampusSelect.value;
+            saveData();
+        });
+
+        // 快捷标签
+        function onQuickBtnClick(val) {
+            if (quickSelected === val) {
+                quickSelected = null;
+                expectQuickTags.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+            } else {
+                quickSelected = val;
+                expectQuickTags.querySelectorAll('.quick-btn').forEach(b => {
+                    b.classList.toggle('selected', b.dataset.value === val);
+                });
+            }
+            saveFormData();
+            saveData();
+        }
+
+        expectQuickTags.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => onQuickBtnClick(btn.dataset.value));
+        });
+
+        // 添加学校
+        expectSchoolDropdown.addEventListener('change', () => {
+            const school = expectSchoolDropdown.value;
+            if (!school) return;
+            if (selectedSchools.includes(school)) {
+                showToast('已添加该学校', true);
+                expectSchoolDropdown.value = '';
+                return;
+            }
+            selectedSchools.push(school);
+            schoolCampuses[school] = [];
+            expectSchoolDropdown.value = '';
+            renderExpectSchools();
+            saveFormData();
+            saveData();
+        });
+
+        function removeSchool(school) {
+            selectedSchools = selectedSchools.filter(s => s !== school);
+            delete schoolCampuses[school];
+            renderExpectSchools();
+            saveFormData();
+            saveData();
+        }
+
+        function toggleCampus(school, campus, isSelected) {
+            if (!schoolCampuses[school]) schoolCampuses[school] = [];
+            if (isSelected) {
+                if (!schoolCampuses[school].includes(campus)) {
+                    schoolCampuses[school].push(campus);
+                }
+            } else {
+                schoolCampuses[school] = schoolCampuses[school].filter(c => c !== campus);
+            }
+            saveFormData();
+            saveData();
+        }
+
+        function renderExpectSchools() {
+            expectSchoolsContainer.innerHTML = '';
+            if (selectedSchools.length === 0) return;
+
+            const list = document.createElement('div');
+            list.className = 'expect-school-list';
+
+            selectedSchools.forEach(school => {
+                const item = document.createElement('div');
+                item.className = 'expect-school-item';
+
+                const name = document.createElement('span');
+                name.className = 'expect-school-name';
+                name.textContent = school;
+                name.title = school;
+
+                const del = document.createElement('span');
+                del.className = 'expect-school-delete';
+                del.textContent = '×';
+                del.addEventListener('click', () => removeSchool(school));
+
+                item.appendChild(name);
+                item.appendChild(del);
+                list.appendChild(item);
+
+                const group = document.createElement('div');
+                group.className = 'expect-campus-group';
+                const tagsContainer = document.createElement('div');
+                tagsContainer.className = 'tags-container';
+                tagsContainer.style.marginBottom = '4px';
+
+                const campuses = SCHOOL_CAMPUSES[school] || [];
+                campuses.forEach(campus => {
+                    const btn = document.createElement('button');
+                    btn.className = 'tag-btn';
+                    btn.dataset.value = campus;
+                    btn.textContent = campus;
+                    btn.addEventListener('click', () => {
+                        btn.classList.toggle('selected');
+                        toggleCampus(school, campus, btn.classList.contains('selected'));
+                    });
+                    if (schoolCampuses[school] && schoolCampuses[school].includes(campus)) {
+                        btn.classList.add('selected');
+                    }
+                    tagsContainer.appendChild(btn);
+                });
+
+                group.appendChild(tagsContainer);
+                list.appendChild(group);
+            });
+
+            expectSchoolsContainer.appendChild(list);
+        }
+
+        function saveFormData() {
+            formData.expect_quick = quickSelected;
+            formData.expect_schools = selectedSchools;
+            formData.expect_school_campuses = schoolCampuses;
+            let allCampuses = [];
+            if (quickSelected) allCampuses.push(quickSelected);
+            Object.values(schoolCampuses).forEach(campusList => {
+                allCampuses = allCampuses.concat(campusList);
+            });
+            formData.expect_campus = allCampuses;
+        }
+
+        renderExpectSchools();
+    }
+
+    // 性格滑块
+    function initPersonalitySliders() {
+        for (let i = 1; i <= 6; i++) {
+            const selfSlider = document.getElementById(`personality_self_${i}`);
+            const expectSlider = document.getElementById(`personality_expect_${i}`);
+
+            if (selfSlider) {
+                selfSlider.addEventListener('input', function() {
+                    formData[`personality_self_${i}`] = parseInt(this.value);
+                    updateSliderMarks(this);
+                    saveData();
+                });
+                if (formData[`personality_self_${i}`]) {
+                    selfSlider.value = formData[`personality_self_${i}`];
+                }
+                updateSliderMarks(selfSlider);
+            }
+            if (expectSlider) {
+                expectSlider.addEventListener('input', function() {
+                    if (!personalityNoPreference[i-1]) {
+                        formData[`personality_expect_${i}`] = parseInt(this.value);
+                        updateSliderMarks(this);
+                        saveData();
+                    }
+                });
+                if (formData[`personality_expect_${i}`]) {
+                    expectSlider.value = formData[`personality_expect_${i}`];
+                }
+                updateSliderMarks(expectSlider);
+            }
+        }
+    }
+
+    function updateSliderMarks(slider) {
+        const value = parseInt(slider.value);
+        const marks = slider.parentElement.parentElement.querySelectorAll('.slider-mark');
+        marks.forEach(mark => {
+            if (parseInt(mark.dataset.val) === value) {
+                mark.classList.add('active');
+            } else {
+                mark.classList.remove('active');
+            }
+        });
+    }
+
+    function initPersonalityNoPreferenceBtns() {
+        for (let i = 1; i <= 6; i++) {
+            const btn = document.querySelector(`.no-preference-btn[data-expect="${i}"]`);
+            if (btn) {
+                if (formData[`personality_expect_${i}_no_pref`]) {
+                    personalityNoPreference[i-1] = true;
+                    btn.classList.add('active');
+                    const slider = document.getElementById(`personality_expect_${i}`);
+                    if (slider) {
+                        slider.classList.add('disabled');
+                        slider.disabled = true;
+                    }
+                }
+                btn.addEventListener('click', () => {
+                    personalityNoPreference[i-1] = !personalityNoPreference[i-1];
+                    if (personalityNoPreference[i-1]) {
+                        btn.classList.add('active');
+                        const slider = document.getElementById(`personality_expect_${i}`);
+                        if (slider) {
+                            slider.classList.add('disabled');
+                            slider.disabled = true;
+                        }
+                        formData[`personality_expect_${i}_no_pref`] = true;
+                    } else {
+                        btn.classList.remove('active');
+                        const slider = document.getElementById(`personality_expect_${i}`);
+                        if (slider) {
+                            slider.classList.remove('disabled');
+                            slider.disabled = false;
+                        }
+                        formData[`personality_expect_${i}_no_pref`] = false;
+                    }
+                    saveData();
+                });
+            }
+        }
+    }
+
+    // 兴趣爱好模块
+    function initInterestsModule() {
+        if (formData.interests && formData.interests.length > 0) {
+            interestsData = formData.interests;
+        }
+        renderInterestSelectors();
+    }
+
+    function renderInterestSelectors() {
+        const container = document.getElementById('interestsContainer');
+        container.innerHTML = '';
+
+        for (let i = 0; i < 3; i++) {
+            const data = interestsData[i];
+            const selectorDiv = document.createElement('div');
+            selectorDiv.className = 'interest-selector';
+            selectorDiv.dataset.index = i;
+
+            const selectedSubTagsHtml = data.subcategories.length > 0 ?
+                `<div class="selected-sub-tags">
+                    ${data.subcategories.map(sub => `<span class="selected-sub-tag" data-sub="${sub}">${sub}<span class="remove" data-sub="${sub}">×</span></span>`).join('')}
+                </div>` : '';
+
+            const selectedSkillExpectHtml = data.skillLevelExpect && data.skillLevelExpect.length > 0 ?
+                `<div class="selected-sub-tags" style="margin-top: 8px;">
+                    ${data.skillLevelExpect.map(level => `<span class="selected-sub-tag" data-skill-expect="${level}">${level}<span class="remove" data-skill-expect="${level}">×</span></span>`).join('')}
+                </div>` : '';
+
+            selectorDiv.innerHTML = `
+                <div class="interest-selector-header">
+                    <div class="interest-number">${i + 1}</div>
+                    <div class="interest-category" data-index="${i}">
+                        <span class="${data.category ? 'selected-value' : 'placeholder'}">${data.category || '点击选择兴趣大类'}</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                </div>
+                <div class="category-tags-panel" data-panel="${i}">
+                    <input type="text" class="category-search" placeholder="搜索兴趣大类..." data-search="${i}">
+                    <div class="category-tags" data-tags="${i}"></div>
+                </div>
+                <div class="interest-detail" data-detail="${i}" style="display: ${data.category ? 'block' : 'none'}">
+                    <div class="detail-row">
+                        <div class="detail-label">细分（最多3个）</div>
+                        <input type="text" class="sub-search" placeholder="搜索细分..." data-sub-search="${i}">
+                        <div class="sub-tags" data-sub-tags="${i}"></div>
+                        ${selectedSubTagsHtml}
+                        <div class="sub-hint">点击标签选择，已选中的会显示在上方，最多可选3个</div>
+                        <div class="other-input" data-other-container="${i}">
+                            <input type="text" class="other-text" placeholder="输入其他细分" data-other-input="${i}">
+                            <button class="other-add" data-other-add="${i}">添加</button>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">你的程度</div>
+                        <div class="sub-tags" data-skill="${i}">
+                            ${SKILL_LEVELS.map(level => `<span class="sub-tag ${data.skillLevel === level ? 'selected' : ''}" data-value="${level}">${level}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">希望对方的程度（可多选）</div>
+                        <div class="sub-tags" data-skill-expect="${i}">
+                            ${SKILL_LEVELS_WITH_NA.map(level => `<span class="sub-tag ${data.skillLevelExpect && data.skillLevelExpect.includes(level) ? 'selected' : ''}" data-value="${level}">${level}</span>`).join('')}
+                        </div>
+                        ${selectedSkillExpectHtml}
+                        <div class="sub-hint">可多选，已选中的会显示在上方</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">期望交流频次</div>
+                        <div class="sub-tags" data-freq="${i}">
+                            ${FREQ_OPTIONS_WITH_NA.map(freq => `<span class="sub-tag ${data.frequency === freq ? 'selected' : ''}" data-value="${freq}">${freq}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(selectorDiv);
+        }
+
+        for (let i = 0; i < 3; i++) {
+            bindCategorySelector(i);
+            bindCategorySearch(i);
+            bindSubSearch(i);
+            bindSubTagsMulti(i);
+            bindSkillLevel(i);
+            bindSkillLevelExpect(i);
+            bindFreq(i);
+            bindOtherInput(i);
+        }
+    }
+
+    function bindCategorySelector(index) {
+        const categoryDiv = document.querySelector(`.interest-category[data-index="${index}"]`);
+        const panel = document.querySelector(`.category-tags-panel[data-panel="${index}"]`);
+        if (categoryDiv && panel) {
+            categoryDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panel.classList.toggle('show');
+                document.querySelectorAll('.category-tags-panel').forEach(p => {
+                    if (p !== panel) p.classList.remove('show');
+                });
+                renderCategoryTags(index);
+            });
+        }
+    }
+
+    function renderCategoryTags(index) {
+        const container = document.querySelector(`.category-tags[data-tags="${index}"]`);
+        if (!container) return;
+        const searchInput = document.querySelector(`.category-search[data-search="${index}"]`);
+        const keyword = searchInput ? searchInput.value.toLowerCase() : '';
+        const filtered = INTEREST_CATEGORIES.filter(cat =>
+            cat.toLowerCase().includes(keyword)
+        );
+        const currentCategory = interestsData[index].category;
+        container.innerHTML = filtered.map(cat => `
+            <span class="category-tag ${currentCategory === cat ? 'selected' : ''}" data-value="${cat}">${cat}</span>
+        `).join('');
+
+        container.querySelectorAll('.category-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                const value = tag.dataset.value;
+                interestsData[index].category = value;
+                interestsData[index].subcategories = [];
+                interestsData[index].skillLevel = '';
+                interestsData[index].skillLevelExpect = [];
+                interestsData[index].frequency = '';
+                renderInterestSelectors();
+                saveData();
+            });
+        });
+    }
+
+    function bindCategorySearch(index) {
+        const searchInput = document.querySelector(`.category-search[data-search="${index}"]`);
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                renderCategoryTags(index);
+            });
+        }
+    }
+
+    function bindSubSearch(index) {
+        const searchInput = document.querySelector(`.sub-search[data-sub-search="${index}"]`);
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            const category = interestsData[index].category;
+            if (!category) return;
+            const keyword = searchInput.value.toLowerCase();
+            const options = INTEREST_SUBCATEGORIES[category] || [];
+            const filtered = options.filter(opt => opt.toLowerCase().includes(keyword));
+            const container = document.querySelector(`.sub-tags[data-sub-tags="${index}"]`);
+            if (container) {
+                const currentSubs = interestsData[index].subcategories;
+                container.innerHTML = filtered.map(opt => `
+                    <span class="sub-tag ${currentSubs.includes(opt) ? 'selected' : ''}" data-value="${opt}">${opt}</span>
+                `).join('');
+
+                container.querySelectorAll('.sub-tag').forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        const value = tag.dataset.value;
+                        const currentSubs = interestsData[index].subcategories;
+                        if (currentSubs.includes(value)) {
+                            interestsData[index].subcategories = currentSubs.filter(v => v !== value);
+                        } else {
+                            if (currentSubs.length >= 3) {
+                                showToast('最多只能选择3个细分领域', true);
+                                return;
+                            }
+                            interestsData[index].subcategories = [...currentSubs, value];
+                        }
+                        renderInterestSelectors();
+                        saveData();
+                    });
+                });
+            }
+        });
+
+        renderSubTags(index);
+    }
+
+    function renderSubTags(index) {
+        const category = interestsData[index].category;
+        if (!category) return;
+        const options = INTEREST_SUBCATEGORIES[category] || [];
+        const container = document.querySelector(`.sub-tags[data-sub-tags="${index}"]`);
+        if (container) {
+            const currentSubs = interestsData[index].subcategories;
+            container.innerHTML = options.map(opt => `
+                <span class="sub-tag ${currentSubs.includes(opt) ? 'selected' : ''}" data-value="${opt}">${opt}</span>
+            `).join('');
+
+            container.querySelectorAll('.sub-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    const value = tag.dataset.value;
+                    const currentSubs = interestsData[index].subcategories;
+                    if (currentSubs.includes(value)) {
+                        interestsData[index].subcategories = currentSubs.filter(v => v !== value);
+                    } else {
+                        if (currentSubs.length >= 3) {
+                            showToast('最多只能选择3个细分领域', true);
+                            return;
+                        }
+                        interestsData[index].subcategories = [...currentSubs, value];
+                    }
+                    renderInterestSelectors();
+                    saveData();
+                });
+            });
+        }
+    }
+
+    function bindSubTagsMulti(index) {
+        renderSubTags(index);
+    }
+
+    function bindOtherInput(index) {
+        const addBtn = document.querySelector(`.other-add[data-other-add="${index}"]`);
+        const input = document.querySelector(`.other-text[data-other-input="${index}"]`);
+
+        if (addBtn && input) {
+            addBtn.addEventListener('click', () => {
+                const value = input.value.trim();
+                if (!value) {
+                    showToast('请输入内容', true);
+                    return;
+                }
+                const currentSubs = interestsData[index].subcategories;
+                if (currentSubs.includes(value)) {
+                    showToast('该细分已存在', true);
+                    return;
+                }
+                if (currentSubs.length >= 3) {
+                    showToast('最多只能选择3个细分领域', true);
+                    return;
+                }
+                interestsData[index].subcategories = [...currentSubs, value];
+                input.value = '';
+                renderInterestSelectors();
+                saveData();
+            });
+        }
+    }
+
+    function bindSkillLevel(index) {
+        const container = document.querySelector(`.sub-tags[data-skill="${index}"]`);
+        if (container) {
+            container.querySelectorAll('.sub-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    container.querySelectorAll('.sub-tag').forEach(t => t.classList.remove('selected'));
+                    tag.classList.add('selected');
+                    interestsData[index].skillLevel = tag.dataset.value;
+                    saveData();
+                });
+            });
+        }
+    }
+
+    function bindSkillLevelExpect(index) {
+        const container = document.querySelector(`.sub-tags[data-skill-expect="${index}"]`);
+        if (container) {
+            container.querySelectorAll('.sub-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    tag.classList.toggle('selected');
+                    const values = Array.from(container.querySelectorAll('.sub-tag.selected')).map(t => t.dataset.value);
+                    interestsData[index].skillLevelExpect = values;
+                    renderInterestSelectors();
+                    saveData();
+                });
+            });
+        }
+    }
+
+    function bindFreq(index) {
+        const container = document.querySelector(`.sub-tags[data-freq="${index}"]`);
+        if (container) {
+            container.querySelectorAll('.sub-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    container.querySelectorAll('.sub-tag').forEach(t => t.classList.remove('selected'));
+                    tag.classList.add('selected');
+                    interestsData[index].frequency = tag.dataset.value;
+                    saveData();
+                });
+            });
+        }
+    }
+
+    // 联系方式模块
+    function initContactFields() {
+        const methodSelect = document.getElementById('contactMethodAdd');
+        const valueInput = document.getElementById('contactValueAdd');
+        const addBtn = document.getElementById('contactAddBtn');
+        const entriesContainer = document.getElementById('contactEntries');
+
+        let contactEntries = formData.contact_entries || [];
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function renderEntries() {
+            entriesContainer.innerHTML = '';
+            contactEntries.forEach((entry, idx) => {
+                const div = document.createElement('div');
+                div.className = 'contact-entry';
+                div.innerHTML = `<div class="contact-entry-info"><span class="contact-entry-type">${escapeHtml(entry.method)}</span><span class="contact-entry-value">${escapeHtml(entry.value)}</span></div><span class="contact-entry-delete" data-idx="${idx}">×</span>`;
+                entriesContainer.appendChild(div);
+            });
+            entriesContainer.querySelectorAll('.contact-entry-delete').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const i = parseInt(btn.dataset.idx);
+                    contactEntries.splice(i, 1);
+                    formData.contact_entries = contactEntries;
+                    renderEntries();
+                    saveData();
+                });
+            });
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                const method = methodSelect?.value;
+                const value = valueInput?.value?.trim();
+                if (!method) { showToast('请选择联系方式类型', true); return; }
+                if (!value) { showToast('请输入联系方式', true); return; }
+                if (contactEntries.some(e => e.method === method)) {
+                    showToast('该类型已存在，可删除后重新添加', true);
+                    return;
+                }
+                contactEntries.push({ method, value });
+                formData.contact_entries = contactEntries;
+                methodSelect.value = '';
+                valueInput.value = '';
+                renderEntries();
+                saveData();
+            });
+        }
+
+        renderEntries();
+    }
+
+    function saveData() {
+        formData.interests = interestsData.filter(i => i.category);
+        localStorage.setItem('friendSurveyData', JSON.stringify(formData));
+    }
+
+    function restoreDraft() {
+        const draft = JSON.parse(localStorage.getItem('friendSurveyData') || '{}');
+        if (Object.keys(draft).length === 0) return;
+        document.querySelectorAll('.input-field').forEach(input => {
+            const field = input.dataset.field;
+            if (draft[field] !== undefined) input.value = draft[field];
+        });
+        document.querySelectorAll('.textarea-field').forEach(textarea => {
+            const field = textarea.dataset.field;
+            if (draft[field] !== undefined) textarea.value = draft[field];
+        });
+        document.querySelectorAll('.select-field').forEach(select => {
+            const field = select.dataset.field;
+            if (draft[field] !== undefined) select.value = draft[field];
+        });
+    }
+
+    function restoreFormData() {
+        document.querySelectorAll('.option-group, .option-row').forEach(group => {
+            const field = group.dataset.field;
+            if (formData[field]) {
+                group.querySelectorAll('.option-btn').forEach(btn => {
+                    if (btn.dataset.value === formData[field]) btn.classList.add('selected');
+                });
+            }
+        });
+        document.querySelectorAll('.tags-container').forEach(container => {
+            const field = container.dataset.field;
+            if (formData[field] && Array.isArray(formData[field])) {
+                container.querySelectorAll('.tag-btn').forEach(btn => {
+                    if (formData[field].includes(btn.dataset.value)) btn.classList.add('selected');
+                });
+            }
+        });
+    }
+
+    function updateStepUI() {
+        const displayStep = currentStep;
+        document.getElementById('stepText').textContent = `STEP ${String(displayStep).padStart(2, '0')} / 06`;
+        document.getElementById('progressFill').style.width = `${(currentStep / 6) * 100}%`;
+        document.querySelectorAll('.step-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.style.display = currentStep > 1 ? 'flex' : 'none';
+        if (currentStep === TOTAL_STEPS) {
+            nextBtn.innerHTML = '<span>提交问卷</span><span>✓</span>';
+            nextBtn.classList.add('submit-btn');
+        } else {
+            nextBtn.innerHTML = '<span>下一页</span><span>→</span>';
+            nextBtn.classList.remove('submit-btn');
+        }
+    }
+
+    function validateCurrentStep() {
+        const required = [...(stepRequiredFields[currentStep] || [])];
+        for (const field of required) {
+            const value = formData[field];
+            if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && !value.trim())) {
+                showToast('请填写所有必填项', true);
+                return false;
+            }
+        }
+        if (currentStep === 6) {
+            const entries = formData.contact_entries || [];
+            if (entries.length === 0) {
+                showToast('请至少添加一种联系方式', true);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast show error' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentStep > 1) { currentStep--; updateStepUI(); }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', async () => {
+        if (!validateCurrentStep()) return;
+        if (currentStep === TOTAL_STEPS) {
+            const btn = document.getElementById('nextBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>提交中...</span>';
+            try {
+                if (userAccount) {
+                    formData['user_id'] = userAccount.id || userAccount.user_id || '';
+                    formData['email'] = userAccount.email || '';
+                    formData['my_school'] = getSchoolFromEmail(userAccount.email);
+                }
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ action: 'submitFriendSurvey', data: formData })
+                });
+                const result = await response.json();
+                if (handleApiResponse(result)) return;
+                if (result.code === 200) {
+                    localStorage.removeItem('friendSurveyData');
+                    document.getElementById('successModal').classList.add('show');
+                } else {
+                    showToast(result.msg || '提交失败，请重试', true);
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>提交问卷</span><span>✓</span>';
+                }
+            } catch (error) {
+                console.error('提交失败:', error);
+                showToast('网络异常，请重试', true);
+                btn.disabled = false;
+                btn.innerHTML = '<span>提交问卷</span><span>✓</span>';
+            }
+        } else {
+            currentStep++;
+            updateStepUI();
+        }
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    init();
+</script>
+</body>
+</html>

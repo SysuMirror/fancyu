@@ -1,0 +1,28 @@
+# Dependencies and generated files
+node_modules/
+*.log
+logs/
+*.pid
+*.sock
+
+# Credentials and local deployment configuration
+.env
+.env.*
+!.env.example
+/run.sh
+*.pem
+*.key
+*.p12
+*.pfx
+
+# User data and photographs
+/web/photos/
+/web/all_users.html
+/backups/
+*.sql.gz
+*.sql.bak
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/

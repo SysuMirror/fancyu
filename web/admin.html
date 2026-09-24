@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FancyU · 管理后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #a5b4fc;
+            --accent: #ec4899;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.08);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%); }
+        .login-box { background: white; border-radius: 20px; padding: 44px; width: 380px; box-shadow: var(--shadow-lg); }
+        .login-box h1 { text-align: center; font-size: 26px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .login-box p { text-align: center; color: var(--text-muted); margin-bottom: 28px; font-size: 14px; }
+        .login-box input { width: 100%; padding: 13px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; transition: border-color 0.2s; }
+        .login-box input:focus { outline: none; border-color: var(--primary); }
+        .login-box button { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: var(--radius-sm); font-size: 16px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        .login-box button:hover { opacity: 0.9; }
+        .login-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .login-box .msg { padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 14px; display: none; }
+        .login-box .msg.error { display: block; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        .admin-page { display: none; }
+        .admin-page.active { display: block; }
+        .topbar { background: white; border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; justify-content: space-between; align-items: center; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+        .topbar h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .topbar .right { display: flex; gap: 12px; align-items: center; }
+        .topbar .right span { font-size: 14px; color: var(--text-muted); }
+        .topbar button { padding: 8px 16px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .topbar button:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+        .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); padding: 0 28px; }
+        .tab { padding: 16px 24px; cursor: pointer; font-size: 14px; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .tab:hover:not(.active) { color: var(--text); }
+
+        .content { padding: 28px; max-width: 1440px; margin: 0 auto; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+        .stat-card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .stat-card .label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .stat-card .value { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.2; }
+        .stat-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .stat-card .sub strong { color: var(--accent); }
+
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-bottom: 28px; }
+        .chart-card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .chart-card h3 { font-size: 15px; color: var(--text); margin-bottom: 20px; font-weight: 600; padding-bottom: 12px; border-bottom: 2px solid var(--bg); }
+
+        .filters { background: var(--card); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .filters input, .filters select { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text); background: white; transition: border-color 0.2s; }
+        .filters input:focus, .filters select:focus { outline: none; border-color: var(--primary); }
+        .filters .search-input { width: 260px; }
+        .filters button { padding: 9px 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.2s; }
+        .filters button:hover { opacity: 0.88; }
+        .filters .count { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+        .table-wrap { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead { background: linear-gradient(135deg, #f8fafc, #f1f5f9); }
+        th { padding: 14px 16px; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); }
+        th:hover { color: var(--primary); }
+        th .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+        td { padding: 13px 16px; border-bottom: 1px solid #f8fafc; color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+        td .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .tag-male { background: #dbeafe; color: #2563eb; }
+        .tag-female { background: #fce7f3; color: #db2777; }
+        .tag-on { background: #dcfce7; color: #16a34a; }
+        .tag-off { background: #fef9c3; color: #ca8a04; }
+        td .btn-sm { padding: 5px 12px; border: 1.5px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 12px; background: white; color: var(--text); transition: all 0.15s; }
+        td .btn-sm:hover { border-color: var(--primary); color: var(--primary); background: #eef2ff; }
+        td .btn-sm.danger { color: #dc2626; border-color: #fecaca; }
+        td .btn-sm.danger:hover { background: #dc2626; color: white; border-color: #dc2626; }
+
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 20px; }
+        .pagination button { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: white; cursor: pointer; font-size: 13px; color: var(--text); transition: all 0.15s; }
+        .pagination button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: #eef2ff; }
+        .pagination button:disabled { background: #f8fafc; color: #cbd5e1; cursor: not-allowed; border-color: #e2e8f0; }
+        .pagination button.active { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-color: var(--primary); }
+        .pagination .page-info { font-size: 13px; color: var(--text-muted); margin-left: 8px; }
+
+        .detail-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 200; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
+        .detail-overlay.active { display: flex; }
+        .detail-box { background: white; border-radius: 20px; padding: 36px; width: 100%; max-width: 860px; max-height: 88vh; overflow-y: auto; position: relative; box-shadow: var(--shadow-lg); }
+        .detail-box .close-btn { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border: none; background: var(--bg); border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.15s; }
+        .detail-box .close-btn:hover { background: #fef2f2; color: #dc2626; }
+        .detail-box h2 { font-size: 22px; margin-bottom: 24px; color: var(--text); font-weight: 700; }
+        .detail-section { margin-bottom: 24px; }
+        .detail-section h3 { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .detail-field label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+        .detail-field .val { font-size: 14px; color: var(--text); word-break: break-all; line-height: 1.5; }
+        .detail-photos { display: flex; gap: 12px; flex-wrap: wrap; }
+        .detail-photos img { width: 110px; height: 110px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; border: 2px solid var(--border); transition: transform 0.2s; }
+        .detail-photos img:hover { transform: scale(1.05); border-color: var(--primary); }
+
+        .img-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 300; justify-content: center; align-items: center; cursor: pointer; }
+        .img-modal.active { display: flex; }
+        .img-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--radius); }
+
+        .assistant-container { display: flex; height: calc(100vh - 140px); background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .chat-sidebar { width: 260px; background: #f8fafc; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .chat-sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+        .chat-sidebar-header h3 { font-size: 14px; color: var(--text); margin-bottom: 12px; font-weight: 600; }
+        .new-chat-btn { width: 100%; padding: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.2s; }
+        .new-chat-btn:hover { opacity: 0.9; }
+        .chat-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .chat-item { padding: 12px; margin-bottom: 8px; background: white; border-radius: var(--radius-sm); cursor: pointer; border: 1.5px solid var(--border); transition: all 0.15s; }
+        .chat-item:hover { border-color: var(--primary); background: #f0f4ff; }
+        .chat-item.active { border-color: var(--primary); background: #eef2ff; }
+        .chat-item-title { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chat-item-time { font-size: 11px; color: var(--text-muted); }
+        .chat-item-delete { float: right; color: #dc2626; font-size: 16px; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+        .chat-item:hover .chat-item-delete { opacity: 1; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: white; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; }
+        .welcome-message { text-align: center; padding: 60px 20px; }
+        .welcome-message h2 { font-size: 28px; color: var(--text); margin-bottom: 16px; font-weight: 700; }
+        .welcome-message p { font-size: 15px; color: var(--text-muted); margin-bottom: 32px; }
+        .example-questions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 600px; margin: 0 auto; }
+        .example-item { padding: 16px; background: #f8fafc; border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; text-align: left; font-size: 13px; color: var(--text); }
+        .example-item:hover { border-color: var(--primary); background: #eef2ff; transform: translateY(-2px); }
+        .message { margin-bottom: 20px; display: flex; gap: 12px; }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+        .message.user .message-avatar { background: var(--accent); }
+        .message-content { flex: 1; max-width: 70%; }
+        .message.user .message-content { text-align: right; }
+        .message-bubble { padding: 12px 16px; border-radius: 16px; display: inline-block; text-align: left; font-size: 14px; line-height: 1.6; }
+        .message.user .message-bubble { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-bottom-right-radius: 4px; }
+        .message.assistant .message-bubble { background: #f1f5f9; color: var(--text); border-bottom-left-radius: 4px; }
+        .message-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .chat-input-container { padding: 20px; border-top: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-end; }
+        #chatInput { flex: 1; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 14px; resize: none; max-height: 120px; font-family: inherit; }
+        #chatInput:focus { outline: none; border-color: var(--primary); }
+        .send-btn { width: 44px; height: 44px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+        .send-btn:hover { opacity: 0.9; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .typing-indicator { display: flex; gap: 4px; padding: 12px 16px; }
+        .typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: typing 1.4s infinite; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+        .code-block { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; margin: 12px 0; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+        .data-table th, .data-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+        .data-table th { background: #f8fafc; font-weight: 600; }
+
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .detail-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .content { padding: 16px; }
+            .filters { flex-direction: column; }
+            .filters .search-input { width: 100%; }
+            .table-wrap { overflow-x: auto; }
+            table { min-width: 700px; }
+            .detail-box { padding: 20px; }
+            .detail-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .header { padding: 12px 16px; }
+            .header h1 { font-size: 18px; }
+            .header .user-info { font-size: 12px; }
+            .content { padding: 12px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .stat-card { padding: 16px; }
+            .stat-value { font-size: 24px; }
+            .stat-label { font-size: 12px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-card { padding: 16px; }
+            .chart-title { font-size: 14px; }
+            .filters { gap: 8px; }
+            .filters .search-input { padding: 10px 12px; font-size: 14px; }
+            .filters .btn { padding: 10px 14px; font-size: 13px; }
+            .detail-box { padding: 16px; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .detail-item { padding: 10px 0; }
+            .detail-item .label { font-size: 12px; }
+            .detail-item .value { font-size: 13px; }
+            .modal { width: 92%; padding: 20px; }
+            .modal h3 { font-size: 16px; }
+            .modal-close { top: 12px; right: 12px; width: 28px; height: 28px; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            body { background: #0f1a14; }
+            .header { background: linear-gradient(135deg, #001a0f 0%, #00331a 100%); }
+            .header h1 { color: #4ade80; }
+            .content { color: #e8f0eb; }
+            .stat-card { background: #1a2e24; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+            .stat-value { color: #4ade80; }
+            .stat-label { color: #a8b8ae; }
+            .chart-card { background: #1a2e24; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+            .chart-title { color: #c8d8ce; }
+            .filters .search-input { background: #1a2e24; border-color: #2a4a3a; color: #e8f0eb; }
+            .filters .search-input:focus { border-color: #4ade80; }
+            .filters .btn { background: #1a2e24; border-color: #2a4a3a; color: #c8d8ce; }
+            .filters .btn:hover { background: #0f1a14; }
+            table { color: #e8f0eb; }
+            th { background: #1a2e24; color: #4ade80; }
+            td { border-bottom-color: #2a4a3a; }
+            tr:hover { background: rgba(0, 133, 62, 0.05); }
+            .detail-box { background: #1a2e24; }
+            .detail-item .label { color: #a8b8ae; }
+            .detail-item .value { color: #e8f0eb; }
+            .modal { background: #1a2e24; }
+            .modal h3 { color: #4ade80; }
+            .modal-close { background: #0f1a14; color: #7a8a8e; }
+            .modal-close:hover { background: #2a4a3a; color: #4ade80; }
+            .img-modal { background: rgba(0,0,0,0.9); }
+        }
+
+        /* ========== 减少动画 ========== */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-page" id="loginPage">
+    <div class="login-box">
+        <h1>FancyU</h1>
+        <p>管理后台</p>
+        <div class="msg" id="loginMsg"></div>
+        <input type="text" id="adminUser" placeholder="用户名" autocomplete="off">
+        <input type="password" id="adminPass" placeholder="密码">
+        <button id="loginBtn" onclick="adminLogin()">登录</button>
+    </div>
+</div>
+
+<div class="admin-page" id="adminPage">
+    <div class="topbar">
+        <h1>FancyU 管理后台</h1>
+        <div class="right">
+            <span id="adminName"></span>
+            <button onclick="adminLogout()">退出</button>
+        </div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="stats" onclick="switchTab('stats')">数据统计</div>
+        <div class="tab" data-tab="users" onclick="switchTab('users')">用户列表</div>
+        <div class="tab" data-tab="assistant" onclick="switchTab('assistant')">AI助手</div>
+    </div>
+    <div class="content">
+        <div class="panel active" id="panelStats">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="charts-grid" id="chartsGrid"></div>
+        </div>
+        <div class="panel" id="panelUsers">
+            <div class="filters">
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索昵称/序列号/邮箱...">
+                <select id="filterSex"><option value="">全部性别</option><option value="男">男</option><option value="女">女</option></select>
+                <select id="filterCampus"><option value="">全部校区</option><option value="南校园">南校园</option><option value="东校园">东校园</option><option value="北校园">北校园</option><option value="珠海">珠海</option><option value="深圳">深圳</option></select>
+                <select id="filterGrade"><option value="">全部年级</option><option value="大一">大一</option><option value="大二">大二</option><option value="大三">大三</option><option value="大四">大四</option><option value="研一">研一</option><option value="研二">研二</option><option value="研三">研三</option><option value="博士">博士</option></select>
+                <select id="filterMatching"><option value="">匹配状态</option><option value="1">参与匹配</option><option value="0">未参与</option></select>
+                <button onclick="loadUsers(1)">筛选</button>
+                <span class="count" id="totalCount"></span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortBy('nickname')">昵称 <span class="sort-arrow" id="sort-nickname"></span></th>
+                            <th onclick="sortBy('sex')">性别 <span class="sort-arrow" id="sort-sex"></span></th>
+                            <th onclick="sortBy('campus')">校区 <span class="sort-arrow" id="sort-campus"></span></th>
+                            <th onclick="sortBy('grade')">年级 <span class="sort-arrow" id="sort-grade"></span></th>
+                            <th onclick="sortBy('height')">身高 <span class="sort-arrow" id="sort-height"></span></th>
+                            <th>MBTI</th>
+                            <th onclick="sortBy('created_at')">提交时间 <span class="sort-arrow" id="sort-created_at"></span></th>
+                            <th>匹配</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+        <div class="panel" id="panelAssistant">
+            <div class="assistant-container">
+                <div class="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        <h3>对话历史</h3>
+                        <button class="new-chat-btn" onclick="createNewChat()">+ 新对话</button>
+                    </div>
+                    <div class="chat-list" id="chatList"></div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="welcome-message">
+                            <h2>👋 你好！我是 FancyU AI 助手</h2>
+                            <p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>
+                            <div class="example-questions">
+                                <div class="example-item" onclick="askExample('查询最近注册的10个用户')">📊 查询最近注册的10个用户</div>
+                                <div class="example-item" onclick="askExample('统计各校区的用户数量')">📈 统计各校区的用户数量</div>
+                                <div class="example-item" onclick="askExample('查找所有参与匹配的女生')">🔍 查找所有参与匹配的女生</div>
+                                <div class="example-item" onclick="askExample('分析用户的MBTI分布')">🧠 分析用户的MBTI分布</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <textarea id="chatInput" placeholder="输入你的问题..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                        <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-box" id="detailBox"></div>
+</div>
+
+<div class="img-modal" id="imgModal" onclick="this.classList.remove('active')">
+    <img id="imgModalSrc" src="">
+</div>
+
+<script>
+Chart.defaults.font.family = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif';
+Chart.defaults.color = '#64748b';
+
+const API = '/api';
+let adminToken = null;
+let currentPage = 1;
+let currentSort = 'created_at';
+let currentOrder = 'DESC';
+let chartInstances = {};
+
+const chartColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+    '#f97316', '#eab308', '#84cc16', '#22c55e',
+    '#14b8a6', '#06b6d4', '#3b82f6', '#a855f7',
+    '#d946ef', '#0ea5e9', '#10b981', '#f59e0b'
+];
+
+function getAdminHeaders() {
+    return { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' };
+}
+
+async function adminLogin() {
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPass').value;
+    const btn = document.getElementById('loginBtn');
+    const msg = document.getElementById('loginMsg');
+    if (!username || !password) { msg.textContent = '请输入用户名和密码'; msg.className = 'msg error'; return; }
+    btn.disabled = true;
+    btn.textContent = '登录中...';
+    try {
+        const res = await fetch(API + '/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        const data = await res.json();
+        if (data.code === 200) {
+            adminToken = data.token;
+            localStorage.setItem('adminToken', adminToken);
+            document.getElementById('adminName').textContent = username;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('adminPage').classList.add('active');
+            loadStats();
+            loadUsers(1);
+        } else if (data.code === 429) {
+            msg.textContent = data.msg;
+            msg.className = 'msg error';
+            const waitMatch = data.msg.match(/(\d+)/);
+            if (waitMatch) {
+                let seconds = parseInt(waitMatch[1]);
+                btn.disabled = true;
+                btn.textContent = '请等待 ' + seconds + ' 秒';
+                const interval = setInterval(function() {
+                    seconds--;
+                    if (seconds <= 0) {
+                        clearInterval(interval);
+                        btn.disabled = false;
+                        btn.textContent = '登录';
+                        msg.textContent = '';
+                        msg.className = 'msg';
+                    } else {
+                        btn.textContent = '请等待 ' + seconds + ' 秒';
+                    }
+                }, 1000);
+            }
+        } else {
+            msg.textContent = data.msg || '登录失败';
+            msg.className = 'msg error';
+        }
+    } catch (e) { msg.textContent = '网络错误'; msg.className = 'msg error'; }
+    btn.disabled = false;
+    btn.textContent = '登录';
+}
+
+function adminLogout() {
+    adminToken = null;
+    localStorage.removeItem('adminToken');
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('adminPage').classList.remove('active');
+    Object.values(chartInstances).forEach(function(c) { if (c && c.destroy) c.destroy(); });
+    chartInstances = {};
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === tab); });
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel' + tab.charAt(0).toUpperCase() + tab.slice(1)); });
+    if (tab === 'stats') loadStats();
+    if (tab === 'assistant') initAssistant();
+}
+
+async function loadStats() {
+    try {
+        Object.values(chartInstances).forEach(function(c) { if (c && c.destroy) c.destroy(); });
+        chartInstances = {};
+        const res = await fetch(API + '/admin/stats', { headers: getAdminHeaders() });
+        const result = await res.json();
+        if (result.code !== 200) return;
+        const d = result.data;
+
+        document.getElementById('statsGrid').innerHTML =
+            '<div class="stat-card"><div class="label">问卷总数</div><div class="value">' + d.totalUsers + '</div></div>' +
+            '<div class="stat-card"><div class="label">注册账号</div><div class="value">' + d.totalAccounts + '</div></div>' +
+            '<div class="stat-card"><div class="label">参与匹配</div><div class="value">' + d.joinMatching + '</div><div class="sub"><strong>' + (d.totalAccounts > 0 ? Math.round(d.joinMatching / d.totalAccounts * 100) : 0) + '%</strong> 参与率</div></div>' +
+            '<div class="stat-card"><div class="label">平均身高</div><div class="value">' + (d.avgHeight || '-') + ' cm</div></div>';
+
+        var chartsHtml = '';
+        chartsHtml += '<div class="chart-card"><h3>性别分布</h3><canvas id="chartSex"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>校区分布</h3><canvas id="chartCampus"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>年级分布</h3><canvas id="chartGrade"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>MBTI 分布 TOP 20</h3><canvas id="chartMBTI"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>恋爱目的</h3><canvas id="chartGoal"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>星座分布</h3><canvas id="chartConstellation"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>专业 TOP 20</h3><canvas id="chartMajor"></canvas></div>';
+        chartsHtml += '<div class="chart-card"><h3>近30天注册/提交趋势</h3><canvas id="chartDaily"></canvas></div>';
+        document.getElementById('chartsGrid').innerHTML = chartsHtml;
+
+        renderPie('chartSex', d.sexDist, chartColors);
+        renderBar('chartCampus', d.campusDist, true, chartColors);
+        renderBar('chartGrade', d.gradeDist, false, chartColors);
+        renderBar('chartMBTI', d.mbtiDist, true, chartColors);
+        renderPie('chartGoal', d.relationshipGoalDist, chartColors);
+        renderBar('chartConstellation', d.constellationDist, true, chartColors);
+        renderBar('chartMajor', d.majorDist, true, chartColors);
+        renderLine('chartDaily', d.dailyReg, d.dailySurvey);
+    } catch (e) { console.error(e); }
+}
+
+function renderPie(id, data, colors) {
+    if (!data || data.length === 0) return;
+    var labels = data.map(function(d) { return d[Object.keys(d)[0]] || '未知'; });
+    var counts = data.map(function(d) { return d.count; });
+    chartInstances[id] = new Chart(document.getElementById(id), {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }] },
+        options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'right', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12 } } } } }
+    });
+}
+
+function renderBar(id, data, horizontal, colors) {
+    if (!data || data.length === 0) return;
+    var labels = data.map(function(d) { return d[Object.keys(d)[0]] || '未知'; });
+    var counts = data.map(function(d) { return d.count; });
+    chartInstances[id] = new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ data: counts, backgroundColor: colors.slice(0, data.length).map(function(c) { return c + 'cc'; }), borderRadius: 6, borderSkipped: false }] },
+        options: { indexAxis: horizontal ? 'y' : 'x', responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } } } }
+    });
+}
+
+function renderLine(id, regData, surveyData) {
+    var allDates = [];
+    var regMap = {};
+    var surveyMap = {};
+    regData.forEach(function(r) { regMap[r.date] = r.count; });
+    surveyData.forEach(function(r) { surveyMap[r.date] = r.count; });
+    allDates = [...new Set([...regData.map(function(d) { return d.date; }), ...surveyData.map(function(d) { return d.date; })])].sort().reverse().slice(0, 30).reverse();
+    chartInstances[id] = new Chart(document.getElementById(id), {
+        type: 'line',
+        data: {
+            labels: allDates,
+            datasets: [
+                { label: '注册', data: allDates.map(function(d) { return regMap[d] || 0; }), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 6 },
+                { label: '提交问卷', data: allDates.map(function(d) { return surveyMap[d] || 0; }), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.08)', tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 6 }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { usePointStyle: true, padding: 16, font: { size: 12 } } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } } } }
+    });
+}
+
+async function loadUsers(page) {
+    currentPage = page;
+    var search = document.getElementById('searchInput').value.trim();
+    var sex = document.getElementById('filterSex').value;
+    var campus = document.getElementById('filterCampus').value;
+    var grade = document.getElementById('filterGrade').value;
+    var joinMatching = document.getElementById('filterMatching').value;
+
+    var params = 'page=' + page + '&pageSize=20&sort=' + currentSort + '&order=' + currentOrder;
+    if (search) params += '&search=' + encodeURIComponent(search);
+    if (sex) params += '&sex=' + encodeURIComponent(sex);
+    if (campus) params += '&campus=' + encodeURIComponent(campus);
+    if (grade) params += '&grade=' + encodeURIComponent(grade);
+    if (joinMatching) params += '&join_matching=' + encodeURIComponent(joinMatching);
+
+    try {
+        var res = await fetch(API + '/admin/users?' + params, { headers: getAdminHeaders() });
+        var result = await res.json();
+        if (result.code !== 200) return;
+
+        var data = result.data;
+        var total = result.total;
+        var pageSize = result.pageSize;
+        document.getElementById('totalCount').textContent = '共 ' + total + ' 条';
+        var totalPages = Math.ceil(total / pageSize);
+
+        var tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+        data.forEach(function(u) {
+            var tagSex = u.sex === '男' ? '<span class="tag tag-male">男</span>' : u.sex === '女' ? '<span class="tag tag-female">女</span>' : '-';
+            var tagMatch = u.join_matching == 1 ? '<span class="tag tag-on">参与</span>' : '<span class="tag tag-off">未参与</span>';
+            var serial = escHtml(u.serial_number || '');
+            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">查看</button> <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除</button></td></tr>';
+        });
+
+        var pagHtml = '';
+        if (totalPages <= 1) {
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+        pagHtml += '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage - 1) + ')">上一页</button>';
+        var start = Math.max(1, currentPage - 2);
+        var end = Math.min(totalPages, currentPage + 2);
+        if (start > 1) { pagHtml += '<button onclick="loadUsers(1)">1</button>'; if (start > 2) pagHtml += '<span style="color:#cbd5e1">...</span>'; }
+        for (var p = start; p <= end; p++) { pagHtml += '<button ' + (p === currentPage ? 'class="active"' : '') + ' onclick="loadUsers(' + p + ')">' + p + '</button>'; }
+        if (end < totalPages) { if (end < totalPages - 1) pagHtml += '<span style="color:#cbd5e1">...</span>'; pagHtml += '<button onclick="loadUsers(' + totalPages + ')">' + totalPages + '</button>'; }
+        pagHtml += '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage + 1) + ')">下一页</button>';
+        pagHtml += '<span class="page-info">第 ' + currentPage + ' / ' + totalPages + ' 页</span>';
+        document.getElementById('pagination').innerHTML = pagHtml;
+    } catch (e) { console.error(e); }
+}
+
+function sortBy(field) {
+    if (currentSort === field) {
+        currentOrder = currentOrder === 'DESC' ? 'ASC' : 'DESC';
+    } else {
+        currentSort = field;
+        currentOrder = 'DESC';
+    }
+    document.querySelectorAll('.sort-arrow').forEach(function(el) { el.textContent = ''; });
+    document.getElementById('sort-' + field).textContent = currentOrder === 'DESC' ? '↓' : '↑';
+    loadUsers(1);
+}
+
+async function viewDetail(serial) {
+    try {
+        var res = await fetch(API + '/admin/user/' + serial, { headers: getAdminHeaders() });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var result = await res.json();
+        if (result.code !== 200) { alert(result.msg || '获取失败'); return; }
+        var u = result.data;
+        var rawPhotos = u.photos;
+        var photos = [];
+        if (rawPhotos && typeof rawPhotos === 'string') {
+            try { photos = JSON.parse(rawPhotos.replace(/'/g, '"')).filter(function(p) { return p; }); }
+            catch(e) { photos = []; }
+        } else if (Array.isArray(rawPhotos)) {
+            photos = rawPhotos.filter(function(p) { return p; });
+        }
+        var photoHtml = photos.map(function(p) { return '<img src="' + escHtml(p) + '" onclick="showImage(this.src)">'; }).join('');
+        var fields = [
+            ['序列号', u.serial_number], ['昵称', u.nickname], ['性别', u.sex], ['校区', u.campus],
+            ['年级', u.grade], ['专业', u.major], ['身高', u.height ? u.height + ' cm' : '-'], ['体重', u.weight ? u.weight + ' kg' : '-'],
+            ['生日', u.birthday], ['星座', u.constellation], ['MBTI', u.mbti],
+            ['恋爱目的', u.relationship_goal], ['理想对象', u.ideal_partner],
+            ['自我介绍', u.self_description], ['微信号', u.wechat], ['手机号', u.phone],
+            ['邮箱', u.email], ['参与匹配', u.join_matching == 1 ? '是' : '否'],
+            ['注册时间', u.created_at ? u.created_at.slice(0, 19) : '-']
+        ];
+        var infoHtml = '<h2>' + escHtml(u.nickname || u.serial_number) + '</h2>';
+        infoHtml += '<div class="detail-section"><h3>基本信息</h3><div class="detail-grid">';
+        fields.forEach(function(f) {
+            if (f[1] !== null && f[1] !== undefined && f[1] !== '') {
+                infoHtml += '<div class="detail-field"><label>' + f[0] + '</label><div class="val">' + escHtml(String(f[1])) + '</div></div>';
+            }
+        });
+        infoHtml += '</div></div>';
+        if (photoHtml) {
+            infoHtml += '<div class="detail-section"><h3>照片</h3><div class="detail-photos">' + photoHtml + '</div></div>';
+        }
+        document.getElementById('detailBox').innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button>' + infoHtml;
+        document.getElementById('detailOverlay').classList.add('active');
+    } catch (e) { console.error('viewDetail error:', e); alert('网络错误，请重试'); }
+}
+
+function closeDetail() {
+    document.getElementById('detailOverlay').classList.remove('active');
+}
+
+function showImage(src) {
+    document.getElementById('imgModalSrc').src = src;
+    document.getElementById('imgModal').classList.add('active');
+}
+
+async function deleteUser(serial) {
+    if (!confirm('确认删除用户 ' + serial + ' 的问卷？此操作不可恢复。')) return;
+    try {
+        var res = await fetch(API + '/admin/user/' + serial, { method: 'DELETE', headers: getAdminHeaders() });
+        var result = await res.json();
+        if (result.code === 200) {
+            alert('删除成功');
+            loadUsers(currentPage);
+            closeDetail();
+        } else {
+            alert(result.msg || '删除失败');
+        }
+    } catch (e) { alert('网络错误'); }
+}
+
+function escHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+var searchInput = document.getElementById('searchInput');
+if (searchInput) searchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') loadUsers(1); });
+
+const LLM_API = API + '/llm/chat';
+let currentChatId = null;
+let chatHistory = {};
+let chatSaveTimer = null;
+
+function initAssistant() {
+    loadChatHistory();
+}
+
+async function loadChatHistory() {
+    try {
+        const res = await fetch(API + '/admin/chat/list', { headers: getAdminHeaders() });
+        const result = await res.json();
+        if (result.code === 200) {
+            chatHistory = {};
+            result.data.forEach(function(chat) {
+                chatHistory[chat.id] = chat;
+                chatHistory[chat.id].messages = [];
+            });
+            renderChatList();
+            if (Object.keys(chatHistory).length > 0) {
+                const lastChatId = Object.keys(chatHistory).sort(function(a, b) {
+                    return new Date(chatHistory[b].updatedAt) - new Date(chatHistory[a].updatedAt);
+                })[0];
+                loadChat(lastChatId);
+            } else {
+                createNewChat();
+            }
+        }
+    } catch (e) {
+        console.error('loadChatHistory error:', e);
+        if (Object.keys(chatHistory).length === 0) {
+            createNewChat();
+        }
+    }
+}
+
+function saveChatHistory() {
+    if (chatSaveTimer) clearTimeout(chatSaveTimer);
+    chatSaveTimer = setTimeout(function() {
+        if (currentChatId && chatHistory[currentChatId]) {
+            const chat = chatHistory[currentChatId];
+            fetch(API + '/admin/chat/save', {
+                method: 'POST',
+                headers: getAdminHeaders(),
+                body: JSON.stringify({
+                    id: chat.id,
+                    title: chat.title,
+                    messages: chat.messages
+                })
+            }).catch(function(e) { console.error('save chat error:', e); });
+        }
+    }, 500);
+}
+
+function createNewChat() {
+    const chatId = 'chat_' + Date.now();
+    chatHistory[chatId] = {
+        id: chatId,
+        title: '新对话',
+        messages: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    saveChatHistory();
+    loadChat(chatId);
+    renderChatList();
+}
+
+async function loadChat(chatId) {
+    currentChatId = chatId;
+    const chat = chatHistory[chatId];
+    if (!chat) return;
+
+    if (chat.messages.length === 0 && chat.id) {
+        try {
+            const res = await fetch(API + '/admin/chat/' + chat.id, { headers: getAdminHeaders() });
+            const result = await res.json();
+            if (result.code === 200 && result.data) {
+                chat.messages = result.data.messages || [];
+                chat.title = result.data.title || chat.title;
+                chatHistory[chatId] = chat;
+            }
+        } catch (e) {
+            console.error('loadChat messages error:', e);
+        }
+    }
+
+    renderChatList();
+    renderMessages(chat.messages);
+}
+
+function deleteChat(chatId, event) {
+    event.stopPropagation();
+    if (!confirm('确定要删除这个对话吗？')) return;
+
+    fetch(API + '/admin/chat/' + chatId, { method: 'DELETE', headers: getAdminHeaders() }).catch(function(e) { console.error('delete chat error:', e); });
+
+    delete chatHistory[chatId];
+
+    if (currentChatId === chatId) {
+        if (Object.keys(chatHistory).length > 0) {
+            const lastChatId = Object.keys(chatHistory).sort(function(a, b) {
+                return new Date(chatHistory[b].updatedAt) - new Date(chatHistory[a].updatedAt);
+            })[0];
+            loadChat(lastChatId);
+        } else {
+            createNewChat();
+        }
+    } else {
+        renderChatList();
+    }
+}
+
+function renderChatList() {
+    const chatList = document.getElementById('chatList');
+    if (!chatList) return;
+    
+    const sortedChats = Object.values(chatHistory).sort(function(a, b) {
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
+    });
+    
+    chatList.innerHTML = sortedChats.map(function(chat) {
+        const isActive = chat.id === currentChatId;
+        const time = new Date(chat.updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return '<div class="chat-item ' + (isActive ? 'active' : '') + '" onclick="loadChat(\'' + chat.id + '\')">' +
+            '<span class="chat-item-delete" onclick="deleteChat(\'' + chat.id + '\', event)">×</span>' +
+            '<div class="chat-item-title">' + escHtml(chat.title) + '</div>' +
+            '<div class="chat-item-time">' + time + '</div>' +
+            '</div>';
+    }).join('');
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="welcome-message">' +
+            '<h2>👋 你好！我是 FancyU AI 助手</h2>' +
+            '<p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>' +
+            '<div class="example-questions">' +
+            '<div class="example-item" onclick="askExample(\'查询最近注册的10个用户\')">📊 查询最近注册的10个用户</div>' +
+            '<div class="example-item" onclick="askExample(\'统计各校区的用户数量\')">📈 统计各校区的用户数量</div>' +
+            '<div class="example-item" onclick="askExample(\'查找所有参与匹配的女生\')">🔍 查找所有参与匹配的女生</div>' +
+            '<div class="example-item" onclick="askExample(\'分析用户的MBTI分布\')">🧠 分析用户的MBTI分布</div>' +
+            '</div></div>';
+        return;
+    }
+    
+    container.innerHTML = messages.map(function(msg) {
+        const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        const avatar = msg.role === 'user' ? '你' : 'AI';
+        return '<div class="message ' + msg.role + '">' +
+            '<div class="message-avatar">' + avatar + '</div>' +
+            '<div class="message-content">' +
+            '<div class="message-bubble">' + formatMessage(msg.content) + '</div>' +
+            '<div class="message-time">' + time + '</div>' +
+            '</div></div>';
+    }).join('');
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+function formatMessage(content) {
+    return content
+        .replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>')
+        .replace(/`([^`]+)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+}
+
+function askExample(question) {
+    document.getElementById('chatInput').value = question;
+    sendMessage();
+}
+
+function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    input.value = '';
+    input.style.height = 'auto';
+    
+    const chat = chatHistory[currentChatId];
+    if (!chat) return;
+    
+    chat.messages.push({
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString()
+    });
+    
+    if (chat.messages.length === 1) {
+        chat.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+    }
+    
+    chat.updatedAt = new Date().toISOString();
+    saveChatHistory();
+    renderMessages(chat.messages);
+    renderChatList();
+    
+    showTypingIndicator();
+    
+    try {
+        const response = await queryDatabase(message);
+        
+        hideTypingIndicator();
+        
+        chat.messages.push({
+            role: 'assistant',
+            content: response,
+            timestamp: new Date().toISOString()
+        });
+        
+        chat.updatedAt = new Date().toISOString();
+        saveChatHistory();
+        renderMessages(chat.messages);
+    } catch (error) {
+        hideTypingIndicator();
+        
+        chat.messages.push({
+            role: 'assistant',
+            content: '抱歉，查询数据库时出现错误：' + error.message,
+            timestamp: new Date().toISOString()
+        });
+        
+        chat.updatedAt = new Date().toISOString();
+        saveChatHistory();
+        renderMessages(chat.messages);
+    }
+}
+
+async function queryDatabase(query) {
+    const systemPrompt = '你是 FancyU 数据库助手。你可以帮助管理员查询和分析用户数据。\n\n' +
+        '可用的数据库表：\n' +
+        '- users: 用户问卷数据（包含字段：serial_number, nickname, sex, campus, grade, major, height, weight, birthday, constellation, mbti, relationship_goal, ideal_partner, self_description, wechat, phone, email, join_matching, created_at）\n\n' +
+        '当用户提出查询需求时，你需要：\n' +
+        '1. 理解用户的查询意图\n' +
+        '2. 使用提供的 API 查询数据\n' +
+        '3. 以友好的方式总结和展示结果\n\n' +
+        'API 使用说明：\n' +
+        '- 查询用户列表：GET ' + API + '/admin/users?page=1&pageSize=20\n' +
+        '- 查询单个用户：GET ' + API + '/admin/user/{serial_number}\n' +
+        '- 统计数据：GET ' + API + '/admin/stats\n\n' +
+        '注意：所有 API 请求都需要在 header 中添加 Authorization: Bearer ' + adminToken;
+    
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: query }
+    ];
+    
+    const response = await fetch(LLM_API, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + adminToken
+        },
+        body: JSON.stringify({
+            messages: messages,
+            max_tokens: 2000,
+            temperature: 0.7
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error('LLM API 请求失败');
+    }
+    
+    const result = await response.json();
+    if (result.code !== 200) {
+        throw new Error(result.msg || 'LLM 服务错误');
+    }
+    
+    return result.data.choices[0].message.content;
+}
+
+function showTypingIndicator() {
+    const container = document.getElementById('chatMessages');
+    const indicator = document.createElement('div');
+    indicator.className = 'message assistant';
+    indicator.id = 'typingIndicator';
+    indicator.innerHTML = '<div class="message-avatar">AI</div>' +
+        '<div class="message-content"><div class="message-bubble">' +
+        '<div class="typing-indicator"><span></span><span></span><span></span></div>' +
+        '</div></div>';
+    container.appendChild(indicator);
+    container.scrollTop = container.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) indicator.remove();
+}
+
+(function() {
+    var saved = localStorage.getItem('adminToken');
+    if (saved) {
+        adminToken = saved;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminPage').classList.add('active');
+        document.getElementById('adminName').textContent = 'mony';
+        loadStats();
+        loadUsers(1);
+        initAssistant();
+    }
+})();
+</script>
+</body>
+</html>

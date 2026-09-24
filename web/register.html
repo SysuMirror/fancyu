@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FancyU · 注册</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --sysu-green: #005826;
+            --sysu-green-light: #007A33;
+            --sysu-green-dark: #003D1A;
+            --sysu-green-subtle: #E8F0EB;
+            --sysu-red: #A6372D;
+            --sysu-red-subtle: #F5ECEB;
+            --bg-paper: #FAFAF7;
+            --bg-paper-warm: #F7F6F1;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A2A2E;
+            --text-secondary: #4A5A5E;
+            --text-muted: #7A8A8E;
+            --shadow-soft: 0 4px 20px rgba(0, 88, 38, 0.06), 0 1px 3px rgba(0, 88, 38, 0.04);
+            --shadow-card: 0 8px 32px rgba(0, 88, 38, 0.08), 0 2px 8px rgba(0, 88, 38, 0.04);
+            --shadow-hover: 0 16px 48px rgba(0, 88, 38, 0.12), 0 4px 12px rgba(0, 88, 38, 0.06);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background-color: var(--bg-paper);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ========== 背景暗纹装饰 ========== */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.02;
+        }
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path fill="%23005826" d="M100,10 Q120,50 160,60 Q130,80 140,120 Q110,100 100,140 Q90,100 60,120 Q70,80 40,60 Q80,50 100,10 Z"/><path fill="%23005826" d="M60,80 Q70,100 90,105 Q75,115 78,135 Q65,120 50,125 Q58,110 45,100 Q62,95 60,80 Z" opacity="0.7"/><path fill="%23005826" d="M140,85 Q150,105 170,110 Q155,120 158,140 Q145,125 130,130 Q138,115 125,105 Q142,100 140,85 Z" opacity="0.7"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            transform: rotate(15deg);
+        }
+        .bg-pattern::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: -50px;
+            width: 500px;
+            height: 400px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250"><path fill="%23005826" d="M20,230 L20,100 L40,100 L40,70 L60,70 L60,50 L80,50 L80,30 L100,30 L100,50 L120,50 L120,70 L140,70 L140,50 L160,50 L160,30 L180,30 L180,50 L200,50 L200,70 L220,70 L220,50 L240,50 L240,30 L260,30 L260,50 L280,50 L280,230 Z" opacity="0.5"/><rect x="30" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="90" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="150" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="210" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="50" y="80" width="200" height="20" fill="%23005826" opacity="0.4"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.5;
+        }
+
+        /* ========== 主容器 ========== */
+        .container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            border-top: 3px solid var(--sysu-green);
+        }
+
+        /* ========== 品牌区域 ========== */
+        .logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .brand-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        .brand-decoration {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+        .brand-decoration svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--sysu-green);
+            stroke-width: 1.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .logo h1 {
+            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+            color: var(--sysu-green);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            white-space: nowrap;
+        }
+        .logo h1 .sep {
+            font-family: system-ui;
+            font-weight: 300;
+            color: var(--sysu-green-light);
+            margin: 0 2px;
+            opacity: 0.5;
+        }
+        .logo p {
+            font-family: 'Noto Serif SC', serif;
+            color: var(--text-secondary);
+            font-size: 15px;
+            letter-spacing: 4px;
+            margin-top: 4px;
+        }
+
+        /* ========== 步骤指示器 ========== */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 28px;
+            gap: 8px;
+        }
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(0, 88, 38, 0.12);
+            transition: all 0.3s ease;
+        }
+        .step-dot.active {
+            background: var(--sysu-green);
+            box-shadow: 0 0 0 4px rgba(0, 88, 38, 0.1);
+        }
+
+        /* ========== 表单 ========== */
+        .form-group {
+            margin-bottom: 22px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input, .email-row input, .email-row select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid rgba(0, 88, 38, 0.15);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--bg-paper);
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus, .email-row input:focus {
+            outline: none;
+            border-color: var(--sysu-green);
+            box-shadow: 0 0 0 3px rgba(0, 88, 38, 0.08);
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+        .form-group .hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .form-group .hint.error {
+            color: var(--sysu-red);
+        }
+        .form-group .hint.success {
+            color: var(--sysu-green);
+        }
+
+        /* 防止浏览器自动填充样式覆盖 */
+        .form-group input:-webkit-autofill,
+        .email-row input:-webkit-autofill {
+            -webkit-text-fill-color: var(--text-primary) !important;
+            -webkit-box-shadow: 0 0 0px 1000px var(--bg-paper) inset !important;
+        }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--sysu-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            letter-spacing: 1px;
+        }
+        .btn:hover {
+            background: var(--sysu-green-light);
+            box-shadow: 0 4px 16px rgba(0, 88, 38, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            background: #c0c0c0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ========== 链接区域 ========== */
+        .links {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .links a {
+            color: var(--sysu-green);
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .links a:hover {
+            color: var(--sysu-green-light);
+            text-decoration: underline;
+        }
+
+        /* ========== 消息提示 ========== */
+        .msg {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .msg.error {
+            background: var(--sysu-red-subtle);
+            color: var(--sysu-red);
+            display: block;
+            border: 1px solid rgba(166, 55, 45, 0.15);
+        }
+        .msg.success {
+            background: var(--sysu-green-subtle);
+            color: var(--sysu-green);
+            display: block;
+            border: 1px solid rgba(0, 88, 38, 0.15);
+        }
+
+        /* ========== 步骤 ========== */
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .container { padding: 40px 32px; max-width: 440px; }
+            .logo h1 { font-size: 26px; }
+        }
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .container { padding: 32px 24px; border-radius: 14px; }
+            .logo { margin-bottom: 28px; }
+            .brand-wrapper { gap: 10px; }
+            .brand-decoration svg { width: 18px; height: 18px; }
+            .logo h1 { font-size: 24px; letter-spacing: 2px; }
+            .logo p { font-size: 13px; }
+            .step-indicator { margin-bottom: 24px; }
+            .form-group { margin-bottom: 18px; }
+            .form-group label { font-size: 13px; margin-bottom: 6px; }
+            .form-group input, .email-row input, .email-row select { padding: 12px 14px; font-size: 16px; min-height: 48px; }
+            .btn { padding: 14px; font-size: 16px; min-height: 52px; }
+            .email-row { flex-direction: column !important; gap: 6px !important; }
+            .email-row input, .email-row select { width: 100%; min-width: auto; max-width: none; flex: auto; }
+            .links { margin-top: 20px; font-size: 13px; }
+            .hint { font-size: 11px; }
+        }
+        @media (max-width: 360px) {
+            .container { padding: 28px 18px; }
+            .logo h1 { font-size: 22px; letter-spacing: 1px; }
+            .brand-decoration { display: none; }
+            .form-group input { padding: 10px 12px; }
+            .btn { padding: 12px; font-size: 15px; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-paper: #0a1210;
+                --bg-paper-warm: #0f1a14;
+                --bg-card: #142018;
+                --text-primary: #e8f0eb;
+                --text-secondary: #a8b8ae;
+                --text-muted: #6a7a70;
+                --sysu-green-subtle: rgba(0, 88, 38, 0.15);
+                --sysu-red-subtle: rgba(166, 55, 45, 0.15);
+                --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+                --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+                --shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.4);
+            }
+            .form-group input, .email-row input, .email-row select {
+                background: var(--bg-paper-warm);
+                border-color: rgba(0, 88, 38, 0.25);
+                color: var(--text-primary);
+            }
+            .form-group input:focus, .email-row input:focus {
+                border-color: #4ade80;
+                box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+            }
+            .form-group input::placeholder {
+                color: var(--text-muted);
+            }
+            .form-group input:-webkit-autofill,
+            .email-row input:-webkit-autofill {
+                -webkit-text-fill-color: var(--text-primary) !important;
+                -webkit-box-shadow: 0 0 0px 1000px var(--bg-paper-warm) inset !important;
+            }
+            .step-dot { background: rgba(0, 88, 38, 0.3); }
+            .step-dot.active { background: #4ade80; box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15); }
+            .btn { background: var(--sysu-green-light); }
+            .btn:hover { background: #00a844; }
+            .links a { color: #4ade80; }
+            .links a:hover { color: #6aeea0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <div class="container">
+        <div class="logo">
+            <div class="brand-wrapper">
+                <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+                <h1>FancyU<span class="sep">｜</span>中意你</h1>
+                <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+            </div>
+            <p>注册新账号</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot1"></div>
+            <div class="step-dot" id="dot2"></div>
+            <div class="step-dot" id="dot3"></div>
+        </div>
+
+        <div id="msg" class="msg"></div>
+
+        <!-- 步骤1：验证邮箱 -->
+        <div class="step active" id="step1">
+            <form id="emailForm">
+                <div class="form-group">
+                    <label for="emailInput">学校邮箱</label>
+                    <input type="email" id="emailInput" placeholder="请输入完整邮箱地址，如 xxx@sysu.edu.cn" required>
+                    <div id="schoolHint" class="hint">请输入学校官方邮箱</div>
+                </div>
+                <button type="submit" class="btn" id="sendCodeBtn">发送验证码</button>
+            </form>
+        </div>
+
+        <!-- 步骤2：输入验证码 -->
+        <div class="step" id="step2">
+            <form id="codeForm">
+                <div class="form-group">
+                    <label for="code">验证码</label>
+                    <input type="text" id="code" placeholder="输入6位验证码" maxlength="6" required>
+                </div>
+                <button type="submit" class="btn">验证</button>
+            </form>
+        </div>
+
+        <!-- 步骤3：设置密码 -->
+        <div class="step" id="step3">
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label for="username">用户名（可选）</label>
+                    <input type="text" id="username" placeholder="自定义用户名，默认为邮箱前缀">
+                    <div class="hint" id="usernameHint">2-20个字符，留空则使用邮箱前缀</div>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" placeholder="至少6位" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">确认密码</label>
+                    <input type="password" id="confirmPassword" placeholder="再次输入密码" required>
+                </div>
+                <button type="submit" class="btn">完成注册</button>
+            </form>
+        </div>
+
+        <div class="links">
+            <a href="login.html">已有账号？登录</a>
+            <span style="color:var(--text-muted)">|</span>
+            <a href="bind.html">绑定序列号</a>
+        </div>
+
+        <div class="links" style="margin-top:12px">
+            <a href="index.html">返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let email = '';
+        let code = '';
+        let usernameAvailable = true;
+        let checkUsernameTimer = null;
+
+        const SCHOOL_MAP = {
+            'mail2.sysu.edu.cn': { key: 'sysu', name: '中山大学' },
+            'sysu.edu.cn': { key: 'sysu', name: '中山大学' },
+            'mail2.scut.edu.cn': { key: 'scut', name: '华南理工大学' },
+	    'mail.scut.edu.cn': { key: 'scut', name: '华南理工大学' },
+            'scut.edu.cn': { key: 'scut', name: '华南理工大学' },
+            'jnu.edu.cn': { key: 'jnu', name: '暨南大学' },
+            'm.scnu.edu.cn': { key: 'scnu', name: '华南师范大学' },
+            'stu.scau.edu.cn': { key: 'scau', name: '华南农业大学' },
+            'gzhmu.edu.cn': { key: 'gzhmu', name: '广州医科大学' },
+            'gzucm.edu.cn': { key: 'gzucm', name: '广州中医药大学' },
+            'mail2.gdut.edu.cn': { key: 'gdut', name: '广东工业大学' },
+            'gdut.edu.cn': { key: 'gdut', name: '广东工业大学' },
+            'oamail.gdufs.edu.cn': { key: 'gdufs', name: '广东外语外贸大学' },
+            'e.gzhu.edu.cn': { key: 'gzhu', name: '广州大学' },
+            'stu.gdpu.edu.cn': { key: 'gdpu', name: '广东药科大学' },
+            'xhcom.edu.cn': { key: 'xhcom', name: '星海音乐学院' },
+            'mail2.gzarts.edu.cn': { key: 'gzarts', name: '广州美术学院' },
+            'gzarts.edu.cn': { key: 'gzarts', name: '广州美术学院' }
+        };
+
+        // 邮箱自动匹配学校
+        const emailInput = document.getElementById('emailInput');
+        const schoolHint = document.getElementById('schoolHint');
+
+        emailInput.addEventListener('input', (e) => {
+            const email = e.target.value.trim();
+            if (!email) {
+                schoolHint.textContent = '请输入学校官方邮箱';
+                schoolHint.className = 'hint';
+                return;
+            }
+
+            // 检查是否包含 @ 符号
+            if (!email.includes('@')) {
+                schoolHint.textContent = '请输入完整的邮箱地址（包含@符号）';
+                schoolHint.className = 'hint';
+                return;
+            }
+
+            // 提取域名部分（不带@）
+            const atIndex = email.indexOf('@');
+            const domain = email.substring(atIndex + 1);
+
+            // 匹配学校
+            const school = SCHOOL_MAP[domain];
+            if (school) {
+                schoolHint.textContent = `✓ 已识别学校：${school.name}`;
+                schoolHint.className = 'hint success';
+            } else {
+                schoolHint.textContent = '⚠ 不支持的邮箱后缀，请使用学校官方邮箱';
+                schoolHint.className = 'hint error';
+            }
+        });
+
+        document.getElementById('username').addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            const hint = document.getElementById('usernameHint');
+            clearTimeout(checkUsernameTimer);
+
+            if (!val) {
+                hint.textContent = '2-20个字符，留空则使用邮箱前缀';
+                hint.className = 'hint';
+                usernameAvailable = true;
+                return;
+            }
+            if (val.length < 2) {
+                hint.textContent = '用户名至少2个字符';
+                hint.className = 'hint error';
+                usernameAvailable = false;
+                return;
+            }
+            if (val.length > 20) {
+                hint.textContent = '用户名不能超过20个字符';
+                hint.className = 'hint error';
+                usernameAvailable = false;
+                return;
+            }
+
+            hint.textContent = '检查中...';
+            hint.className = 'hint';
+            usernameAvailable = false;
+
+            checkUsernameTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/account/check-username?username=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        usernameAvailable = data.available;
+                        hint.textContent = data.msg;
+                        hint.className = 'hint ' + (data.available ? 'success' : 'error');
+                    }
+                } catch (err) {
+                    hint.textContent = '检查失败，请稍后重试';
+                    hint.className = 'hint error';
+                }
+            }, 500);
+        });
+
+        function showMsg(text, type) {
+            const msg = document.getElementById('msg');
+            msg.textContent = text;
+            msg.className = 'msg ' + type;
+        }
+
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById('dot' + i).classList.toggle('active', i <= step);
+            }
+        }
+
+        // 步骤1：发送验证码
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            email = emailInput.value.trim();
+
+            if (!email) {
+                showMsg('请输入邮箱地址', 'error');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                showMsg('请输入完整的邮箱地址', 'error');
+                return;
+            }
+
+            // 检查是否匹配支持的学校邮箱
+            const atIndex = email.indexOf('@');
+            const domain = email.substring(atIndex + 1);
+            if (!SCHOOL_MAP[domain]) {
+                showMsg('不支持的邮箱后缀，请使用学校官方邮箱', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('sendCodeBtn');
+            btn.disabled = true;
+            btn.textContent = '发送中...';
+
+            try {
+                const res = await fetch(API_BASE + '/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendCode', email, source: 'register' })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    showMsg('验证码已发送，请查收邮件', 'success');
+                    goToStep(2);
+
+                    let countdown = 60;
+                    btn.textContent = countdown + 's';
+                    const timer = setInterval(() => {
+                        countdown--;
+                        btn.textContent = countdown + 's';
+                        if (countdown <= 0) {
+                            clearInterval(timer);
+                            btn.disabled = false;
+                            btn.textContent = '重新发送';
+                        }
+                    }, 1000);
+                } else {
+                    showMsg(data.msg || '发送失败，请稍后重试', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '发送验证码';
+                }
+            } catch (err) {
+                showMsg('网络错误，请稍后重试', 'error');
+                btn.disabled = false;
+                btn.textContent = '发送验证码';
+            }
+        });
+
+        // 步骤2：验证验证码
+        document.getElementById('codeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            code = document.getElementById('code').value.trim();
+
+            if (code.length !== 6) {
+                showMsg('请输入6位验证码', 'error');
+                return;
+            }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+
+            try {
+                const res = await fetch(API_BASE + '/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'checkCode', email, code })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    showMsg('验证通过，请设置密码', 'success');
+                    goToStep(3);
+                } else {
+                    showMsg(data.msg, 'error');
+                    btn.disabled = false;
+                    btn.textContent = '验证';
+                }
+            } catch (err) {
+                showMsg('网络错误，请稍后重试', 'error');
+                btn.disabled = false;
+                btn.textContent = '验证';
+            }
+        });
+
+        // 步骤3：注册
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showMsg('两次密码不一致', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMsg('密码长度至少为6位', 'error');
+                return;
+            }
+
+            if (!usernameAvailable) {
+                showMsg('用户名不可用，请修改', 'error');
+                return;
+            }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+
+            try {
+                const res = await fetch(API_BASE + '/account/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, password, username, nickname: username })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                    showMsg('注册成功，正在跳转...', 'success');
+                    setTimeout(() => {
+                        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        window.location.href = safeRedirect;
+                    }, 1000);
+                } else {
+                    showMsg(data.msg, 'error');
+                    btn.disabled = false;
+                    btn.textContent = '完成注册';
+                }
+            } catch (err) {
+                showMsg('网络错误，请稍后重试', 'error');
+                btn.disabled = false;
+                btn.textContent = '完成注册';
+            }
+        });
+    </script>
+</body>
+</html>

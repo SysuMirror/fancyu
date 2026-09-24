@@ -1,0 +1,22 @@
+#!/bin/bash
+# Template only: supply deployment variables and copy to run.sh when setting up a new environment.
+# SYSUDate 启动脚本 (supervisord 托管, pod 重建自愈)
+set -e
+APP=/home/cloud/sysudate
+
+# node_modules 属主自愈(曾被 root 污染会导致 cloud 无法读取)
+if find "$APP/api/node_modules" -maxdepth 3 ! -user cloud 2>/dev/null | grep -q .; then
+    sudo -n chown -R cloud:cloud "$APP" 2>/dev/null || true
+fi
+
+export PORT=8080
+export WEB_DIR="$APP/web"
+export MYSQL_HOST="${MYSQL_HOST:?Set MYSQL_HOST before starting}"
+export MYSQL_PORT="${MYSQL_PORT:?Set MYSQL_PORT before starting}"
+export MYSQL_USER="${MYSQL_USER:?Set MYSQL_USER before starting}"
+export MYSQL_PASSWORD="${MYSQL_PASSWORD:?Set MYSQL_PASSWORD before starting}"
+export MYSQL_DATABASE="${MYSQL_DATABASE:?Set MYSQL_DATABASE before starting}"
+export JWT_SECRET="${JWT_SECRET:?Set JWT_SECRET before starting}"
+
+cd "$APP/api"
+exec /usr/bin/node index.js

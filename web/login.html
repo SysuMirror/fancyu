@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FancyU | 中意你 · 登录</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --sysu-green: #005826;
+            --sysu-green-light: #007A33;
+            --sysu-green-dark: #003D1A;
+            --sysu-green-subtle: #E8F0EB;
+            --sysu-red: #A6372D;
+            --sysu-red-subtle: #F5ECEB;
+            --bg-paper: #FAFAF7;
+            --bg-paper-warm: #F7F6F1;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A2A2E;
+            --text-secondary: #4A5A5E;
+            --text-muted: #7A8A8E;
+            --shadow-soft: 0 4px 20px rgba(0, 88, 38, 0.06), 0 1px 3px rgba(0, 88, 38, 0.04);
+            --shadow-card: 0 8px 32px rgba(0, 88, 38, 0.08), 0 2px 8px rgba(0, 88, 38, 0.04);
+            --shadow-hover: 0 16px 48px rgba(0, 88, 38, 0.12), 0 4px 12px rgba(0, 88, 38, 0.06);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background-color: var(--bg-paper);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ========== 背景暗纹装饰 ========== */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.02;
+        }
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path fill="%23005826" d="M100,10 Q120,50 160,60 Q130,80 140,120 Q110,100 100,140 Q90,100 60,120 Q70,80 40,60 Q80,50 100,10 Z"/><path fill="%23005826" d="M60,80 Q70,100 90,105 Q75,115 78,135 Q65,120 50,125 Q58,110 45,100 Q62,95 60,80 Z" opacity="0.7"/><path fill="%23005826" d="M140,85 Q150,105 170,110 Q155,120 158,140 Q145,125 130,130 Q138,115 125,105 Q142,100 140,85 Z" opacity="0.7"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            transform: rotate(15deg);
+        }
+        .bg-pattern::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: -50px;
+            width: 500px;
+            height: 400px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250"><path fill="%23005826" d="M20,230 L20,100 L40,100 L40,70 L60,70 L60,50 L80,50 L80,30 L100,30 L100,50 L120,50 L120,70 L140,70 L140,50 L160,50 L160,30 L180,30 L180,50 L200,50 L200,70 L220,70 L220,50 L240,50 L240,30 L260,30 L260,50 L280,50 L280,230 Z" opacity="0.5"/><rect x="30" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="90" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="150" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="210" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="50" y="80" width="200" height="20" fill="%23005826" opacity="0.4"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.5;
+        }
+
+        /* ========== 主容器 ========== */
+        .container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            border-top: 3px solid var(--sysu-green);
+        }
+
+        /* ========== 品牌区域 ========== */
+        .logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .brand-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        .brand-decoration {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+        .brand-decoration svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--sysu-green);
+            stroke-width: 1.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .logo h1 {
+            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+            color: var(--sysu-green);
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            white-space: nowrap;
+        }
+        .logo h1 .sep {
+            font-family: system-ui;
+            font-weight: 300;
+            color: var(--sysu-green-light);
+            margin: 0 2px;
+            opacity: 0.5;
+        }
+        .logo p {
+            font-family: 'Noto Serif SC', serif;
+            color: var(--text-secondary);
+            font-size: 15px;
+            letter-spacing: 4px;
+            margin-top: 4px;
+        }
+
+        /* ========== 表单 ========== */
+        .form-group {
+            margin-bottom: 22px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid rgba(0, 88, 38, 0.15);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--bg-paper);
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--sysu-green);
+            box-shadow: 0 0 0 3px rgba(0, 88, 38, 0.08);
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ========== 邮箱组合 ========== */
+        .email-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .email-group input {
+            flex: 2;
+            min-width: 0;
+        }
+        .email-group .at-sign {
+            flex-shrink: 0;
+        }
+        .email-group select {
+            flex: 1;
+            min-width: 0;
+            max-width: 160px;
+            padding: 12px 6px;
+            font-size: 13px;
+        }
+        .email-group .at-sign {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--sysu-green);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            letter-spacing: 1px;
+        }
+        .btn:hover {
+            background: var(--sysu-green-light);
+            box-shadow: 0 4px 16px rgba(0, 88, 38, 0.2);
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            background: #c0c0c0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ========== 链接区域 ========== */
+        .links {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .links a, .links button {
+            color: var(--sysu-green);
+            text-decoration: none;
+            margin: 0 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .links a:hover, .links button:hover {
+            color: var(--sysu-green-light);
+            text-decoration: underline;
+        }
+
+        /* ========== 消息提示 ========== */
+        .msg {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .msg.error {
+            background: var(--sysu-red-subtle);
+            color: var(--sysu-red);
+            display: block;
+            border: 1px solid rgba(166, 55, 45, 0.15);
+        }
+        .msg.success {
+            background: var(--sysu-green-subtle);
+            color: var(--sysu-green);
+            display: block;
+            border: 1px solid rgba(0, 88, 38, 0.15);
+        }
+
+        /* ========== 分割线 ========== */
+        .divider {
+            border-top: 1px solid rgba(0, 88, 38, 0.08);
+            margin: 28px 0;
+        }
+
+        /* ========== 学校标签 ========== */
+        .school-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        .school-tag.sysu { background: #e8f5e9; color: #2e7d32; }
+        .school-tag.scut { background: #fff3e0; color: #e65100; }
+        .school-tag.jnu { background: #e3f2fd; color: #1565c0; }
+        .school-tag.scnu { background: #fce4ec; color: #c62828; }
+        .school-tag.scau { background: #f3e5f5; color: #7b1fa2; }
+        .school-tag.gzhmu { background: #e0f2f1; color: #00695c; }
+        .school-tag.gzucm { background: #fff8e1; color: #f57f17; }
+        .school-tag.gdut { background: #e8eaf6; color: #283593; }
+        .school-tag.gdufs { background: #fce4ec; color: #ad1457; }
+        .school-tag.gzhu { background: #e0f7fa; color: #00838f; }
+        .school-tag.gdpu { background: #f1f8e9; color: #558b2f; }
+        .school-tag.xhcom { background: #ede7f6; color: #4527a0; }
+        .school-tag.gzarts { background: #fbe9e7; color: #bf360c; }
+
+        /* ========== 弹窗 ========== */
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        .modal-mask.show {
+            display: flex;
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--shadow-hover);
+            animation: modalIn 0.3s ease;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-top: 3px solid var(--sysu-green);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(24px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--sysu-green-subtle);
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .modal-close-btn:hover {
+            background: rgba(0, 88, 38, 0.12);
+            color: var(--sysu-green);
+        }
+        .modal-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 22px;
+            color: var(--sysu-green);
+            margin-bottom: 28px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        /* ========== 验证码输入组 ========== */
+        .code-input-group {
+            display: flex;
+            gap: 12px;
+        }
+        .send-code-btn {
+            padding: 0 18px;
+            background: var(--sysu-green);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            color: white;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .send-code-btn:hover:not(:disabled) {
+            background: var(--sysu-green-light);
+            box-shadow: 0 2px 8px rgba(0, 88, 38, 0.15);
+        }
+        .send-code-btn:disabled {
+            background: #c0c0c0;
+            cursor: not-allowed;
+        }
+
+        /* ========== 旧版入口 ========== */
+        .legacy-note {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 16px;
+        }
+        .legacy-note a {
+            color: var(--text-muted);
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+        .legacy-note a:hover {
+            color: var(--sysu-green);
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .container { padding: 40px 32px; max-width: 440px; }
+            .logo h1 { font-size: 26px; }
+            .modal-content { padding: 32px 28px; max-width: 420px; }
+        }
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .container { padding: 32px 24px; border-radius: 14px; }
+            .logo { margin-bottom: 28px; }
+            .brand-wrapper { gap: 10px; }
+            .brand-decoration svg { width: 18px; height: 18px; }
+            .logo h1 { font-size: 24px; letter-spacing: 2px; }
+            .logo p { font-size: 13px; }
+            .form-group { margin-bottom: 18px; }
+            .form-group label { font-size: 13px; margin-bottom: 6px; }
+            .form-group input, .form-group select { padding: 12px 14px; font-size: 16px; min-height: 48px; }
+            .btn { padding: 14px; font-size: 16px; min-height: 52px; }
+            .email-group { flex-direction: column; gap: 6px; }
+            .email-group .at-sign { display: none; }
+            .email-group input, .email-group select { width: 100%; min-width: auto; }
+            .links { margin-top: 20px; font-size: 13px; }
+            .divider { margin: 20px 0; }
+            .modal-content { padding: 28px 20px; margin: 0 12px; max-height: 92vh; }
+            .modal-title { font-size: 20px; margin-bottom: 20px; }
+            .modal-close-btn { top: 12px; right: 12px; width: 28px; height: 28px; font-size: 18px; }
+            .code-input-group { flex-direction: column; gap: 8px; }
+            .send-code-btn { padding: 12px 14px; width: 100%; font-size: 14px; }
+            .school-tag { font-size: 11px; padding: 2px 6px; }
+        }
+        @media (max-width: 360px) {
+            .container { padding: 28px 18px; }
+            .logo h1 { font-size: 22px; letter-spacing: 1px; }
+            .brand-decoration { display: none; }
+            .form-group input, .form-group select { padding: 10px 12px; }
+            .btn { padding: 12px; font-size: 15px; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-paper: #0a1210;
+                --bg-paper-warm: #0f1a14;
+                --bg-card: #142018;
+                --text-primary: #e8f0eb;
+                --text-secondary: #a8b8ae;
+                --text-muted: #6a7a70;
+                --sysu-green-subtle: rgba(0, 88, 38, 0.15);
+                --sysu-red-subtle: rgba(166, 55, 45, 0.15);
+                --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+                --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+                --shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.4);
+            }
+            .form-group input, .form-group select {
+                background: var(--bg-paper-warm);
+                border-color: rgba(0, 88, 38, 0.25);
+                color: var(--text-primary);
+            }
+            .form-group input:focus, .form-group select:focus {
+                border-color: #4ade80;
+                box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+            }
+            .form-group input::placeholder {
+                color: var(--text-muted);
+            }
+            .btn {
+                background: var(--sysu-green-light);
+            }
+            .btn:hover {
+                background: #00a844;
+            }
+            .modal-close-btn {
+                background: rgba(0, 88, 38, 0.2);
+                color: var(--text-muted);
+            }
+            .modal-close-btn:hover {
+                background: rgba(0, 88, 38, 0.3);
+                color: #4ade80;
+            }
+            .send-code-btn {
+                background: var(--sysu-green-light);
+            }
+            .send-code-btn:hover:not(:disabled) {
+                background: #00a844;
+            }
+            .links a, .links button {
+                color: #4ade80;
+            }
+            .links a:hover, .links button:hover {
+                color: #6aeea0;
+            }
+            .legacy-note { color: var(--text-muted); }
+            .legacy-note a { color: var(--text-muted); }
+            .legacy-note a:hover { color: #4ade80; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <div class="container">
+        <div class="logo">
+            <div class="brand-wrapper">
+                <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+                <h1>FancyU<span class="sep">｜</span>中意你</h1>
+                <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+            </div>
+            <p>校园恋爱交友平台</p>
+        </div>
+
+        <div id="msg" class="msg"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="login">邮箱 / 用户名</label>
+                <input type="text" id="login" placeholder="输入邮箱或用户名" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="输入密码" required>
+            </div>
+            <button type="submit" class="btn" id="submitBtn">登录</button>
+        </form>
+
+        <div class="links">
+            <button type="button" onclick="openRegisterModal()">注册新账号</button>
+            <span style="color:var(--text-muted)">|</span>
+            <button type="button" onclick="openForgotModal()">忘记密码</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="links">
+            <a href="index.html">返回首页</a>
+        </div>
+
+        <div class="legacy-note">
+            <a href="bind.html">绑定序列号</a> · <a href="modify.html">用序列号修改资料</a>
+            <br><span style="font-size:11px">（兼容旧数据）</span>
+        </div>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <div class="modal-mask" id="registerModal">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeAllModals()">&#215;</button>
+            <div class="modal-title">注册账号</div>
+            <div id="registerMsg" class="msg"></div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="regNickname" placeholder="给自己起个昵称" required>
+                </div>
+                <div class="form-group">
+                    <label>学校邮箱 <span id="schoolTag"></span></label>
+                    <input type="email" id="regEmail" placeholder="请输入完整邮箱地址，如 xxx@sysu.edu.cn" required>
+                    <div id="regSchoolHint" class="hint">请输入学校官方邮箱</div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" placeholder="设置密码（至少6位）" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="regPasswordConfirm" placeholder="再次输入密码" required>
+                </div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="code-input-group">
+                        <input type="text" id="regCode" placeholder="6位验证码" maxlength="6" style="flex:1;">
+                        <button type="button" class="send-code-btn" id="regSendCodeBtn" onclick="sendRegisterCode()">发送验证码</button>
+                    </div>
+                </div>
+                <div class="form-group" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px;">
+                    <input type="checkbox" id="agreeTerms" style="margin-top:4px;accent-color:var(--sysu-green);cursor:pointer;">
+                    <label for="agreeTerms" style="font-size:13px;color:var(--text-secondary);cursor:pointer;line-height:1.5;">
+                        我已阅读并同意 <a href="terms.html" target="_blank" style="color:var(--sysu-green);text-decoration:underline;">《用户服务协议与隐私政策》</a>
+                    </label>
+                </div>
+                <button type="submit" class="btn" id="registerBtn">注册</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 忘记密码弹窗 -->
+    <div class="modal-mask" id="forgotModal">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeAllModals()">&#215;</button>
+            <div class="modal-title">重置密码</div>
+            <div id="forgotMsg" class="msg"></div>
+            <form id="forgotForm">
+                <div class="form-group">
+                    <label>注册邮箱</label>
+                    <input type="email" id="forgotEmail" placeholder="请输入完整邮箱地址" required>
+                    <div id="forgotSchoolHint" class="hint">请输入学校官方邮箱</div>
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="forgotPassword" placeholder="新密码（至少6位）" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>确认新密码</label>
+                    <input type="password" id="forgotPasswordConfirm" placeholder="再次输入新密码" required>
+                </div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="code-input-group">
+                        <input type="text" id="forgotCode" placeholder="6位验证码" maxlength="6" style="flex:1;">
+                        <button type="button" class="send-code-btn" id="forgotSendCodeBtn" onclick="sendForgotCode()">发送验证码</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="forgotBtn">重置密码</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        const SCHOOL_MAP = {
+            'mail2.sysu.edu.cn': { name: '中山大学', key: 'sysu', class: 'sysu' },
+            'sysu.edu.cn': { name: '中山大学', key: 'sysu', class: 'sysu' },
+            'mail2.scut.edu.cn': { name: '华南理工大学', key: 'scut', class: 'scut' },
+	    'mail.scut.edu.cn': { name: '华南理工大学', key: 'scut', class: 'scut' },
+            'scut.edu.cn': { name: '华南理工大学', key: 'scut', class: 'scut' },
+            'jnu.edu.cn': { name: '暨南大学', key: 'jnu', class: 'jnu' },
+            'm.scnu.edu.cn': { name: '华南师范大学', key: 'scnu', class: 'scnu' },
+            'stu.scau.edu.cn': { name: '华南农业大学', key: 'scau', class: 'scau' },
+            'gzhmu.edu.cn': { name: '广州医科大学', key: 'gzhmu', class: 'gzhmu' },
+            'gzucm.edu.cn': { name: '广州中医药大学', key: 'gzucm', class: 'gzucm' },
+            'mail2.gdut.edu.cn': { name: '广东工业大学', key: 'gdut', class: 'gdut' },
+            'gdut.edu.cn': { name: '广东工业大学', key: 'gdut', class: 'gdut' },
+            'oamail.gdufs.edu.cn': { name: '广东外语外贸大学', key: 'gdufs', class: 'gdufs' },
+            'e.gzhu.edu.cn': { name: '广州大学', key: 'gzhu', class: 'gzhu' },
+            'stu.gdpu.edu.cn': { name: '广东药科大学', key: 'gdpu', class: 'gdpu' },
+            'xhcom.edu.cn': { name: '星海音乐学院', key: 'xhcom', class: 'xhcom' },
+            'mail2.gzarts.edu.cn': { name: '广州美术学院', key: 'gzarts', class: 'gzarts' },
+            'gzarts.edu.cn': { name: '广州美术学院', key: 'gzarts', class: 'gzarts' }
+        };
+
+        // 邮箱自动匹配学校
+        function setupEmailInput(inputId, hintId) {
+            const input = document.getElementById(inputId);
+            const hint = document.getElementById(hintId);
+
+            input.addEventListener('input', (e) => {
+                const email = e.target.value.trim();
+                if (!email) {
+                    hint.textContent = '请输入学校官方邮箱';
+                    hint.className = 'hint';
+                    return;
+                }
+
+                if (!email.includes('@')) {
+                    hint.textContent = '请输入完整的邮箱地址（包含@符号）';
+                    hint.className = 'hint';
+                    return;
+                }
+
+                const atIndex = email.indexOf('@');
+                const domain = email.substring(atIndex + 1);
+                const school = SCHOOL_MAP[domain];
+
+                if (school) {
+                    hint.textContent = `✓ 已识别学校：${school.name}`;
+                    hint.className = 'hint success';
+                } else {
+                    hint.textContent = '⚠ 不支持的邮箱后缀，请使用学校官方邮箱';
+                    hint.className = 'hint error';
+                }
+            });
+        }
+
+        // 初始化邮箱输入监听
+        setupEmailInput('regEmail', 'regSchoolHint');
+        setupEmailInput('forgotEmail', 'forgotSchoolHint');
+
+        function showMsg(text, type, targetId = 'msg') {
+            const msg = document.getElementById(targetId);
+            msg.textContent = text;
+            msg.className = 'msg ' + type;
+        }
+
+        function closeAllModals() {
+            document.getElementById('registerModal').classList.remove('show');
+            document.getElementById('forgotModal').classList.remove('show');
+        }
+
+        function openRegisterModal() {
+            document.getElementById('registerModal').classList.add('show');
+            document.getElementById('registerMsg').className = 'msg';
+            document.getElementById('registerMsg').textContent = '';
+            document.getElementById('registerForm').reset();
+        }
+
+        function openForgotModal() {
+            document.getElementById('forgotModal').classList.add('show');
+            document.getElementById('forgotMsg').className = 'msg';
+            document.getElementById('forgotMsg').textContent = '';
+            document.getElementById('forgotForm').reset();
+        }
+
+        function startCountdown(btnId) {
+            const btn = document.getElementById(btnId);
+            let sec = 60;
+            btn.disabled = true;
+            btn.textContent = sec + 's';
+            const timer = setInterval(() => {
+                sec--;
+                if (sec <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.textContent = '发送验证码';
+                } else {
+                    btn.textContent = sec + 's';
+                }
+            }, 1000);
+        }
+
+        async function sendRegisterCode() {
+            const email = document.getElementById('regEmail').value.trim();
+            if (!email) {
+                showMsg('请输入邮箱地址', 'error', 'registerMsg');
+                return;
+            }
+            if (!email.includes('@')) {
+                showMsg('请输入完整的邮箱地址', 'error', 'registerMsg');
+                return;
+            }
+            const atIndex = email.indexOf('@');
+            const domain = email.substring(atIndex + 1);
+            if (!SCHOOL_MAP[domain]) {
+                showMsg('不支持的邮箱后缀，请使用学校官方邮箱', 'error', 'registerMsg');
+                return;
+            }
+            const btn = document.getElementById('regSendCodeBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch(API_BASE + '/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendCode', email, source: 'register' })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMsg('验证码已发送', 'success', 'registerMsg');
+                    startCountdown('regSendCodeBtn');
+                } else {
+                    showMsg(data.msg, 'error', 'registerMsg');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showMsg('网络错误: ' + err.message, 'error', 'registerMsg');
+                btn.disabled = false;
+            }
+        }
+
+        async function sendForgotCode() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email) {
+                showMsg('请输入邮箱地址', 'error', 'forgotMsg');
+                return;
+            }
+            if (!email.includes('@')) {
+                showMsg('请输入完整的邮箱地址', 'error', 'forgotMsg');
+                return;
+            }
+            const atIndex = email.indexOf('@');
+            const domain = email.substring(atIndex + 1);
+            if (!SCHOOL_MAP[domain]) {
+                showMsg('不支持的邮箱后缀，请使用学校官方邮箱', 'error', 'forgotMsg');
+                return;
+            }
+            const btn = document.getElementById('forgotSendCodeBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch(API_BASE + '/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendCode', email, source: 'reset' })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMsg('验证码已发送', 'success', 'forgotMsg');
+                    startCountdown('forgotSendCodeBtn');
+                } else {
+                    showMsg(data.msg, 'error', 'forgotMsg');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showMsg('网络错误: ' + err.message, 'error', 'forgotMsg');
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('submitBtn');
+            if (!login || !password) {
+                showMsg('请填写完整信息', 'error');
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            try {
+                const res = await fetch(API_BASE + '/account/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    showMsg('登录成功，正在跳转...', 'success');
+                    setTimeout(() => {
+                        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        window.location.href = safeRedirect;
+                    }, 800);
+                } else {
+                    showMsg(data.msg || data.Message || '登录失败 (' + (data.code || data.Code) + ')', 'error');
+                }
+            } catch (err) {
+                showMsg('网络错误: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登录';
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nickname = document.getElementById('regNickname').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regPasswordConfirm').value;
+            const code = document.getElementById('regCode').value.trim();
+            const btn = document.getElementById('registerBtn');
+
+            if (!nickname || !email || !password || !code) {
+                showMsg('请填写完整信息', 'error', 'registerMsg');
+                return;
+            }
+            if (!document.getElementById('agreeTerms').checked) {
+                showMsg('请先阅读并同意用户协议与隐私政策', 'error', 'registerMsg');
+                return;
+            }
+            if (password !== confirm) {
+                showMsg('两次密码不一致', 'error', 'registerMsg');
+                return;
+            }
+            if (password.length < 6) {
+                showMsg('密码至少6位', 'error', 'registerMsg');
+                return;
+            }
+
+            const atIndex = email.indexOf('@');
+            const domain = email.substring(atIndex + 1);
+            const schoolInfo = SCHOOL_MAP[domain];
+
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+            try {
+                const res = await fetch(API_BASE + '/account/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nickname,
+                        email,
+                        password,
+                        code,
+                        my_school: schoolInfo ? schoolInfo.key : null,
+                        my_school_name: schoolInfo ? schoolInfo.name : null
+                    })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                    showMsg('注册成功！正在跳转...', 'success', 'registerMsg');
+                    setTimeout(() => {
+                        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        window.location.href = safeRedirect;
+                    }, 1200);
+                } else {
+                    showMsg(data.msg, 'error', 'registerMsg');
+                }
+            } catch (err) {
+                showMsg('网络错误', 'error', 'registerMsg');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '注册';
+            }
+        });
+
+        document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgotEmail').value.trim();
+            const password = document.getElementById('forgotPassword').value;
+            const confirm = document.getElementById('forgotPasswordConfirm').value;
+            const code = document.getElementById('forgotCode').value.trim();
+            const btn = document.getElementById('forgotBtn');
+
+            if (!email || !password || !code) {
+                showMsg('请填写完整信息', 'error', 'forgotMsg');
+                return;
+            }
+            if (password !== confirm) {
+                showMsg('两次密码不一致', 'error', 'forgotMsg');
+                return;
+            }
+            if (password.length < 6) {
+                showMsg('密码至少6位', 'error', 'forgotMsg');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '处理中...';
+            try {
+                const res = await fetch(API_BASE + '/account/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, new_password: password, code })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showMsg('密码重置成功！请登录', 'success', 'forgotMsg');
+                    setTimeout(() => {
+                        closeAllModals();
+                        document.getElementById('login').value = email;
+                    }, 1200);
+                } else {
+                    showMsg(data.msg, 'error', 'forgotMsg');
+                }
+            } catch (err) {
+                showMsg('网络错误', 'error', 'forgotMsg');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '重置密码';
+            }
+        });
+
+        document.querySelectorAll('.modal-mask').forEach(mask => {
+            mask.addEventListener('click', (e) => {
+                if (e.target === mask) closeAllModals();
+            });
+        });
+    </script>
+</body>
+</html>

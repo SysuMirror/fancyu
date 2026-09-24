@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>中意你 · 平台维护中 | FancyU</title>
+    <style>
+        /* ========== 基础重置与字体 ========== */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* 色彩体系 */
+            --sysu-green: #005826;
+            --sysu-green-light: #007A33;
+            --sysu-green-dark: #003D1A;
+            --sysu-green-subtle: #E8F0EB;
+            --bg-paper: #FAFAF7;
+            --bg-paper-warm: #F7F6F1;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A2A2E;
+            --text-secondary: #4A5A5E;
+            --text-muted: #7A8A8E;
+            --shadow-card: 0 8px 32px rgba(0, 88, 38, 0.08), 0 2px 8px rgba(0, 88, 38, 0.04);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background-color: var(--bg-paper);
+            color: var(--text-primary);
+            position: relative;
+            overflow-x: hidden;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ========== 背景暗纹装饰 ========== */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.02;
+        }
+
+        /* 榕树叶暗纹 - 右上角 */
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path fill="%23005826" d="M100,10 Q120,50 160,60 Q130,80 140,120 Q110,100 100,140 Q90,100 60,120 Q70,80 40,60 Q80,50 100,10 Z"/><path fill="%23005826" d="M60,80 Q70,100 90,105 Q75,115 78,135 Q65,120 50,125 Q58,110 45,100 Q62,95 60,80 Z" opacity="0.7"/><path fill="%23005826" d="M140,85 Q150,105 170,110 Q155,120 158,140 Q145,125 130,130 Q138,115 125,105 Q142,100 140,85 Z" opacity="0.7"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            transform: rotate(15deg);
+        }
+
+        /* 牌坊剪影 - 左下角 */
+        .bg-pattern::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: -50px;
+            width: 500px;
+            height: 400px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250"><path fill="%23005826" d="M20,230 L20,100 L40,100 L40,70 L60,70 L60,50 L80,50 L80,30 L100,30 L100,50 L120,50 L120,70 L140,70 L140,50 L160,50 L160,30 L180,30 L180,50 L200,50 L200,70 L220,70 L220,50 L240,50 L240,30 L260,30 L260,50 L280,50 L280,230 Z" opacity="0.5"/><rect x="30" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="90" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="150" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="210" y="100" width="40" height="130" fill="%23005826" opacity="0.3"/><rect x="50" y="80" width="200" height="20" fill="%23005826" opacity="0.4"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            opacity: 0.5;
+        }
+
+        /* ========== 主容器 ========== */
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 56px 32px;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+
+        /* ========== 维护卡片区 (无任何交互按钮/小贴士) ========== */
+        .maintenance-card {
+            background: var(--bg-card);
+            border-radius: 32px;
+            padding: 64px 48px;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(0, 88, 38, 0.06);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .maintenance-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--sysu-green), var(--sysu-green-light), var(--sysu-green));
+            border-radius: 32px 32px 0 0;
+        }
+
+        /* 品牌标识区 */
+        .brand-icon-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .brand-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+        }
+
+        .brand-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--sysu-green);
+            stroke-width: 1.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .brand-text {
+            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--sysu-green);
+            letter-spacing: 2px;
+        }
+
+        /* 图形区 - 温和维护icon */
+        .construction-graphic {
+            margin: 20px 0 28px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .shield-wrapper {
+            position: relative;
+            display: inline-block;
+            animation: gentleFloat 4s ease-in-out infinite;
+        }
+
+        .shield-svg {
+            width: 120px;
+            height: 120px;
+            stroke: var(--sysu-green);
+            stroke-width: 1.2;
+            fill: rgba(0, 88, 38, 0.02);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .inner-tools {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-icon {
+            background: var(--bg-card);
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 14px rgba(0, 88, 38, 0.12);
+            border: 1px solid rgba(0, 88, 38, 0.1);
+        }
+
+        .tool-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--sysu-green-light);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        /* 主标题文字 */
+        .main-message {
+            margin: 32px 0 20px;
+        }
+
+        .platform-status {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 52px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--sysu-green) 0%, var(--sysu-green-light) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .upgrade-text {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .upgrade-sub {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 420px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* 装饰分割线 */
+        .divider {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--sysu-green), transparent);
+            margin: 32px auto 28px;
+            opacity: 0.3;
+        }
+
+        /* 预计完成时间标签 */
+        .estimate-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--sysu-green-subtle);
+            padding: 8px 20px;
+            border-radius: 40px;
+            margin-bottom: 0;
+        }
+
+        .estimate-badge svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--sysu-green);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .estimate-badge span {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--sysu-green);
+        }
+
+        /* 页脚 - 只保留最简信息 */
+        .footer {
+            text-align: center;
+            margin-top: 56px;
+            padding: 24px 20px 16px;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(0, 88, 38, 0.06);
+        }
+
+        .footer p {
+            font-size: 13px;
+        }
+
+        /* 动效 */
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        @media (max-width: 620px) {
+            .container {
+                padding: 32px 20px;
+            }
+            .maintenance-card {
+                padding: 48px 28px;
+            }
+            .platform-status {
+                font-size: 38px;
+                letter-spacing: 1px;
+            }
+            .upgrade-text {
+                font-size: 22px;
+            }
+            .shield-svg {
+                width: 90px;
+                height: 90px;
+            }
+            .tool-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .tool-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+            .brand-text {
+                font-size: 18px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 24px 16px; }
+            .maintenance-card { padding: 36px 20px; }
+            .platform-status { font-size: 32px; letter-spacing: 1px; }
+            .upgrade-text { font-size: 18px; }
+            .shield-svg { width: 72px; height: 72px; }
+            .tool-icon { width: 32px; height: 32px; }
+            .tool-icon svg { width: 16px; height: 16px; }
+            .brand-text { font-size: 16px; }
+            .status-badge { padding: 10px 20px; font-size: 13px; }
+            .countdown { font-size: 28px; }
+            .countdown-label { font-size: 11px; }
+        }
+
+        /* ========== 暗色模式 ========== */
+        @media (prefers-color-scheme: dark) {
+            body { background: #0f1a14; }
+            .maintenance-card { background: #1a2e24; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+            .platform-status { color: #4ade80; }
+            .upgrade-text { color: #c8d8ce; }
+            .brand-text { color: #a8b8ae; }
+            .countdown { color: #4ade80; }
+            .countdown-label { color: #6a7a70; }
+            .status-badge { background: rgba(0, 133, 62, 0.15); color: #4ade80; }
+            .tool-icon { background: rgba(0, 133, 62, 0.15); }
+            .tool-icon svg { stroke: #4ade80; }
+            .bg-pattern { opacity: 0.015; }
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .brand-icon svg {
+                animation: gentleLeafSway 3s ease-in-out infinite;
+            }
+            @keyframes gentleLeafSway {
+                0%, 100% { transform: rotate(0deg); }
+                50% { transform: rotate(4deg); }
+            }
+        }
+
+        /* ========== 减少动画 ========== */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+
+<div class="container">
+    <div class="maintenance-card">
+        <!-- 品牌标识区 -->
+        <div class="brand-icon-group">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/>
+                    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+                </svg>
+            </div>
+            <div class="brand-text">FancyU｜中意你</div>
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/>
+                    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- 维护图形（盾牌+工具） -->
+        <div class="construction-graphic">
+            <div class="shield-wrapper">
+                <svg class="shield-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.4"/>
+                    <path d="M8 9h8M12 7v10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                <div class="inner-tools">
+                    <div class="tool-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                            <path d="M1.5 22.5 9 15"/>
+                        </svg>
+                    </div>
+                    <div class="tool-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="m16 2 4 4-2 2-4-4 2-2z"/>
+                            <path d="M5 16 3 18l3 3 2-2"/>
+                            <path d="m12 7 5 5-9 9-5-5 9-9z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心文字：明确平台升级/测试中，无404字样 -->
+        <div class="main-message">
+            <div class="platform-status">✨ 平台关停升级中 ✨</div>
+            <div class="upgrade-text">出于各种原因，我们将在至少五一假期后再开放全新平台</div>
+            <div class="upgrade-sub">更新预告：隐私保护政策和免责声明，账号制平台、全新问卷、交友匹配、外校接入</div>
+        </div>
+
+        <!-- 仅保留预计完成标签 (简洁装饰) -->
+        <div class="estimate-badge">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>焕新回归 · 敬请期待</span>
+        </div>
+
+        <!-- 装饰分割线 -->
+        <div class="divider"></div>
+
+        <!-- 完全移除“小贴士框框”和任何按钮（返回上一页/首页均已删除） -->
+    </div>
+
+    <!-- 页脚信息，保留极简品牌说明 -->
+    <div class="footer">
+        <p>中意你 · FancyU | 校园恋爱匹配平台</p>
+        <p style="margin-top: 8px;">© 2026 中意你 · 每一次升级都为更温暖的相遇</p>
+    </div>
+</div>
+
+<!-- 无任何交互按钮脚本，干净展示维护信息 -->
+</body>
+</html>

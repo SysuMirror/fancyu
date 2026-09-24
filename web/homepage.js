@@ -9,7 +9,8 @@
     let loading = false;
     let changed = false;
     const token = () => localStorage.getItem('token');
-    const suggestions = ['摄影', '旅行', '音乐', '电影', '读书', '运动', '美食', '慢热', '猫咪', '户外'];
+    const categories = PROFILE_TAG_CATEGORIES;
+    let activeCategory = categories[0].name;
 
     async function request(method = 'GET', body) {
         const response = await fetch('/api/account/profile', {
@@ -103,13 +104,13 @@
     function renderDraft() {
         renderAvatar($('avatarPreview'), draft.avatar, saved.username);
         $('removeAvatar').hidden = !draft.avatar;
-        $('tagCount').textContent = draft.tags.length + ' / 8';
+        $('tagCount').textContent = draft.tags.length + ' / 12';
         $('selectedTags').replaceChildren(...draft.tags.map((tag, index) => {
-            const node = tagElement(tag, () => { draft.tags.splice(index, 1); changed = true; renderDraft(); });
+            const node = tagElement(tag, () => { draft.tags.splice(index, 1); changed = true; setStatus(''); renderDraft(); });
             node.setAttribute('aria-label', '移除标签 ' + tag);
             return node;
         }));
-        $('suggestedTags').replaceChildren(...suggestions.filter(tag => !draft.tags.includes(tag)).map(tag => tagElement(tag, () => addTag(tag))));
+        renderTagCatalog();
         $('editPhotoCount').textContent = draft.photos.length + ' / 6';
         $('choosePhotos').disabled = draft.photos.length >= 6;
         $('photoPreviews').replaceChildren(...draft.photos.map((src, index) => {
@@ -137,6 +138,8 @@
         $('bioInput').value = draft.bio;
         $('bioCount').textContent = size(draft.bio) + ' / 300';
         $('tagInput').value = '';
+        $('tagSearch').value = '';
+        activeCategory = categories[0].name;
         $('avatarInput').value = '';
         $('photosInput').value = '';
         setStatus('');
@@ -151,14 +154,71 @@
         changed = false;
     }
 
-    function addTag(value = $('tagInput').value) {
+    function renderTagCatalog() {
+        const query = $('tagSearch').value.trim().toLocaleLowerCase();
+        $('tagCategories').replaceChildren(...categories.map(category => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'category-button';
+            button.textContent = category.name;
+            button.setAttribute('aria-pressed', String(!query && activeCategory === category.name));
+            button.addEventListener('click', () => {
+                activeCategory = category.name;
+                $('tagSearch').value = '';
+                renderTagCatalog();
+                const current = Array.from($('tagCategories').children).find(node => node.textContent === category.name);
+                current?.focus({ preventScroll: true });
+            });
+            return button;
+        }));
+        const groups = [];
+        const seen = new Set();
+        for (const category of categories) {
+            if (!query && category.name !== activeCategory) continue;
+            for (const group of category.groups) {
+                const matches = group.tags.filter(tag => {
+                    const matched = !query || (category.name + ' ' + (group.name || '') + ' ' + tag).toLocaleLowerCase().includes(query);
+                    if (!matched || seen.has(tag)) return false;
+                    seen.add(tag);
+                    return true;
+                });
+                if (!matches.length) continue;
+                const section = document.createElement('section');
+                const heading = document.createElement('h4');
+                heading.textContent = query ? category.name + (group.name ? ' · ' + group.name : '') : (group.name || category.name);
+                const list = document.createElement('div');
+                list.className = 'tags suggestions';
+                list.append(...matches.map(tag => {
+                    const button = tagElement(tag, () => {
+                        if (draft.tags.includes(tag)) {
+                            draft.tags = draft.tags.filter(value => value !== tag);
+                            changed = true;
+                            setStatus('');
+                            renderDraft();
+                        } else addTag(tag, false);
+                        const current = Array.from($('suggestedTags').querySelectorAll('button')).find(node => node.textContent === tag);
+                        current?.focus({ preventScroll: true });
+                    });
+                    button.setAttribute('aria-pressed', String(draft.tags.includes(tag)));
+                    return button;
+                }));
+                section.append(heading, list);
+                groups.push(section);
+            }
+        }
+        $('suggestedTags').replaceChildren(...groups);
+        $('tagSearchStatus').textContent = query ? '找到 ' + seen.size + ' 个标签' : '从「' + activeCategory + '」中选择你的偏好';
+        $('tagNoResults').hidden = seen.size > 0;
+    }
+
+    function addTag(value = $('tagInput').value, clearInput = true) {
         const tag = value.trim();
         if (!tag) return true;
         if (size(tag) > 12) { setStatus('每个标签最多 12 字', true); return false; }
-        if (draft.tags.includes(tag)) { $('tagInput').value = ''; return true; }
-        if (draft.tags.length >= 8) { setStatus('最多添加 8 个标签，请先移除一个', true); return false; }
+        if (draft.tags.includes(tag)) { if (clearInput) $('tagInput').value = ''; setStatus(''); return true; }
+        if (draft.tags.length >= 12) { setStatus('最多添加 12 个标签，请先移除一个', true); return false; }
         draft.tags.push(tag);
-        $('tagInput').value = '';
+        if (clearInput) $('tagInput').value = '';
         changed = true;
         setStatus('');
         renderDraft();
@@ -234,7 +294,7 @@
         } catch (error) { setStatus(error.message || '保存失败，请检查网络后重试', true); }
         finally { setBusy(false); }
     });
-    $('profileForm').addEventListener('input', () => { changed = true; });
+    $('profileForm').addEventListener('input', event => { if (event.target.id !== 'tagSearch') changed = true; });
     $('bioInput').addEventListener('input', () => {
         const count = size($('bioInput').value);
         $('bioCount').textContent = count + ' / 300';
@@ -253,6 +313,8 @@
     $('removeAvatar').addEventListener('click', () => { draft.avatar = ''; changed = true; renderDraft(); });
     $('addTag').addEventListener('click', () => addTag());
     $('tagInput').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); addTag(); } });
+    $('tagSearch').addEventListener('input', renderTagCatalog);
+    $('tagSearch').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
     $('closePhoto').addEventListener('click', () => $('photoDialog').close());
     window.addEventListener('beforeunload', event => { if (changed && $('editor').open) { event.preventDefault(); event.returnValue = ''; } });
     load();

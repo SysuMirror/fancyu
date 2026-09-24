@@ -1,7 +1,7 @@
 'use strict';
 
 const MAX_PHOTOS = 6;
-const MAX_TAGS = 8;
+const MAX_TAGS = 12;
 const MAX_IMAGE_BYTES = 350 * 1024;
 const length = value => Array.from(value).length;
 
@@ -27,7 +27,7 @@ function validateProfile(body) {
     if (typeof body.bio !== 'string' || length(body.bio) > 300) throw new Error('个人简介不能超过 300 字');
     if (!Array.isArray(body.tags) || body.tags.length > MAX_TAGS ||
         body.tags.some(tag => typeof tag !== 'string' || !tag.trim() || length(tag.trim()) > 12)) {
-        throw new Error('最多添加 8 个标签，每个标签为 1–12 字');
+        throw new Error('最多添加 12 个标签，每个标签为 1–12 字');
     }
     if (!Array.isArray(body.photos) || body.photos.length > MAX_PHOTOS) throw new Error('最多添加 6 张照片');
     if (body.avatar !== '' && typeof body.avatar !== 'string') throw new Error('头像格式无效');

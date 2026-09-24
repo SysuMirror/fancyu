@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>我的主页 | FancyU · 中意你</title>
     <link rel="stylesheet" href="homepage.css">
+    <script src="profile-tags.js" defer></script>
     <script src="homepage.js" defer></script>
 </head>
 <body>
@@ -31,7 +32,20 @@
             <section class="avatar-editor"><div id="avatarPreview" class="avatar small"></div><div><button type="button" id="chooseAvatar" class="secondary">更换头像</button> <button type="button" id="removeAvatar" class="text-button">移除</button><p class="hint">支持 JPG、PNG、WebP，单张不超过 10 MB</p></div><input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" hidden></section>
             <div class="field"><label for="profileId">主页 ID <span class="required">*</span></label><div class="input-prefix"><span>@</span><input id="profileId" required minlength="3" maxlength="24" pattern="[a-zA-Z][a-zA-Z0-9_-]{2,23}" autocomplete="off" spellcheck="false" placeholder="your_unique_id" aria-describedby="idHint"></div><p id="idHint" class="hint">3–24 位，以字母开头，可用字母、数字、_ 和 -。不区分大小写，不改变登录用户名。</p></div>
             <div class="field"><div class="label-row"><label for="bioInput">个人简介</label><span id="bioCount" class="hint">0 / 300</span></div><textarea id="bioInput" rows="4" placeholder="最近在热爱什么？想认识怎样的朋友？" aria-describedby="bioCount"></textarea></div>
-            <div class="field"><div class="label-row"><label for="tagInput">我的标签</label><span id="tagCount" class="hint">0 / 8</span></div><div id="selectedTags" class="tags selected"></div><div class="tag-entry"><input id="tagInput" placeholder="输入标签，按回车添加" aria-describedby="tagHint"><button id="addTag" type="button" class="secondary">添加</button></div><p id="tagHint" class="hint">最多 8 个，每个不超过 12 字。也可以选择：</p><div id="suggestedTags" class="tags suggestions"></div></div>
+            <div class="field tag-field">
+                <div class="label-row"><label for="tagSearch">我的标签</label><span id="tagCount" class="hint" aria-live="polite">0 / 12</span></div>
+                <div id="selectedTags" class="tags selected" aria-label="已选标签"></div>
+                <p id="tagHint" class="hint">最多选择 12 个，每个不超过 12 字。点击已选标签可移除。</p>
+                <div class="tag-library">
+                    <input id="tagSearch" type="search" placeholder="搜索全部分类，例如：爵士、摄影、慢热" aria-label="搜索全部标签" autocomplete="off">
+                    <div id="tagCategories" class="tag-categories" role="group" aria-label="标签分类"></div>
+                    <p id="tagSearchStatus" class="hint" role="status"></p>
+                    <div id="suggestedTags" class="tag-results"></div>
+                    <p id="tagNoResults" class="hint" hidden>没有找到？你也可以在下方添加自定义标签。</p>
+                </div>
+                <label for="tagInput" class="custom-tag-label">自定义标签</label>
+                <div class="tag-entry"><input id="tagInput" placeholder="写下你的独特兴趣，按回车添加" aria-describedby="tagHint" autocomplete="off"><button id="addTag" type="button" class="secondary">添加</button></div>
+            </div>
             <div class="field"><div class="label-row"><label for="photosInput">我的照片</label><span id="editPhotoCount" class="hint">0 / 6</span></div><div id="photoPreviews" class="photo-grid edit-grid"></div><button type="button" id="choosePhotos" class="upload-button">＋ 添加照片</button><input id="photosInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><p class="hint">最多 6 张，单张不超过 10 MB；上传时自动压缩。点击照片右上角可移除。</p></div>
         </div>
         <div class="dialog-footer"><p id="editStatus" class="edit-status" role="status" aria-live="polite"></p><div class="footer-actions"><button id="cancelEdit" type="button" class="secondary">取消</button><button id="saveButton" class="primary" type="submit">保存主页</button></div></div>

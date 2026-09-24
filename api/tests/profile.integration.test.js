@@ -46,6 +46,11 @@ test('profile persistence, ownership, unique IDs, validation and cleanup', { ski
         assert.equal((await request(1, 'PUT', { ...body, profile_id: run.toUpperCase() })).status, 409);
         assert.equal((await request(0)).data.profile.bio, '初次保存🌱');
         assert.equal((await request(0, 'PUT', { ...body, photos: ['javascript:alert(1)'] })).status, 400);
+        const twelveTags = ['R&B', '独立音乐', 'City Pop', '谷子', '猫咪', '旅行', '摄影', '咖啡', '校园观星', '拼豆', '慢热', '自定义兴趣'];
+        assert.equal((await request(0, 'PUT', { ...body, tags: twelveTags })).status, 200);
+        assert.deepEqual((await request(0)).data.profile.tags, twelveTags);
+        assert.equal((await request(0, 'PUT', { ...body, tags: [...twelveTags, '第十三个'] })).status, 400);
+        assert.deepEqual((await request(0)).data.profile.tags, twelveTags);
         assert.equal((await request(0, 'PUT', { ...body, avatar: '', bio: '', tags: [], photos: [] })).status, 200);
         assert.deepEqual((await request(0)).data.profile.tags, []);
         assert.equal((await request(0)).data.profile.avatar, '');

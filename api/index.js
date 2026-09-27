@@ -12,8 +12,9 @@ app.use(express.json({ limit: '10mb' }));
 const path = require('path');
 const WEB_DIR = process.env.WEB_DIR || path.join(__dirname, '..', 'web');
 app.use((req, res, next) => {
-    if (req.url === '/api' || req.url.startsWith('/api/')) {
+    if (req.url === '/api' || req.url.startsWith('/api/') || req.url.startsWith('/api?')) {
         req.url = req.url.slice(4) || '/';
+        if(req.url.startsWith('?'))req.url='/'+req.url;
     }
     next();
 });
@@ -135,28 +136,28 @@ function generateToken(account) {
     const payload = {
         account_id: account.id,
         email: account.email,
-        username: account.username
+        username: account.username, security_version: 2
     };
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 function verifyToken(token) {
     try {
-        return jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return decoded.security_version === 2 && Number.isInteger(decoded.account_id) ? decoded : null;
     } catch (err) {
         return null;
     }
 }
 
 async function authMiddleware(req, res, next) {
-    // 部署补丁: 免登录, 任意请求直接通过
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const decoded = verifyToken(authHeader.slice(7));
-        if (decoded) { req.account = decoded; return next(); }
-    }
-    req.account = { account_id: parseInt(process.env.GUEST_ACCOUNT_ID || '1', 10), email: 'guest@sysudate.local', username: 'guest' };
-    next();
+    const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : '';
+    const decoded = verifyToken(token);
+    if (!decoded) return res.status(401).json({code:401,msg:'请重新登录'});
+    try { const pool=await getPool(); const [rows]=await pool.execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);
+        if(!rows.length)return res.status(401).json({code:401,msg:'账号已失效'});
+        req.account=decoded;next();
+    } catch(e){res.status(503).json({code:503,msg:'账号服务暂不可用'});}
 }
 
 async function parseJsonArray(value) {
@@ -245,15 +246,8 @@ async function saveCode(email, code, source) {
     await pool.execute(query, [email, code, source || 'general']);
 }
 
-async function verifyCode(email, code) {
-    // 部署补丁: 验证码任意通过
-    return true;
-}
-
-async function verifyAndDeleteCode(email, code) {
-    // 部署补丁: 验证码任意通过
-    return true;
-}
+async function verifyCode(email,code) { return secureAuth.check(email,'register',code,false); }
+async function verifyAndDeleteCode(email,code) { return secureAuth.check(email,'register',code,true); }
 
 async function checkRecentSend(email) {
     const pool = await getPool();
@@ -616,27 +610,11 @@ app.use((req, res, next) => {
 
 // ==================== 账号系统 API ====================
 
-// 注册新账号
-app.post('/account/register', async (req, res) => {
-    // 部署补丁: 免注册, 任意输入直接通过; 账号不存在则自动创建
-    try {
-        const { email, password, username } = req.body;
-        const key = (email && String(email).trim()) || ('guest-' + Date.now());
-        let account = await findAccountByEmailOrUsername(key);
-        if (!account) {
-            account = await createAccount(key, password || 'guest', username || ('u' + Math.random().toString(36).slice(2, 10)));
-        }
-        const token = generateToken(account);
-        await updateLastLogin(account.id);
-        return res.json({
-            code: 200, msg: '注册成功', token,
-            user: { account_id: account.id, email: account.email, username: account.username, serials: [] }
-        });
-    } catch (error) {
-        console.error('Register Error:', error);
-        return res.json({ code: 500, msg: '服务器错误' });
-    }
-});
+const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,prepare:async pool=>{
+    await ensureMatchHistoryTable(pool);await ensureComplaintTable(pool);
+}});
+const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,
+    emailConfigured:!!SMTP_PASSWORD,from:FROM_ALIAS+' <'+ACCOUNT_NAME+'>',ensureSchema:daily.ensureSchema,secret:JWT_SECRET});
 
 // 老用户绑定序列号
 app.post('/account/bind', async (req, res) => {
@@ -656,8 +634,8 @@ app.post('/account/bind', async (req, res) => {
             return res.json({ code: 400, msg: '仅支持指定学校官方邮箱' });
         }
         
-        if (password.length < 6) {
-            return res.json({ code: 400, msg: '密码长度至少为6位' });
+        if (password.length < 8) {
+            return res.json({ code: 400, msg: '密码长度至少为8位' });
         }
         
         const isValid = await verifyAndDeleteCode(email, code);
@@ -711,28 +689,7 @@ app.post('/account/bind', async (req, res) => {
     }
 });
 
-// 登录
-app.post('/account/login', async (req, res) => {
-    // 部署补丁: 免登录, 任意输入直接通过; 账号不存在则自动创建
-    try {
-        const { login, password } = req.body;
-        const key = (login && String(login).trim()) || ('guest-' + Date.now());
-        let account = await findAccountByEmailOrUsername(key);
-        if (!account) {
-            const username = 'u' + Math.random().toString(36).slice(2, 10);
-            account = await createAccount(key, password || 'guest', username);
-        }
-        const token = generateToken(account);
-        await updateLastLogin(account.id);
-        return res.json({
-            code: 200, msg: '登录成功', token,
-            user: { account_id: account.id, email: account.email, username: account.username, serials: [] }
-        });
-    } catch (error) {
-        console.error('Login Error:', error);
-        return res.json({ code: 500, msg: '服务器错误' });
-    }
-});
+// 密码登录由 secure-auth 模块处理。
 
 // 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
 require('./profile')(app, { getPool, verifyToken });
@@ -777,8 +734,8 @@ app.post('/account/change-password', authMiddleware, async (req, res) => {
         if (!old_password || !new_password) {
             return res.json({ code: 400, msg: '旧密码和新密码不能为空' });
         }
-        if (new_password.length < 6) {
-            return res.json({ code: 400, msg: '新密码长度不能少于6位' });
+        if (new_password.length < 8) {
+            return res.json({ code: 400, msg: '新密码长度不能少于8位' });
         }
         
         const account = await findAccountByEmailOrUsername(req.account.email);
@@ -800,38 +757,6 @@ app.post('/account/change-password', authMiddleware, async (req, res) => {
 });
 
 // 找回密码（通过验证邮箱重置，无需登录）
-app.post('/account/reset-password', async (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    try {
-        if (!checkRateLimit(clientIp, 'resetPassword', 3, 60000)) {
-            return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
-        }
-        
-        const { email, code, new_password } = req.body;
-        if (!email || !code || !new_password) {
-            return res.json({ code: 400, msg: '邮箱、验证码和新密码不能为空' });
-        }
-        if (new_password.length < 6) {
-            return res.json({ code: 400, msg: '新密码长度不能少于6位' });
-        }
-        
-        const isValid = await verifyAndDeleteCode(email, code);
-        if (!isValid) {
-            return res.json({ code: 400, msg: '验证码错误或已过期' });
-        }
-        
-        const account = await findAccountByEmailOrUsername(email);
-        if (!account) {
-            return res.json({ code: 404, msg: '该邮箱未注册' });
-        }
-        
-        await updateAccountPassword(account.id, new_password);
-        return res.json({ code: 200, msg: '密码重置成功' });
-    } catch (error) {
-        console.error('Reset Password Error:', error);
-        return res.json({ code: 500, msg: '服务器错误' });
-    }
-});
 
 // 修改用户名（需登录）
 app.post('/account/change-username', authMiddleware, async (req, res) => {
@@ -1209,9 +1134,9 @@ app.post('/account/exchange-contact', authMiddleware, async (req, res) => {
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'mony';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 if (!ADMIN_PASSWORD) {
-    console.warn('\x1b[33m%s\x1b[0m', '⚠ WARNING: ADMIN_PASSWORD 环境变量未设置，使用默认密码！请在生产环境中设置强密码！');
+    console.warn('\x1b[33m%s\x1b[0m', '⚠ WARNING: ADMIN_PASSWORD 环境变量未设置，管理员登录已停用，请设置管理员密码。');
 }
-const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD || '123456', 10);
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD || crypto.randomBytes(32).toString('hex'), 10);
 
 const loginAttempts = new Map();
 const LOGIN_MAX_ATTEMPTS = 3;
@@ -1241,16 +1166,17 @@ function rateLimitMiddleware(req, res, next) {
     next();
 }
 
-function adminAuthMiddleware(req, res, next) {
-    // 部署补丁: 管理端免登录
-    next();
+function adminAuthMiddleware(req,res,next) {
+    try { const token=req.headers.authorization?.replace(/^Bearer /,'');const data=jwt.verify(token,JWT_SECRET);
+        if(data.isAdmin===true&&data.security_version===2){req.admin=data;return next();}
+    }catch(e){}
+    return res.status(401).json({code:401,msg:'请登录管理员账号'});
 }
-
-app.post('/admin/login', rateLimitMiddleware, async (req, res) => {
-    // 部署补丁: 管理端免登录
-    const { username } = req.body || {};
-    const token = jwt.sign({ isAdmin: true, username: username || 'admin' }, JWT_SECRET, { expiresIn: '24h' });
-    return res.json({ code: 200, msg: '登录成功', token });
+app.post('/admin/login',rateLimitMiddleware,async(req,res)=>{
+    if(!ADMIN_PASSWORD)return res.status(503).json({code:503,msg:'管理员密码尚未配置'});
+    const {username,password}=req.body||{};
+    if(username!==ADMIN_USERNAME||typeof password!=='string'||!await bcrypt.compare(password,ADMIN_PASSWORD_HASH))return res.status(401).json({code:401,msg:'用户名或密码错误'});
+    return res.json({code:200,msg:'登录成功',token:jwt.sign({isAdmin:true,security_version:2,username},JWT_SECRET,{expiresIn:'24h'})});
 });
 
 app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
@@ -1360,12 +1286,11 @@ app.get('/admin/friend-surveys', adminAuthMiddleware, async (req, res) => {
 // 管理员批量导出匹配结果
 app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
     try {
-        const pool = await getPool();
-        await ensureMatchHistoryTable(pool);
+        const result = await daily.transaction(async (pool,time) => {
         const { matches, match_round = 1, survey_type = 'love' } = req.body;
         
         if (!Array.isArray(matches)) {
-            return res.json({ code: 400, msg: 'matches 必须是数组' });
+            return { code: 400, msg: 'matches 必须是数组' };
         }
         
         let successCount = 0;
@@ -1387,6 +1312,7 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
             const accountId = accRows1[0].id;
             const matchAccountId = accRows2[0].id;
             
+            if(accountId===matchAccountId || await daily.weeklyGuard(pool,accountId,matchAccountId,time)){skipCount++;continue;}
             // 检查是否已存在
             const [existing] = await pool.execute(
                 `SELECT id FROM match_history WHERE account_id = ? AND match_account_id = ? AND match_round = ? AND survey_type = ?`,
@@ -1404,7 +1330,9 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
             successCount++;
         }
         
-        return res.json({ code: 200, data: { success: successCount, skip: skipCount, fail: failCount } });
+        return { code: 200, data: { success: successCount, skip: skipCount, fail: failCount } };
+        });
+        return res.json(result);
     } catch (error) {
         console.error('Admin Import Matches Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
@@ -2174,6 +2102,10 @@ app.post('/migrate', async (req, res) => {
 
 // ==================== 原有 API（保持兼容） ====================
 
+app.get('/', (req,res,next)=>{
+    if(['debug','queryByUserId'].includes(req.query.action))return res.status(403).json({code:403,msg:'请从已授权的配对页面查看资料'});
+    next();
+});
 app.get('/', async (req, res) => {
     const { action, email, serial, code } = req.query;
     if (!action) {
@@ -2306,44 +2238,6 @@ app.post('/', async (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     
     try {
-        if (action === 'sendCode') {
-            if (!checkRateLimit(clientIp, 'sendCode', 5, 60000)) {
-                return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
-            }
-            if (!email) {
-                return res.json({ code: 400, msg: '邮箱不能为空' });
-            }
-
-            // 部署补丁: 不检查邮箱后缀
-
-            if (source === 'index') {
-                const { exceeded, attempts } = await checkVerifyAttempts(email);
-                if (exceeded) {
-                    return res.json({ code: 429, msg: `验证码尝试次数过多（${attempts}/5），请1小时后再试` });
-                }
-            }
-            
-            if (await checkRecentSend(email)) {
-                return res.json({ code: 400, msg: '请等待60秒后再试' });
-            }
-            
-            const verifyCode = generateCode();
-            // 部署补丁: 不实际发信(无SMTP), 任意验证码可通过
-            try { await saveCode(email, verifyCode, source || 'general'); } catch (e) {}
-            
-            return res.json({ code: 200, msg: '验证码已发送' });
-        }
-        
-        if (action === 'checkCode') {
-            if (!email || !code) {
-                return res.json({ code: 400, msg: '邮箱和验证码不能为空' });
-            }
-            const isValid = await verifyCode(email, code);
-            return isValid 
-                ? res.json({ code: 200, msg: '验证通过' })
-                : res.json({ code: 400, msg: '验证码错误或已过期' });
-        }
-        
         if (action === 'verifyMatch') {
             if (!checkRateLimit(clientIp, 'verifyMatch', 5, 60000)) {
                 return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
@@ -2361,11 +2255,8 @@ app.post('/', async (req, res) => {
                 return res.json({ code: 400, msg: '请等待60秒后再试' });
             }
             
-            const verifyCode = generateCode();
-            await sendVerificationEmail(email, verifyCode);
-            await saveCode(email, verifyCode, 'modify');
-            
-            return res.json({ code: 200, msg: '验证码已发送' });
+            const result = await secureAuth.send(email,'register');
+            return res.status(result.code).json(result);
         }
         
         if (action === 'submitSurvey') {
@@ -2590,6 +2481,10 @@ app.post('/account/withdraw-consent', authMiddleware, async (req, res) => {
     try {
         const accountId = req.account.account_id;
         const pool = await getPool();
+        await daily.transaction(async c=>{
+            await c.execute('UPDATE daily_settings SET enabled=0 WHERE account_id=?',[accountId]);
+            await c.execute("UPDATE daily_pairs SET status='cancelled',low_wechat=NULL,high_wechat=NULL WHERE (low_id=? OR high_id=?) AND status IN ('pending','connected')",[accountId,accountId]);
+        });
         await pool.execute(`UPDATE account_preferences SET join_matching = 0, join_friend_matching = 0 WHERE account_id = ?`, [accountId]);
         await pool.execute(`DELETE FROM match_history WHERE account_id = ?`, [accountId]);
         return res.json({ code: 200, msg: '已撤回同意，您已退出所有匹配并清空匹配历史' });
@@ -2616,6 +2511,11 @@ saveSurveyData = async function(email, data) {
 };
 
 // 部署补丁: 静态页面托管(放在所有 API 路由之后) + 端口取环境变量
+app.use((req,res,next)=>{
+    let decodedPath;try{decodedPath=decodeURIComponent(req.path);}catch(e){return res.status(400).end();}
+    if(/^\/(all_users\.html|photos(?:\/|$))/i.test(decodedPath))return res.status(403).send('请通过已授权的资料页面访问');
+    next();
+});
 app.use(express.static(WEB_DIR));
 app.use((req, res) => {
     if (req.method === 'GET' && !req.path.startsWith('/account') && !req.path.startsWith('/admin') && !req.path.startsWith('/api') && !req.path.startsWith('/llm')) {

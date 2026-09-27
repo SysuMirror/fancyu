@@ -1501,6 +1501,7 @@
             }
         }
     </style>
+<script src="auth-session.js"></script>
 </head>
 <body>
 <div class="bg-pattern"></div>
@@ -1533,6 +1534,7 @@
         <div class="btn-group">
             <button class="btn-primary" id="btnLove"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>每周配对</button>
             <button class="btn-primary" id="btnFriend"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>每周交友</button>
+            <button class="btn-primary" onclick="location.href='daily.html'">♡ 日常配对</button>
             <button class="btn-primary" id="btnProfile"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>我的主页</button>
             <button class="btn-primary" id="btnSupport">💖 大发善心</button>
         </div>
@@ -1704,25 +1706,12 @@
 <script>
     const API_URL = "/api";
 
-// ===== 部署补丁: 免登录自动登录 =====
-async function autoGuestLogin() {
-    if (window.__guestBusy) return;
-    window.__guestBusy = true;
-    try {
-        let login = localStorage.getItem('guest_login');
-        if (!login) { login = 'guest-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('guest_login', login); }
-        const r = await fetch('/api/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password: 'guest' }) });
-        const d = await r.json();
-        if (d.code === 200) {
-            localStorage.setItem('token', d.token);
-            localStorage.setItem('user', JSON.stringify(d.user));
-            location.reload();
-        } else {
-            autoGuestLogin();
-        }
-    } catch (e) {
-        autoGuestLogin();
-    }
+// 登录失效时跳转，并保留返回路径。
+function requireLogin() {
+    if(window.__loginRedirecting)return;
+    window.__loginRedirecting=true;
+    localStorage.removeItem('token');localStorage.removeItem('user');
+    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
 }
 
     const IS_REGISTRATION_CLOSED = false;
@@ -1732,7 +1721,6 @@ async function autoGuestLogin() {
         const token = localStorage.getItem('token');
         const userStr = localStorage.getItem('user');
         if (!token || !userStr) {
-            autoGuestLogin();
             return null;
         }
         try { return JSON.parse(userStr); } catch (e) { return null; }
@@ -1762,7 +1750,7 @@ async function autoGuestLogin() {
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        autoGuestLogin();
+        requireLogin();
     });
 
     // DOM 元素

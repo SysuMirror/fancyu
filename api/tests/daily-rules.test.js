@@ -1,0 +1,8 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {dayKey,ageAt,validateSettings,compatible,score,CAMPUSES}=require('../daily-rules');
+const now=new Date('2026-09-27T08:00:00Z');
+const settings={birth_date:'2005-09-27',gender:'非二元',show_gender:false,campus:CAMPUSES[3],grade:'大三',genders:['非二元','女'],campuses:[CAMPUSES[3]],min_age:18,max_age:30,schedule:'不固定',pace:'慢慢熟悉',single_adult_student:true,display_consent:true};
+test('Beijing date and adult birthday boundary',()=>{assert.equal(dayKey(new Date('2026-09-27T15:59:59Z')),'2026-09-27');assert.equal(dayKey(new Date('2026-09-27T16:00:00Z')),'2026-09-28');assert.equal(ageAt('2008-09-28',now),17);assert.equal(ageAt('2008-09-27',now),18);});
+test('validates explicit consent and preferences; rejects invalid dates and underage users',()=>{assert.deepEqual(validateSettings(settings,now),settings);for(const patch of [{birth_date:'2008-09-28'},{birth_date:'2004-02-30'},{genders:[]},{campuses:[]},{single_adult_student:false},{display_consent:false},{min_age:40,max_age:20},{max_age:101}])assert.throws(()=>validateSettings({...settings,...patch},now));});
+test('compatibility is mutual, not default heterosexual, never based on missing answers',()=>{assert.equal(compatible(settings,settings,now),true);assert.equal(compatible(settings,{...settings,genders:['男']},now),false);assert.equal(compatible(settings,{...settings,campus:CAMPUSES[0]},now),false);assert.equal(compatible(settings,{...settings,min_age:25},now),false);assert.equal(score({},{},[],[]),0);assert.equal(score(settings,settings,['摄影'],['摄影']),5);});

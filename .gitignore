@@ -26,3 +26,8 @@ logs/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Daily matching deployment scratch and private credentials
+/.daily-staging/
+/.daily-backups/
+/.private/

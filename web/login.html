@@ -506,6 +506,7 @@
             * { animation: none !important; transition: none !important; }
         }
     </style>
+<script src="auth-session.js"></script>
 </head>
 <body>
     <div class="bg-pattern"></div>
@@ -570,7 +571,7 @@
                 </div>
                 <div class="form-group">
                     <label>密码</label>
-                    <input type="password" id="regPassword" placeholder="设置密码（至少6位）" required minlength="6">
+                    <input type="password" id="regPassword" placeholder="设置密码（至少8位）" required minlength="8">
                 </div>
                 <div class="form-group">
                     <label>确认密码</label>
@@ -608,7 +609,7 @@
                 </div>
                 <div class="form-group">
                     <label>新密码</label>
-                    <input type="password" id="forgotPassword" placeholder="新密码（至少6位）" required minlength="6">
+                    <input type="password" id="forgotPassword" placeholder="新密码（至少8位）" required minlength="8">
                 </div>
                 <div class="form-group">
                     <label>确认新密码</label>
@@ -829,7 +830,7 @@
                     showMsg('登录成功，正在跳转...', 'success');
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : 'index.html';
                         window.location.href = safeRedirect;
                     }, 800);
                 } else {
@@ -864,8 +865,8 @@
                 showMsg('两次密码不一致', 'error', 'registerMsg');
                 return;
             }
-            if (password.length < 6) {
-                showMsg('密码至少6位', 'error', 'registerMsg');
+            if (password.length < 8) {
+                showMsg('密码至少8位', 'error', 'registerMsg');
                 return;
             }
 
@@ -897,7 +898,7 @@
                     showMsg('注册成功！正在跳转...', 'success', 'registerMsg');
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : 'index.html';
                         window.location.href = safeRedirect;
                     }, 1200);
                 } else {
@@ -927,8 +928,8 @@
                 showMsg('两次密码不一致', 'error', 'forgotMsg');
                 return;
             }
-            if (password.length < 6) {
-                showMsg('密码至少6位', 'error', 'forgotMsg');
+            if (password.length < 8) {
+                showMsg('密码至少8位', 'error', 'forgotMsg');
                 return;
             }
 

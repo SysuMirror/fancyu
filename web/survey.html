@@ -272,6 +272,7 @@
             * { animation: none !important; transition: none !important; }
         }
     </style>
+<script src="auth-session.js"></script>
 </head>
 <body>
 <div class="container">
@@ -733,25 +734,12 @@
 <script>
     const API_URL = "/api";
 
-// ===== 部署补丁: 免登录自动登录 =====
-async function autoGuestLogin() {
-    if (window.__guestBusy) return;
-    window.__guestBusy = true;
-    try {
-        let login = localStorage.getItem('guest_login');
-        if (!login) { login = 'guest-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('guest_login', login); }
-        const r = await fetch('/api/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password: 'guest' }) });
-        const d = await r.json();
-        if (d.code === 200) {
-            localStorage.setItem('token', d.token);
-            localStorage.setItem('user', JSON.stringify(d.user));
-            location.reload();
-        } else {
-            autoGuestLogin();
-        }
-    } catch (e) {
-        autoGuestLogin();
-    }
+// 登录失效时跳转，并保留返回路径。
+function requireLogin() {
+    if(window.__loginRedirecting)return;
+    window.__loginRedirecting=true;
+    localStorage.removeItem('token');localStorage.removeItem('user');
+    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
 }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -767,7 +755,7 @@ async function autoGuestLogin() {
     function checkAuth() {
         authToken = localStorage.getItem('token');
         if (!authToken) {
-            autoGuestLogin();
+            requireLogin();
             return false;
         }
         const userStr = localStorage.getItem('user');
@@ -785,7 +773,7 @@ async function autoGuestLogin() {
         if (data.code === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            autoGuestLogin();
+            requireLogin();
             return true;
         }
         return false;

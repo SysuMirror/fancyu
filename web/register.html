@@ -357,6 +357,7 @@
             * { animation: none !important; transition: none !important; }
         }
     </style>
+<script src="auth-session.js"></script>
 </head>
 <body>
     <div class="bg-pattern"></div>
@@ -412,7 +413,7 @@
                 </div>
                 <div class="form-group">
                     <label for="password">密码</label>
-                    <input type="password" id="password" placeholder="至少6位" required minlength="6">
+                    <input type="password" id="password" placeholder="至少8位" required minlength="8">
                 </div>
                 <div class="form-group">
                     <label for="confirmPassword">确认密码</label>
@@ -667,8 +668,8 @@
                 return;
             }
 
-            if (password.length < 6) {
-                showMsg('密码长度至少为6位', 'error');
+            if (password.length < 8) {
+                showMsg('密码长度至少为8位', 'error');
                 return;
             }
 
@@ -698,7 +699,7 @@
                     showMsg('注册成功，正在跳转...', 'success');
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                        const safeRedirect = redirect.startsWith('http') ? 'index.html' : redirect;
+                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : 'index.html';
                         window.location.href = safeRedirect;
                     }, 1000);
                 } else {

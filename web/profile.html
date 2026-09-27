@@ -196,6 +196,7 @@
             * { animation: none !important; transition: none !important; }
         }
     </style>
+<script src="auth-session.js"></script>
 </head>
 <body>
 <div class="container">
@@ -222,6 +223,7 @@
         </div>
     </div>
 
+    <div class="section"><div class="section-title"><div class="section-icon">♡</div>日常配对</div><div class="card survey-card"><div class="survey-info"><div class="survey-title">每天认识一位同频的人</div><div class="survey-status">今日推荐、我的连接与配对偏好</div></div><a href="daily.html" class="survey-btn" style="margin-left:12px;white-space:nowrap;">进入配对</a></div></div>
     <!-- 账号管理 -->
     <div class="section">
         <div class="section-title"><div class="section-icon">⚙️</div>账号管理</div>
@@ -345,7 +347,7 @@
         </div>
         <div class="form-group">
             <label class="form-label">新密码</label>
-            <input type="password" class="form-input" id="newPassword" placeholder="输入新密码（至少6位）">
+            <input type="password" class="form-input" id="newPassword" placeholder="输入新密码（至少8位）">
         </div>
         <div class="form-group">
             <label class="form-label">确认新密码</label>
@@ -384,25 +386,12 @@
 <script>
     const API_URL = "/api";
 
-// ===== 部署补丁: 免登录自动登录 =====
-async function autoGuestLogin() {
-    if (window.__guestBusy) return;
-    window.__guestBusy = true;
-    try {
-        let login = localStorage.getItem('guest_login');
-        if (!login) { login = 'guest-' + Math.random().toString(36).slice(2, 10); localStorage.setItem('guest_login', login); }
-        const r = await fetch('/api/account/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password: 'guest' }) });
-        const d = await r.json();
-        if (d.code === 200) {
-            localStorage.setItem('token', d.token);
-            localStorage.setItem('user', JSON.stringify(d.user));
-            location.reload();
-        } else {
-            autoGuestLogin();
-        }
-    } catch (e) {
-        autoGuestLogin();
-    }
+// 登录失效时跳转，并保留返回路径。
+function requireLogin() {
+    if(window.__loginRedirecting)return;
+    window.__loginRedirecting=true;
+    localStorage.removeItem('token');localStorage.removeItem('user');
+    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
 }
 
     let currentUser = null;
@@ -412,7 +401,7 @@ async function autoGuestLogin() {
     function checkAuth() {
         authToken = localStorage.getItem('token');
         if (!authToken) {
-            autoGuestLogin();
+            requireLogin();
             return false;
         }
         const userStr = localStorage.getItem('user');
@@ -748,7 +737,7 @@ async function autoGuestLogin() {
         const newPwd = document.getElementById('newPassword').value;
         const confirmPwd = document.getElementById('confirmPassword').value;
         if (!oldPwd || !newPwd || !confirmPwd) { showToast('请填写所有密码字段', true); return; }
-        if (newPwd.length < 6) { showToast('新密码至少6位', true); return; }
+        if (newPwd.length < 8) { showToast('新密码至少8位', true); return; }
         if (newPwd !== confirmPwd) { showToast('两次输入的新密码不一致', true); return; }
         try {
             const res = await fetch(`${API_URL}/account/change-password`, {

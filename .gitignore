@@ -31,3 +31,7 @@ Thumbs.db
 /.daily-staging/
 /.daily-backups/
 /.private/
+
+# Weekly questionnaire deployment scratch
+/.weekly-staging/
+/.weekly-backups/

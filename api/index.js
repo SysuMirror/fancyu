@@ -693,6 +693,7 @@ app.post('/account/bind', async (req, res) => {
 
 // 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
 require('./profile')(app, { getPool, verifyToken });
+const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {
@@ -1013,8 +1014,9 @@ app.get('/account/survey-status', authMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         const accountId = req.account.account_id;
+        await weekly.ensureSchema();
         const [loveRows] = await pool.execute(
-            `SELECT COUNT(*) as count FROM users WHERE account_id = ?`,
+            `SELECT COUNT(*) as count FROM weekly_questionnaires WHERE account_id = ?`,
             [accountId]
         );
         const [friendRows] = await pool.execute(

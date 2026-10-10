@@ -1,0 +1,12 @@
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('crypto');
+const {fixture}=require('./weekly.test');
+test('weekly questionnaire persists privately, sanitizes branches and cascades on deletion',{skip:process.env.WEEKLY_INTEGRATION_TEST!=='1'},async()=>{
+const mysql=require('mysql2/promise'),express=require('express');const p=mysql.createPool({host:process.env.MYSQL_HOST,port:process.env.MYSQL_PORT,user:process.env.MYSQL_USER,password:process.env.MYSQL_PASSWORD,database:process.env.MYSQL_DATABASE});const ids=[],name='weeklytest_'+crypto.randomBytes(5).toString('hex');let server;
+try{for(let i=0;i<2;i++){const [r]=await p.execute('INSERT INTO accounts(email,username,password_hash) VALUES (?,?,?)',[name+i+'@example.invalid',name+i,'no-login']);ids.push(r.insertId);}
+const app=express();app.use(express.json());require('../weekly')(app,{getPool:async()=>p,authMiddleware:(req,res,next)=>{const id=Number(req.headers.authorization);if(!ids.includes(id))return res.status(401).json({code:401});req.account={account_id:id};next();},adminAuthMiddleware:(req,res)=>res.status(401).json({code:401})});server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+async function request(id,body){const r=await fetch('http://127.0.0.1:'+server.address().port+'/account/weekly-survey',{method:body?'PUT':'GET',headers:{Authorization:String(id),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,...await r.json()};}
+assert.equal((await request(0)).status,401);assert.equal((await request(ids[0])).survey,null);assert.equal((await request(ids[0],{...fixture(),account_id:ids[1]})).status,200);assert.equal((await request(ids[1])).survey,null);assert.ok((await request(ids[0])).survey.answers['13']);
+assert.equal((await request(ids[0],fixture(false))).status,200);assert.equal((await request(ids[0])).survey.answers['13'],undefined);assert.deepEqual((await request(ids[0])).survey.important,['17','47']);
+assert.equal((await request(ids[0],{answers:{},important:[]})).status,400);assert.equal((await request(ids[0])).survey.answers['12'],fixture(false).answers['12']);await p.execute('DELETE FROM accounts WHERE id=?',[ids[0]]);const [rows]=await p.execute('SELECT account_id FROM weekly_questionnaires WHERE account_id=?',[ids[0]]);assert.equal(rows.length,0);
+}finally{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}for(const id of ids)await p.execute('DELETE FROM accounts WHERE id=?',[id]);await p.end();}
+});

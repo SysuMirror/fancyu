@@ -17,7 +17,7 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
     }
     async function send(email,purpose) {
         if (!validEmail(email)) return {code:400,msg:'请输入中大学生邮箱'};
-        if (!emailConfigured) return {code:503,msg:'学生邮箱邮件服务尚未配置，暂不能开启日常配对。请联系管理员。'};
+        if (!emailConfigured) return {code:503,msg:'学生邮箱邮件服务尚未配置，暂不能开启配对。请联系管理员。'};
         const pool=await getPool(), c=await pool.getConnection();
         const code=String(crypto.randomInt(100000,1000000));
         try {
@@ -81,11 +81,11 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
         const result=b.action==='sendCode'? await send(email,purpose):{code:await check(email,purpose,b.code,false)?200:400,msg:'验证码校验完成'};
         res.status(result.code).json(result);
     }));
-    app.post('/daily/verification/send',authMiddleware,limit,wrap(async(req,res)=>{
+    app.post(['/daily/verification/send','/account/student-verification/send'],authMiddleware,limit,wrap(async(req,res)=>{
         const pool=await getPool();const [rows]=await pool.execute('SELECT email FROM accounts WHERE id=?',[req.account.account_id]);
         const result=await send(rows[0]?.email,'daily');res.status(result.code).json(result);
     }));
-    app.post('/daily/verification/confirm',authMiddleware,limit,wrap(async(req,res)=>{
+    app.post(['/daily/verification/confirm','/account/student-verification/confirm'],authMiddleware,limit,wrap(async(req,res)=>{
         const pool=await getPool();const [rows]=await pool.execute('SELECT email FROM accounts WHERE id=?',[req.account.account_id]);const email=rows[0]?.email;
         if(!validEmail(email)||!await check(email,'daily',req.body?.code))return res.status(400).json({code:400,msg:'验证码错误、过期或尝试次数过多'});
         await markVerified(req.account.account_id,email);res.json({code:200,msg:'学生邮箱验证成功'});

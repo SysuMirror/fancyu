@@ -35,3 +35,6 @@ Thumbs.db
 # Weekly questionnaire deployment scratch
 /.weekly-staging/
 /.weekly-backups/
+
+/.verification-staging/
+/.verification-backups/

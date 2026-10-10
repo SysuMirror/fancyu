@@ -616,6 +616,8 @@ const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddlewar
 const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,
     emailConfigured:!!SMTP_PASSWORD,from:FROM_ALIAS+' <'+ACCOUNT_NAME+'>',ensureSchema:daily.ensureSchema,secret:JWT_SECRET});
 
+const studentVerification = require('./verification-guard')(app,{getPool,ensureSchema:daily.ensureSchema,authMiddleware});
+
 // 老用户绑定序列号
 app.post('/account/bind', async (req, res) => {
     const { serial_number, email, code, password, username } = req.body;
@@ -708,6 +710,8 @@ app.get('/account/me', authMiddleware, async (req, res) => {
         const pool = await getPool();
         await ensurePreferencesTable(pool);
         const prefs = await getAccountPreferences(pool, account.id);
+        await daily.ensureSchema();
+        const studentVerified=await studentVerification.verified(pool,account.id);
 
         return res.json({
             code: 200,
@@ -716,8 +720,9 @@ app.get('/account/me', authMiddleware, async (req, res) => {
                 email: account.email,
                 username: account.username,
                 created_at: account.created_at,
-                join_matching: prefs ? !!prefs.join_matching : true,
-                join_friend_matching: prefs ? !!prefs.join_friend_matching : true,
+                student_email_verified: studentVerified,
+                join_matching: studentVerified && !!prefs?.join_matching,
+                join_friend_matching: studentVerified && !!prefs?.join_friend_matching,
                 contact_email: contactEmail,
                 serials
             }
@@ -859,7 +864,7 @@ app.post('/account/toggle-matching', authMiddleware, async (req, res) => {
         const value = join_matching ? 1 : 0;
         const pool = await getPool();
         await ensurePreferencesTable(pool);
-        await setAccountPreference(pool, req.account.account_id, 'join_matching', value);
+        if(!await setAccountPreference(pool, req.account.account_id, 'join_matching', value))throw Error('preference write failed');
         return res.json({ code: 200, msg: value ? '已加入本轮恋爱匹配' : '已退出本轮恋爱匹配', join_matching: !!value });
     } catch (error) {
         console.error('Toggle Matching Error:', error);
@@ -881,8 +886,8 @@ async function ensurePreferencesTable(pool) {
     try {
         await pool.execute(`CREATE TABLE IF NOT EXISTS account_preferences (
             account_id INT PRIMARY KEY,
-            join_matching TINYINT(1) DEFAULT 1,
-            join_friend_matching TINYINT(1) DEFAULT 1,
+            join_matching TINYINT(1) DEFAULT 0,
+            join_friend_matching TINYINT(1) DEFAULT 0,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )`);
     } catch (e) {
@@ -901,7 +906,8 @@ async function getAccountPreferences(pool, accountId) {
 
 async function setAccountPreference(pool, accountId, field, value) {
     try {
-        await pool.execute(`INSERT INTO account_preferences (account_id, ${field}) VALUES (?, ?) ON DUPLICATE KEY UPDATE ${field} = ?`, [accountId, value, value]);
+        await pool.execute(`INSERT INTO account_preferences (account_id, join_matching, join_friend_matching) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE ${field} = VALUES(${field})`, [accountId,field==='join_matching'?value:0,field==='join_friend_matching'?value:0]);
+        if(field==='join_matching')await pool.execute('UPDATE accounts SET join_matching=? WHERE id=?',[value,accountId]);
         return true;
     } catch (e) {
         console.error('setAccountPreference error:', e.message.substring(0, 100));
@@ -916,7 +922,7 @@ app.post('/account/toggle-friend-matching', authMiddleware, async (req, res) => 
         const value = join_friend_matching ? 1 : 0;
         const pool = await getPool();
         await ensurePreferencesTable(pool);
-        await setAccountPreference(pool, req.account.account_id, 'join_friend_matching', value);
+        if(!await setAccountPreference(pool, req.account.account_id, 'join_friend_matching', value))throw Error('preference write failed');
         return res.json({ code: 200, msg: value ? '已加入本轮交友匹配' : '已退出本轮交友匹配', join_friend_matching: !!value });
     } catch (error) {
         console.error('Toggle Friend Matching Error:', error);
@@ -1041,7 +1047,8 @@ app.get('/account/matches', authMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         await ensureMatchHistoryTable(pool);
-        const matches = await getMatchHistory(pool, req.account.account_id);
+        const history = await getMatchHistory(pool, req.account.account_id);
+        const matches=[];for(const match of history)if(await studentVerification.verified(pool,match.match_account_id))matches.push(match);
 
         const result = await Promise.all(matches.map(async (m) => {
             const matchData = m.match_data ? JSON.parse(m.match_data) : {};
@@ -1114,6 +1121,7 @@ app.post('/account/exchange-contact', authMiddleware, async (req, res) => {
             return res.json({ code: 404, msg: '匹配记录不存在' });
         }
 
+        if(!await studentVerification.verified(pool,match.match_account_id))return res.status(403).json({code:403,msg:'对方尚未通过学生邮箱验证，暂不能交换联系方式'});
         if (match.user_agreed) {
             return res.json({ code: 200, msg: '您已同意交换联系方式', contact_exchanged: match.contact_exchanged === 1 });
         }
@@ -1314,6 +1322,7 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
             const accountId = accRows1[0].id;
             const matchAccountId = accRows2[0].id;
             
+            if(!await studentVerification.verified(pool,accountId)||!await studentVerification.verified(pool,matchAccountId)){skipCount++;continue;}
             if(accountId===matchAccountId || await daily.weeklyGuard(pool,accountId,matchAccountId,time)){skipCount++;continue;}
             // 检查是否已存在
             const [existing] = await pool.execute(
@@ -2144,6 +2153,7 @@ app.get('/', async (req, res) => {
             if (!userData) {
                 return res.json({ code: 404, msg: '未找到该用户' });
             }
+            if(!userData.account_id||!await studentVerification.verified(await getPool(),userData.account_id))return res.status(403).json({code:403,msg:'该资料暂不可访问'});
             const filteredData = filterByDisplaySelf(userData, userData.display_self);
             if (filteredData) {
                 filteredData.contact_email = userData.contact_email;

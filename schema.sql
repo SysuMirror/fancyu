@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `accounts` (
     `password_hash` VARCHAR(255) NOT NULL,
     `email_verified` BOOLEAN DEFAULT TRUE,
     `school` VARCHAR(100) NULL,
-    `join_matching` TINYINT(1) DEFAULT 1,
+    `join_matching` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `last_login_at` TIMESTAMP NULL,
     INDEX `idx_email` (`email`),

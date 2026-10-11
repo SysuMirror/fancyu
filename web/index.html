@@ -1532,9 +1532,8 @@
         <div class="slogan"><p>算法寻觅 · 缘分天定</p><p>每周一遇 · 真诚相识</p></div>
 
         <div class="btn-group">
-            <button class="btn-primary" id="btnLove"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>每周配对</button>
-            <button class="btn-primary" id="btnFriend"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>每周交友</button>
-            <button class="btn-primary" onclick="location.href='daily.html'">♡ 日常配对</button>
+            <button class="btn-primary" id="btnLove"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>恋爱板块</button>
+            <button class="btn-primary" id="btnFriend"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>交友板块</button>
             <button class="btn-primary" id="btnProfile"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>我的主页</button>
             <button class="btn-primary" id="btnSupport">💖 大发善心</button>
         </div>
@@ -1573,17 +1572,18 @@
         <button class="modal-close-btn" id="loveMenuCloseBtn">×</button>
         <div class="love-menu-title">恋爱板块</div>
         <div class="love-menu-buttons">
-            <div class="love-menu-item" id="loveSurveyBtn">
+            <button type="button" class="love-menu-item" id="loveSurveyBtn">
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                填写问卷
-            </div>
+                每周配对
+            </button>
+            <button type="button" class="love-menu-item" id="dailyMatchBtn"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>日常配对</button>
         </div>
         <div class="match-toggle-row">
             <div>
-                <div class="match-toggle-label">本轮参与匹配</div>
-                <div class="match-toggle-hint">关闭后本轮不会被匹配</div>
+                <div class="match-toggle-label">参与每周配对</div>
+                <div class="match-toggle-hint">仅控制每周配对，日常配对单独设置</div>
             </div>
-            <div class="toggle-switch on" id="loveMatchToggle"></div>
+            <div class="toggle-switch" id="loveMatchToggle"></div>
         </div>
     </div>
 </div>
@@ -1594,17 +1594,17 @@
         <button class="modal-close-btn" id="friendMenuCloseBtn">×</button>
         <div class="friend-menu-title">交友板块</div>
         <div class="friend-menu-buttons">
-            <div class="friend-menu-item" id="friendSurveyBtn">
+            <button type="button" class="friend-menu-item" id="friendSurveyBtn">
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                填写问卷
-            </div>
+                每周交友
+            </button>
         </div>
         <div class="match-toggle-row">
             <div>
-                <div class="match-toggle-label">本轮参与匹配</div>
-                <div class="match-toggle-hint">关闭后本轮不会被匹配</div>
+                <div class="match-toggle-label">参与每周交友</div>
+                <div class="match-toggle-hint">关闭后不参与本轮每周交友</div>
             </div>
-            <div class="toggle-switch on" id="friendMatchToggle"></div>
+            <div class="toggle-switch" id="friendMatchToggle"></div>
         </div>
     </div>
 </div>
@@ -1812,24 +1812,22 @@ function requireLogin() {
 
     // 匹配开关切换
     async function toggleMatch(type) {
-        const toggle = document.getElementById(type + 'MatchToggle');
-        const isOn = toggle.classList.toggle('on');
-        localStorage.setItem(type + '_match_enabled', isOn ? '1' : '0');
-        showToast(isOn ? '已开启本轮匹配' : '已关闭本轮匹配');
-
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const endpoint = type === 'friend' ? '/account/toggle-friend-matching' : '/account/toggle-matching';
-                await fetch(API_URL + endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ join_matching: isOn })
-                });
-            } catch (err) {
-                console.error('同步匹配状态失败:', err);
-            }
-        }
+        const toggle=document.getElementById(type+'MatchToggle');
+        if(toggle.dataset.busy==='1')return;
+        const token=localStorage.getItem('token');
+        if(!token){requireLogin();return;}
+        const isOn=!toggle.classList.contains('on');
+        const field=type==='friend'?'join_friend_matching':'join_matching';
+        const endpoint=type==='friend'?'/account/toggle-friend-matching':'/account/toggle-matching';
+        toggle.dataset.busy='1';
+        try {
+            const res=await fetch(API_URL+endpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({[field]:isOn})});
+            const result=await res.json();
+            if(result.code!==200)throw Error(result.msg||'操作失败，请稍后重试');
+            toggle.classList.toggle('on',result[field]===true);
+            showToast(result.msg);
+        }catch(e){showToast(e.message||'网络异常，请稍后重试');}
+        finally{delete toggle.dataset.busy;}
     }
 
     // 大发善心功能
@@ -1850,33 +1848,16 @@ function requireLogin() {
 
     // 恢复匹配开关状态
     async function restoreToggleState() {
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const res = await fetch(API_URL + '/account/me', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                const result = await res.json();
-                if (result.code === 200 && result.user) {
-                    const joinMatching = result.user.join_matching !== false;
-                    ['love', 'friend'].forEach(type => {
-                        const toggle = document.getElementById(type + 'MatchToggle');
-                        if (joinMatching) toggle.classList.add('on');
-                        else toggle.classList.remove('on');
-                        localStorage.setItem(type + '_match_enabled', joinMatching ? '1' : '0');
-                    });
-                    return;
-                }
-            } catch (err) {
-                console.error('获取匹配状态失败:', err);
+        ['love','friend'].forEach(type=>document.getElementById(type+'MatchToggle').classList.remove('on'));
+        const token=localStorage.getItem('token');if(!token)return;
+        try {
+            const res=await fetch(API_URL+'/account/me',{headers:{Authorization:'Bearer '+token}});
+            const result=await res.json();
+            if(result.code===200&&result.user){
+                document.getElementById('loveMatchToggle').classList.toggle('on',result.user.join_matching===true);
+                document.getElementById('friendMatchToggle').classList.toggle('on',result.user.join_friend_matching===true);
             }
-        }
-        ['love', 'friend'].forEach(type => {
-            const saved = localStorage.getItem(type + '_match_enabled');
-            const toggle = document.getElementById(type + 'MatchToggle');
-            if (saved === '0') toggle.classList.remove('on');
-            else toggle.classList.add('on');
-        });
+        }catch(e){showToast('暂时无法读取参与状态，请刷新重试');}
     }
     restoreToggleState();
 
@@ -1888,6 +1869,7 @@ function requireLogin() {
 
     // 恋爱板块弹窗
     document.getElementById("loveSurveyBtn")?.addEventListener("click", goToLoveSurvey);
+    document.getElementById("dailyMatchBtn")?.addEventListener("click", () => { location.href="daily.html"; });
     document.getElementById("loveMenuCloseBtn")?.addEventListener("click", closeAllModals);
     document.getElementById("loveMatchToggle")?.addEventListener("click", () => toggleMatch('love'));
     loveMenuModal?.addEventListener("click", (e) => { if (e.target === loveMenuModal) closeAllModals(); });

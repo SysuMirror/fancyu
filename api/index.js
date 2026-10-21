@@ -500,13 +500,13 @@ async function saveFriendSurveyData(accountId, data) {
     const pool = await getPool();
 
     try {
-        await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS friend_goal VARCHAR(50) NULL AFTER relationship_goal`);
+        await pool.execute(`ALTER TABLE friend_survey ADD COLUMN IF NOT EXISTS friend_goal VARCHAR(50) NULL AFTER relationship_goal`);
     } catch (e) {}
     try {
-        await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ideal_friend TEXT NULL AFTER self_description`);
+        await pool.execute(`ALTER TABLE friend_survey ADD COLUMN IF NOT EXISTS ideal_friend TEXT NULL AFTER self_description`);
     } catch (e) {}
 
-    const existingQuery = `SELECT id FROM users WHERE account_id = ? AND survey_type = 'friend' LIMIT 1`;
+    const existingQuery = `SELECT id FROM friend_survey WHERE account_id = ? AND survey_type = 'friend' LIMIT 1`;
     const [existing] = await pool.execute(existingQuery, [accountId]);
 
     const friendFields = [
@@ -526,17 +526,18 @@ async function saveFriendSurveyData(accountId, data) {
             return Array.isArray(val) ? JSON.stringify(val) : val;
         });
         updateValues.push(existing[0].id);
-        await pool.execute(`UPDATE users SET ${setClause}, updated_at = NOW() WHERE id = ?`, updateValues);
+        await pool.execute(`UPDATE friend_survey SET ${setClause}, updated_at = NOW() WHERE id = ?`, updateValues);
         return { updated: true, id: existing[0].id };
     } else {
-        const insertFields = friendFields;
+        const insertFields = [...friendFields,'serial_number'];
         const placeholders = insertFields.map(() => '?').join(', ');
-        const query = `INSERT INTO users (${insertFields.join(', ')}) VALUES (${placeholders})`;
+        const query = `INSERT INTO friend_survey (${insertFields.join(', ')}) VALUES (${placeholders})`;
         const values = insertFields.map(field => {
+            if (field === 'serial_number') return 'F'+crypto.randomBytes(10).toString('hex');
             if (field === 'account_id') return accountId;
             if (field === 'user_id') return data['user_id'] || null;
             if (field === 'email') return data['email'] || null;
-            if (field === 'contact_email') return data['contact_info'] || data['email'] || null;
+            if (field === 'contact_email') return data['contact_email'] || data['email'] || null;
             if (field === 'survey_type') return 'friend';
             const val = data[field];
             if (val === undefined || val === null) return null;
@@ -696,6 +697,7 @@ app.post('/account/bind', async (req, res) => {
 // 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
 require('./profile')(app, { getPool, verifyToken });
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware});
+const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {

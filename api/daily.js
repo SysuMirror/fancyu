@@ -164,6 +164,9 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
     }));
     app.delete('/daily/blocks/:id',authMiddleware,route(async(req,c)=>{
         if(!Number.isSafeInteger(Number(req.params.id))||Number(req.params.id)<1)throw error(400,'屏蔽编号无效');
+        // Revoke friendship pairs before removing the shared block, so old access cannot revive.
+        const [friendTables]=await c.query("SHOW TABLES LIKE 'friend_card_pairs'");
+        if(friendTables.length)await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND status IN ('pending','connected')",[req.account.account_id,req.params.id,req.params.id,req.account.account_id]);
         await c.execute('DELETE FROM daily_blocks WHERE owner_id=? AND target_id=?',[req.account.account_id,req.params.id]);
         // Keep old relationships ended. They are not restored on unblock.
         await c.execute("UPDATE daily_pairs SET status='cancelled' WHERE low_id=? AND high_id=? AND status='blocked'",[Math.min(req.account.account_id,Number(req.params.id)),Math.max(req.account.account_id,Number(req.params.id))]);

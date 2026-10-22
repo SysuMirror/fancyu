@@ -6,7 +6,7 @@ const json = x => typeof x === 'string' ? JSON.parse(x) : x;
 const sqlTime = d => d.toISOString().slice(0,19).replace('T',' ');
 const plusDays = (d,n) => new Date(d.getTime()+n*86400000);
 
-module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuthMiddleware, prepare = async()=>{}, now = () => new Date() }) {
+module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuthMiddleware, prepare = async()=>{}, observe = async()=>{}, now = () => new Date() }) {
     let ready;
     function ensureSchema() {
         if(!ready) ready=(async()=>{ const pool=await getPool();
@@ -124,10 +124,11 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
             choices.push({id:other,pending,priority:pending&&((id===low?pending.high_choice:pending.low_choice)==='like')?1:0,score:score(a.settings,b,myTags,json(row.tags)||[]),exposure:Number(row.exposure),tie:Math.random()});
         }
         choices.sort((a,b)=>b.priority-a.priority||b.score-a.score||a.exposure-b.exposure||a.tie-b.tie);
-        if(!choices.length)return {msg:'今天暂时没有合适的推荐，可稍后再来；不会占用今日名额',empty:true};
+        if(!choices.length){await observe(c,{mode:'daily',accountId:id,unit:day,outcome:'empty',time});return {msg:'今天暂时没有合适的推荐，可稍后再来；不会占用今日名额',empty:true};}
         const choice=choices[0];let pairId=choice.pending?.id;
         if(!pairId){const [r]=await c.execute('INSERT INTO daily_pairs(low_id,high_id,created_at,expires_at) VALUES (?,?,?,?)',[Math.min(id,choice.id),Math.max(id,choice.id),sqlTime(time),sqlTime(plusDays(time,14))]);pairId=r.insertId;}
         await c.execute('INSERT INTO daily_days(account_id,day_key,pair_id) VALUES (?,?,?)',[id,day,pairId]);
+        await observe(c,{mode:'daily',accountId:id,unit:day,outcome:'recommended',pairId,time});
         return {pair_id:pairId,msg:'今日推荐已准备好'};
     }));
     app.post('/daily/pairs/:id/respond',authMiddleware,route(async(req,c,time)=>{

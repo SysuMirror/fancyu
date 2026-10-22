@@ -611,7 +611,9 @@ app.use((req, res, next) => {
 
 // ==================== 账号系统 API ====================
 
-const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,prepare:async pool=>{
+const analytics = require('./admin-analytics')({getPool});
+const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,observe:analytics.observe,prepare:async pool=>{
+    await analytics.ensureSchema();
     await ensureMatchHistoryTable(pool);await ensureComplaintTable(pool);
 }});
 const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,
@@ -697,7 +699,8 @@ app.post('/account/bind', async (req, res) => {
 // 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
 require('./profile')(app, { getPool, verifyToken });
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware});
-const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification});
+const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,observe:analytics.observe});
+analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {

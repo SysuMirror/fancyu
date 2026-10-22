@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path');
 const {weekKey,validateCard,compatible,score,MAX}=require('./friends-rules');
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
-module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,now=()=>new Date()}){
+module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},now=()=>new Date()}){
  let ready;
  function ensureSchema(){if(!ready)ready=(async()=>{await daily.ensureSchema();const p=await getPool();for(const sql of fs.readFileSync(path.join(__dirname,'friends-schema.sql'),'utf8').split(';').map(s=>s.trim()).filter(Boolean))await p.query(sql);})().catch(e=>{ready=null;throw e;});return ready;}
  const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
@@ -62,9 +62,9 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,no
    const [past]=await c.execute(`SELECT id FROM friend_card_pairs WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND (week_key=? OR status='connected' OR created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 DAY)) LIMIT 1`,[id,r.account_id,r.account_id,id,week]);if(past.length)continue;
    choices.push({other,score:score(card,other),tie:Math.random()});
   }
-  choices.sort((a,b)=>b.score-a.score||a.tie-b.tie);if(!choices.length)return {empty:true,msg:'本周暂时没有合适搭子，可稍后再试，不占用名额'};
+  choices.sort((a,b)=>b.score-a.score||a.tie-b.tie);if(!choices.length){await observe(c,{mode:'quick',accountId:id,unit:card.id+':'+week,outcome:'empty',time:now()});return {empty:true,msg:'本周暂时没有合适搭子，可稍后再试，不占用名额'};}
   const b=choices[0].other;const [r]=await c.execute('INSERT INTO friend_card_pairs(a_card,b_card,a_id,b_id,week_key) VALUES (?,?,?,?,?)',[card.id,b.id,id,b.account_id,week]);
-  await c.execute('INSERT INTO friend_card_weeks(card_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[card.id,week,r.insertId,b.id,week,r.insertId]);return {pair_id:r.insertId,msg:'本周搭子已推荐，双方都可以查看并决定是否认识'};
+  await c.execute('INSERT INTO friend_card_weeks(card_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[card.id,week,r.insertId,b.id,week,r.insertId]);await observe(c,{mode:'quick',accountId:id,unit:card.id+':'+week,outcome:'recommended',pairId:r.insertId,time:now()});return {pair_id:r.insertId,msg:'本周搭子已推荐，双方都可以查看并决定是否认识'};
  }));
  app.post('/account/friends/pairs/:id/respond',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id;await requireEligible(c,id);const p=await pair(c,id,req.params.id);if(!await visible(c,p))fail(409,'这段推荐已结束或不可访问');if(p.status==='connected')return {msg:'你们已经建立连接'};

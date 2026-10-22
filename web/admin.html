@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FancyU · 管理后台</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -241,6 +240,7 @@
             * { animation: none !important; transition: none !important; }
         }
     </style>
+<link rel="stylesheet" href="admin-overview.css">
 </head>
 <body>
 
@@ -270,8 +270,7 @@
     </div>
     <div class="content">
         <div class="panel active" id="panelStats">
-            <div class="stats-grid" id="statsGrid"></div>
-            <div class="charts-grid" id="chartsGrid"></div>
+            <div id="operationsDashboard"></div>
         </div>
         <div class="panel" id="panelUsers">
             <div class="filters">
@@ -348,9 +347,8 @@
     <img id="imgModalSrc" src="">
 </div>
 
+<script src="admin-overview.js"></script>
 <script>
-Chart.defaults.font.family = '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif';
-Chart.defaults.color = '#64748b';
 
 const API = '/api';
 let adminToken = null;
@@ -435,84 +433,7 @@ function switchTab(tab) {
     if (tab === 'assistant') initAssistant();
 }
 
-async function loadStats() {
-    try {
-        Object.values(chartInstances).forEach(function(c) { if (c && c.destroy) c.destroy(); });
-        chartInstances = {};
-        const res = await fetch(API + '/admin/stats', { headers: getAdminHeaders() });
-        const result = await res.json();
-        if (result.code !== 200) return;
-        const d = result.data;
-
-        document.getElementById('statsGrid').innerHTML =
-            '<div class="stat-card"><div class="label">问卷总数</div><div class="value">' + d.totalUsers + '</div></div>' +
-            '<div class="stat-card"><div class="label">注册账号</div><div class="value">' + d.totalAccounts + '</div></div>' +
-            '<div class="stat-card"><div class="label">参与匹配</div><div class="value">' + d.joinMatching + '</div><div class="sub"><strong>' + (d.totalAccounts > 0 ? Math.round(d.joinMatching / d.totalAccounts * 100) : 0) + '%</strong> 参与率</div></div>' +
-            '<div class="stat-card"><div class="label">平均身高</div><div class="value">' + (d.avgHeight || '-') + ' cm</div></div>';
-
-        var chartsHtml = '';
-        chartsHtml += '<div class="chart-card"><h3>性别分布</h3><canvas id="chartSex"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>校区分布</h3><canvas id="chartCampus"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>年级分布</h3><canvas id="chartGrade"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>MBTI 分布 TOP 20</h3><canvas id="chartMBTI"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>恋爱目的</h3><canvas id="chartGoal"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>星座分布</h3><canvas id="chartConstellation"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>专业 TOP 20</h3><canvas id="chartMajor"></canvas></div>';
-        chartsHtml += '<div class="chart-card"><h3>近30天注册/提交趋势</h3><canvas id="chartDaily"></canvas></div>';
-        document.getElementById('chartsGrid').innerHTML = chartsHtml;
-
-        renderPie('chartSex', d.sexDist, chartColors);
-        renderBar('chartCampus', d.campusDist, true, chartColors);
-        renderBar('chartGrade', d.gradeDist, false, chartColors);
-        renderBar('chartMBTI', d.mbtiDist, true, chartColors);
-        renderPie('chartGoal', d.relationshipGoalDist, chartColors);
-        renderBar('chartConstellation', d.constellationDist, true, chartColors);
-        renderBar('chartMajor', d.majorDist, true, chartColors);
-        renderLine('chartDaily', d.dailyReg, d.dailySurvey);
-    } catch (e) { console.error(e); }
-}
-
-function renderPie(id, data, colors) {
-    if (!data || data.length === 0) return;
-    var labels = data.map(function(d) { return d[Object.keys(d)[0]] || '未知'; });
-    var counts = data.map(function(d) { return d.count; });
-    chartInstances[id] = new Chart(document.getElementById(id), {
-        type: 'doughnut',
-        data: { labels: labels, datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }] },
-        options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'right', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12 } } } } }
-    });
-}
-
-function renderBar(id, data, horizontal, colors) {
-    if (!data || data.length === 0) return;
-    var labels = data.map(function(d) { return d[Object.keys(d)[0]] || '未知'; });
-    var counts = data.map(function(d) { return d.count; });
-    chartInstances[id] = new Chart(document.getElementById(id), {
-        type: 'bar',
-        data: { labels: labels, datasets: [{ data: counts, backgroundColor: colors.slice(0, data.length).map(function(c) { return c + 'cc'; }), borderRadius: 6, borderSkipped: false }] },
-        options: { indexAxis: horizontal ? 'y' : 'x', responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } } } }
-    });
-}
-
-function renderLine(id, regData, surveyData) {
-    var allDates = [];
-    var regMap = {};
-    var surveyMap = {};
-    regData.forEach(function(r) { regMap[r.date] = r.count; });
-    surveyData.forEach(function(r) { surveyMap[r.date] = r.count; });
-    allDates = [...new Set([...regData.map(function(d) { return d.date; }), ...surveyData.map(function(d) { return d.date; })])].sort().reverse().slice(0, 30).reverse();
-    chartInstances[id] = new Chart(document.getElementById(id), {
-        type: 'line',
-        data: {
-            labels: allDates,
-            datasets: [
-                { label: '注册', data: allDates.map(function(d) { return regMap[d] || 0; }), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 6 },
-                { label: '提交问卷', data: allDates.map(function(d) { return surveyMap[d] || 0; }), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.08)', tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 6 }
-            ]
-        },
-        options: { responsive: true, plugins: { legend: { labels: { usePointStyle: true, padding: 16, font: { size: 12 } } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } } } }
-    });
-}
+async function loadStats() { return window.loadOperationsStats(); }
 
 async function loadUsers(page) {
     currentPage = page;

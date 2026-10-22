@@ -1181,18 +1181,9 @@ function rateLimitMiddleware(req, res, next) {
     next();
 }
 
-function adminAuthMiddleware(req,res,next) {
-    try { const token=req.headers.authorization?.replace(/^Bearer /,'');const data=jwt.verify(token,JWT_SECRET);
-        if(data.isAdmin===true&&data.security_version===2){req.admin=data;return next();}
-    }catch(e){}
-    return res.status(401).json({code:401,msg:'请登录管理员账号'});
-}
-app.post('/admin/login',rateLimitMiddleware,async(req,res)=>{
-    if(!ADMIN_PASSWORD)return res.status(503).json({code:503,msg:'管理员密码尚未配置'});
-    const {username,password}=req.body||{};
-    if(username!==ADMIN_USERNAME||typeof password!=='string'||!await bcrypt.compare(password,ADMIN_PASSWORD_HASH))return res.status(401).json({code:401,msg:'用户名或密码错误'});
-    return res.json({code:200,msg:'登录成功',token:jwt.sign({isAdmin:true,security_version:2,username},JWT_SECRET,{expiresIn:'24h'})});
-});
+const adminAccounts = require('./admin-accounts')({getPool,secret:JWT_SECRET,legacyUsername:ADMIN_USERNAME,legacyPasswordHash:ADMIN_PASSWORD_HASH,legacyEnabled:!!ADMIN_PASSWORD});
+function adminAuthMiddleware(req,res,next) { return adminAccounts.authorize(req,res,next); }
+app.post('/admin/login',rateLimitMiddleware,(req,res)=>adminAccounts.login(req,res));
 
 app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
     try {

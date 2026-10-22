@@ -249,7 +249,7 @@
         <h1>FancyU</h1>
         <p>管理后台</p>
         <div class="msg" id="loginMsg"></div>
-        <input type="text" id="adminUser" placeholder="用户名" autocomplete="off">
+        <input type="text" id="adminUser" placeholder="管理员用户名或邮箱" autocomplete="off">
         <input type="password" id="adminPass" placeholder="密码">
         <button id="loginBtn" onclick="adminLogin()">登录</button>
     </div>
@@ -382,7 +382,7 @@ async function adminLogin() {
         if (data.code === 200) {
             adminToken = data.token;
             localStorage.setItem('adminToken', adminToken);
-            document.getElementById('adminName').textContent = username;
+            document.getElementById('adminName').textContent = data.username || username;
             document.getElementById('loginPage').style.display = 'none';
             document.getElementById('adminPage').classList.add('active');
             loadStats();
@@ -882,7 +882,7 @@ function hideTypingIndicator() {
         adminToken = saved;
         document.getElementById('loginPage').style.display = 'none';
         document.getElementById('adminPage').classList.add('active');
-        document.getElementById('adminName').textContent = 'mony';
+        try { document.getElementById('adminName').textContent = JSON.parse(decodeURIComponent(escape(atob(saved.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))))).username || '管理员'; } catch(e) { document.getElementById('adminName').textContent = '管理员'; }
         loadStats();
         loadUsers(1);
         initAssistant();

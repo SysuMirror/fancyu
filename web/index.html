@@ -1596,17 +1596,11 @@
         <div class="friend-menu-buttons">
             <button type="button" class="friend-menu-item" id="friendQuickBtn">
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                快速交友 · 约个搭子
+                约个搭子
             </button>
-            <button type="button" class="friend-menu-item" id="friendSurveyBtn">深度交友 · 认识聊得来的朋友</button>
+            <button type="button" class="friend-menu-item" id="friendSurveyBtn">深度交友</button>
         </div>
-        <div class="match-toggle-row">
-            <div>
-                <div class="match-toggle-label">参与深度交友</div>
-                <div class="match-toggle-hint">仅控制深度交友，搭子卡单独设置</div>
-            </div>
-            <div class="toggle-switch" id="friendMatchToggle"></div>
-        </div>
+
     </div>
 </div>
 
@@ -1856,7 +1850,6 @@ function requireLogin() {
             const result=await res.json();
             if(result.code===200&&result.user){
                 document.getElementById('loveMatchToggle').classList.toggle('on',result.user.join_matching===true);
-                document.getElementById('friendMatchToggle').classList.toggle('on',result.user.join_friend_matching===true);
             }
         }catch(e){showToast('暂时无法读取参与状态，请刷新重试');}
     }
@@ -1879,7 +1872,6 @@ function requireLogin() {
     document.getElementById("friendQuickBtn")?.addEventListener("click",()=>{window.location.href="friends.html#quick";});
     document.getElementById("friendSurveyBtn")?.addEventListener("click", goToFriendSurvey);
     document.getElementById("friendMenuCloseBtn")?.addEventListener("click", closeAllModals);
-    document.getElementById("friendMatchToggle")?.addEventListener("click", () => toggleMatch('friend'));
     friendMenuModal?.addEventListener("click", (e) => { if (e.target === friendMenuModal) closeAllModals(); });
 
     // 大发善心弹窗事件

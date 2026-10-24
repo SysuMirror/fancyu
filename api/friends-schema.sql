@@ -42,3 +42,15 @@ CREATE TABLE IF NOT EXISTS friend_card_weeks (
  FOREIGN KEY(card_id) REFERENCES friend_cards(id) ON DELETE CASCADE,
  FOREIGN KEY(pair_id) REFERENCES friend_card_pairs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS friend_account_weeks (
+ account_id INT NOT NULL,
+ week_key CHAR(10) NOT NULL,
+ pair_id INT NOT NULL,
+ PRIMARY KEY(account_id,week_key),
+ FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO friend_account_weeks(account_id,week_key,pair_id)
+ SELECT account_id,week_key,MIN(pair_id) FROM (
+ SELECT a_id account_id,week_key,id pair_id FROM friend_card_pairs
+ UNION ALL SELECT b_id account_id,week_key,id pair_id FROM friend_card_pairs
+ ) past GROUP BY account_id,week_key;

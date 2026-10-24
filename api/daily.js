@@ -40,6 +40,8 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
         const [r]=await c.execute('SELECT owner_id FROM daily_blocks WHERE (owner_id=? AND target_id=?) OR (owner_id=? AND target_id=?) LIMIT 1',[a,b,b,a]);return !!r.length;
     }
     async function weeklyConflict(c,a,b,time) {
+        const [friendTables]=await c.query("SHOW TABLES LIKE 'friend_card_pairs'");
+        if(friendTables.length){const [f]=await c.execute("SELECT id FROM friend_card_pairs WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND ((status='pending' AND week_key=?) OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?) LIMIT 1",[a,b,b,a,require('./friends-rules').weekKey(time),sqlTime(plusDays(time,-30))]);if(f.length)return true;}
         const [tables]=await c.query("SHOW TABLES LIKE 'weekly_match_pairs'");
         if(tables.length){const [w]=await c.execute("SELECT id FROM weekly_match_pairs WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND ((status='pending' AND expires_at>?) OR connected_at IS NOT NULL OR cooldown_until>?) LIMIT 1",[a,b,b,a,sqlTime(time),sqlTime(time)]);if(w.length)return true;}
         const [r]=await c.execute(`SELECT id FROM match_history WHERE ((account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?))

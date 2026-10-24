@@ -6,7 +6,7 @@ const json = x => typeof x === 'string' ? JSON.parse(x) : x;
 const sqlTime = d => d.toISOString().slice(0,19).replace('T',' ');
 const plusDays = (d,n) => new Date(d.getTime()+n*86400000);
 
-module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuthMiddleware, prepare = async()=>{}, observe = async()=>{}, now = () => new Date() }) {
+module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuthMiddleware, prepare = async()=>{}, observe = async()=>{}, invalidateWeekly=async()=>{},banWeekly=async()=>{}, now = () => new Date() }) {
     let ready;
     function ensureSchema() {
         if(!ready) ready=(async()=>{ const pool=await getPool();
@@ -40,6 +40,8 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
         const [r]=await c.execute('SELECT owner_id FROM daily_blocks WHERE (owner_id=? AND target_id=?) OR (owner_id=? AND target_id=?) LIMIT 1',[a,b,b,a]);return !!r.length;
     }
     async function weeklyConflict(c,a,b,time) {
+        const [tables]=await c.query("SHOW TABLES LIKE 'weekly_match_pairs'");
+        if(tables.length){const [w]=await c.execute("SELECT id FROM weekly_match_pairs WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND ((status='pending' AND expires_at>?) OR connected_at IS NOT NULL OR cooldown_until>?) LIMIT 1",[a,b,b,a,sqlTime(time),sqlTime(time)]);if(w.length)return true;}
         const [r]=await c.execute(`SELECT id FROM match_history WHERE ((account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?))
             AND (contact_exchanged=1 OR created_at>?) LIMIT 1`,[a,b,b,a,sqlTime(plusDays(time,-3))]);return !!r.length;
     }
@@ -159,6 +161,7 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
     app.post('/daily/pairs/:id/block',authMiddleware,route(async(req,c,time)=>{
         const id=req.account.account_id,p=await pairFor(c,id,req.params.id),other=p.low_id===id?p.high_id:p.low_id;
         await c.execute('INSERT IGNORE INTO daily_blocks(owner_id,target_id,created_at) VALUES (?,?,?)',[id,other,sqlTime(time)]);
+        await invalidateWeekly(c,id,other);
         await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=? AND status IN ('pending','connected')",[Math.min(id,other),Math.max(id,other)]);
         await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[id,other,other,id]);
         return {msg:'已屏蔽，双方不能再访问资料或联系方式'};
@@ -168,6 +171,7 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
         // Revoke friendship pairs before removing the shared block, so old access cannot revive.
         const [friendTables]=await c.query("SHOW TABLES LIKE 'friend_card_pairs'");
         if(friendTables.length)await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND status IN ('pending','connected')",[req.account.account_id,req.params.id,req.params.id,req.account.account_id]);
+        await invalidateWeekly(c,req.account.account_id,Number(req.params.id));
         await c.execute('DELETE FROM daily_blocks WHERE owner_id=? AND target_id=?',[req.account.account_id,req.params.id]);
         // Keep old relationships ended. They are not restored on unblock.
         await c.execute("UPDATE daily_pairs SET status='cancelled' WHERE low_id=? AND high_id=? AND status='blocked'",[Math.min(req.account.account_id,Number(req.params.id)),Math.max(req.account.account_id,Number(req.params.id))]);
@@ -182,11 +186,11 @@ module.exports = function registerDaily(app,{ getPool, authMiddleware, adminAuth
     }));
     app.post('/admin/daily/accounts/:id/ban',adminAuthMiddleware,route(async(req,c)=>{
         const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)throw error(400,'账号无效');
-        await c.execute('UPDATE daily_settings SET banned=1,enabled=0 WHERE account_id=?',[id]);
+        await banWeekly(c,id);await c.execute('UPDATE daily_settings SET banned=1,enabled=0 WHERE account_id=?',[id]);
         await c.execute("UPDATE daily_pairs SET status='cancelled',low_wechat=NULL,high_wechat=NULL WHERE (low_id=? OR high_id=?) AND status IN ('pending','connected')",[id,id]);
         return {msg:'已停止该账号参与日常配对并撤销连接访问'};
     }));
     return {ensureSchema,transaction,blocked,
-        async weeklyGuard(c,a,b,time){const [r]=await c.execute(`SELECT id FROM daily_pairs WHERE low_id=? AND high_id=? AND (status IN ('pending','connected','closed') OR cooldown_until>?) LIMIT 1`,[Math.min(a,b),Math.max(a,b),sqlTime(time)]);return r.length>0||await blocked(c,a,b);}
+        async weeklyGuard(c,a,b,time){const [r]=await c.execute(`SELECT id FROM daily_pairs WHERE low_id=? AND high_id=? AND (status IN ('pending','connected','closed') OR cooldown_until>?) LIMIT 1`,[Math.min(a,b),Math.max(a,b),sqlTime(time)]);return r.length>0||await blocked(c,a,b)||await weeklyConflict(c,a,b,time);}
     };
 };

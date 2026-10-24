@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path');
 const {weekKey,validateCard,compatible,score,MAX}=require('./friends-rules');
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
-module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},now=()=>new Date()}){
+module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},invalidateWeekly=async()=>{},now=()=>new Date()}){
  let ready;
  function ensureSchema(){if(!ready)ready=(async()=>{await daily.ensureSchema();const p=await getPool();for(const sql of fs.readFileSync(path.join(__dirname,'friends-schema.sql'),'utf8').split(';').map(s=>s.trim()).filter(Boolean))await p.query(sql);})().catch(e=>{ready=null;throw e;});return ready;}
  const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
@@ -75,12 +75,12 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
  app.post('/account/friends/pairs/:id/close',authMiddleware,route(async(req,c)=>{const p=await pair(c,req.account.account_id,req.params.id);await c.execute("UPDATE friend_card_pairs SET status='closed',a_wechat=NULL,b_wechat=NULL WHERE id=?",[p.id]);return {msg:'已结束连接，停止展示联系方式'};}));
  app.post('/account/friends/pairs/:id/block',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,p=await pair(c,id,req.params.id),other=p.a_id===id?p.b_id:p.a_id;
-  await c.execute('INSERT IGNORE INTO daily_blocks(owner_id,target_id,created_at) VALUES (?,?,UTC_TIMESTAMP())',[id,other]);
+  await c.execute('INSERT IGNORE INTO daily_blocks(owner_id,target_id,created_at) VALUES (?,?,UTC_TIMESTAMP())',[id,other]);await invalidateWeekly(c,id,other);
   await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[id,other,other,id]);
   await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=? AND status IN ('pending','connected')",[Math.min(id,other),Math.max(id,other)]);
   await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[id,other,other,id]);return {msg:'已屏蔽，停止双方资料和联系方式访问'};
  }));
- app.delete('/account/friends/blocks/:id',authMiddleware,route(async(req,c)=>{const other=Number(req.params.id);if(!Number.isSafeInteger(other)||other<1)fail(400,'账号编号无效');await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND status IN ('pending','connected')",[req.account.account_id,other,other,req.account.account_id]);await c.execute('DELETE FROM daily_blocks WHERE owner_id=? AND target_id=?',[req.account.account_id,other]);return {msg:'已解除屏蔽，原配对不会恢复'};}));
+ app.delete('/account/friends/blocks/:id',authMiddleware,route(async(req,c)=>{const other=Number(req.params.id);if(!Number.isSafeInteger(other)||other<1)fail(400,'账号编号无效');await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND status IN ('pending','connected')",[req.account.account_id,other,other,req.account.account_id]);await invalidateWeekly(c,req.account.account_id,other);await c.execute('DELETE FROM daily_blocks WHERE owner_id=? AND target_id=?',[req.account.account_id,other]);return {msg:'已解除屏蔽，原配对不会恢复'};}));
  app.post('/account/friends/pairs/:id/report',authMiddleware,route(async(req,c)=>{const p=await pair(c,req.account.account_id,req.params.id),reason=req.body?.reason;if(typeof reason!=='string'||reason.trim().length<2||reason.length>500)fail(400,'请输入 2–500 字举报说明');await c.execute("INSERT INTO complaints(reporter_account_id,target_type,target_id,reason,description,status) VALUES (?,'user',?,?,?,'pending')",[req.account.account_id,String(p.a_id===req.account.account_id?p.b_id:p.a_id),'快速交友举报',reason.trim()]);return {msg:'举报已提交'};}));
  return {ensureSchema};
 };

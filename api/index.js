@@ -612,7 +612,7 @@ app.use((req, res, next) => {
 // ==================== 账号系统 API ====================
 
 const analytics = require('./admin-analytics')({getPool});
-const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,observe:analytics.observe,prepare:async pool=>{
+const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b),banWeekly:(c,id)=>weeklyMatch.ban(c,id),prepare:async pool=>{
     await analytics.ensureSchema();
     await ensureMatchHistoryTable(pool);await ensureComplaintTable(pool);
 }});
@@ -698,9 +698,11 @@ app.post('/account/bind', async (req, res) => {
 
 // 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
 require('./profile')(app, { getPool, verifyToken });
-const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware});
-const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,observe:analytics.observe});
-analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await ensurePreferencesTable(await getPool());}});
+const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
+const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly});
+weeklyMatch.start();
+const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
+analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {
@@ -1294,6 +1296,7 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
     try {
         const result = await daily.transaction(async (pool,time) => {
         const { matches, match_round = 1, survey_type = 'love' } = req.body;
+        if(survey_type==='love')return {code:400,msg:'每周恋爱配对请使用批次预览和发布，不再接受手工导入'};
         
         if (!Array.isArray(matches)) {
             return { code: 400, msg: 'matches 必须是数组' };

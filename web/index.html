@@ -1578,13 +1578,7 @@
             </button>
             <button type="button" class="love-menu-item" id="dailyMatchBtn"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>日常配对</button>
         </div>
-        <div class="match-toggle-row">
-            <div>
-                <div class="match-toggle-label">参与每周配对</div>
-                <div class="match-toggle-hint">仅控制每周配对，日常配对单独设置</div>
-            </div>
-            <div class="toggle-switch" id="loveMatchToggle"></div>
-        </div>
+        <p style="text-align:center;color:var(--text-secondary);font-size:13px;margin-top:18px">每周配对需主动报名，周三 20:00 截止，周四 20:00 发布。</p>
     </div>
 </div>
 
@@ -1798,7 +1792,7 @@ function requireLogin() {
 
     // 填写恋爱问卷
     function goToLoveSurvey() {
-        window.location.href = "survey.html";
+        window.location.href = "weekly-match.html";
     }
 
     // 填写交友问卷
@@ -1850,7 +1844,6 @@ function requireLogin() {
             const res=await fetch(API_URL+'/account/me',{headers:{Authorization:'Bearer '+token}});
             const result=await res.json();
             if(result.code===200&&result.user){
-                document.getElementById('loveMatchToggle').classList.toggle('on',result.user.join_matching===true);
             }
         }catch(e){showToast('暂时无法读取参与状态，请刷新重试');}
     }
@@ -1866,7 +1859,6 @@ function requireLogin() {
     document.getElementById("loveSurveyBtn")?.addEventListener("click", goToLoveSurvey);
     document.getElementById("dailyMatchBtn")?.addEventListener("click", () => { location.href="daily.html"; });
     document.getElementById("loveMenuCloseBtn")?.addEventListener("click", closeAllModals);
-    document.getElementById("loveMatchToggle")?.addEventListener("click", () => toggleMatch('love'));
     loveMenuModal?.addEventListener("click", (e) => { if (e.target === loveMenuModal) closeAllModals(); });
 
     // 交友板块弹窗

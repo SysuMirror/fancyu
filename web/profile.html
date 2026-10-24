@@ -249,25 +249,7 @@
     <!-- 匹配开关 -->
     <div class="matching-toggle-section">
         <div class="section-title"><div class="section-icon">⚙️</div>本周匹配设置</div>
-        <div class="matching-toggle-card">
-            <div class="matching-toggle-header">
-                <div class="matching-toggle-info">
-                    <div class="matching-toggle-icon love">💕</div>
-                    <div>
-                        <div class="matching-toggle-title">恋爱匹配</div>
-                        <div class="matching-toggle-desc">开启后参与本周恋爱匹配</div>
-                    </div>
-                </div>
-                <label class="toggle-switch love">
-                    <input type="checkbox" id="loveMatchingToggle" onchange="toggleLoveMatching(this)">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-            <div class="matching-status" id="loveMatchingStatus">
-                <span class="matching-status-dot"></span>
-                <span id="loveMatchingText">加载中...</span>
-            </div>
-        </div>
+        <div class="card survey-card"><div class="survey-info"><div class="survey-title">每周恋爱配对</div><div class="survey-status">每周主动报名 · 查看本批结果与已有连接</div></div><a class="survey-btn" href="weekly-match.html">进入</a></div>
         <div class="matching-toggle-card">
             <div class="matching-toggle-header">
                 <div class="matching-toggle-info">
@@ -315,7 +297,7 @@
     <!-- 匹配结果 -->
     <div class="section">
         <div class="section-title"><div class="section-icon">💕</div>匹配结果</div>
-        <div id="matchResults">
+        <p style="margin-bottom:12px"><a href="weekly-match.html">查看新版每周恋爱配对结果与连接 ↗</a></p><div id="matchResults">
             <div class="empty-state">
                 <div class="empty-icon">📭</div>
                 <div class="empty-text">暂无匹配结果</div>
@@ -466,11 +448,8 @@ function requireLogin() {
             const res = await fetch(`${API_URL}/account/me`, { headers: getAuthHeaders() });
             const data = await res.json();
             if (data.code === 200 && data.user) {
-                const joinLove = data.user.join_matching !== false;
                 const joinFriend = data.user.join_friend_matching !== false;
-                document.getElementById('loveMatchingToggle').checked = joinLove;
                 document.getElementById('friendMatchingToggle').checked = joinFriend;
-                updateMatchingStatusUI('love', joinLove);
                 updateMatchingStatusUI('friend', joinFriend);
             }
         } catch (e) { console.error('loadMatchingStatus error:', e); }
@@ -485,30 +464,6 @@ function requireLogin() {
         } else {
             statusEl.className = 'matching-status inactive';
             textEl.textContent = '已关闭 - 不参与本周' + (type === 'love' ? '恋爱' : '交友') + '匹配';
-        }
-    }
-
-    async function toggleLoveMatching(el) {
-        const join_matching = el.checked;
-        updateMatchingStatusUI('love', join_matching);
-        try {
-            const res = await fetch(`${API_URL}/account/toggle-matching`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                body: JSON.stringify({ join_matching })
-            });
-            const data = await res.json();
-            if (data.code === 200) {
-                showToast(data.msg);
-            } else {
-                el.checked = !join_matching;
-                updateMatchingStatusUI('love', !join_matching);
-                showToast(data.msg || '操作失败', true);
-            }
-        } catch (e) {
-            el.checked = !join_matching;
-            updateMatchingStatusUI('love', !join_matching);
-            showToast('网络错误', true);
         }
     }
 

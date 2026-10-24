@@ -1,5 +1,5 @@
 (function(root){const schema={
-  "version": "1.1",
+  "version": "1.2",
   "longTerm": "认真恋爱，并希望朝长期、甚至婚姻的方向发展",
   "sections": [
     "基本信息",
@@ -240,48 +240,6 @@
       "optional": false,
       "conditional": true,
       "type": "radio"
-    },
-    {
-      "id": "15",
-      "title": "关于将来结婚，我目前的想法",
-      "options": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7
-      ],
-      "group": "15",
-      "section": 1,
-      "important": true,
-      "display": false,
-      "optional": false,
-      "conditional": true,
-      "type": "scale",
-      "hint": "1 = 确定不打算结婚｜4 = 还没想好｜7 = 确定希望将来结婚"
-    },
-    {
-      "id": "16",
-      "title": "关于将来要孩子，我目前的想法",
-      "options": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7
-      ],
-      "group": "16",
-      "section": 1,
-      "important": true,
-      "display": false,
-      "optional": false,
-      "conditional": true,
-      "type": "scale",
-      "hint": "1 = 确定不要｜4 = 还没想好｜7 = 确定想要"
     },
     {
       "id": "17a",
@@ -1138,4 +1096,4 @@
       "type": "text"
     }
   ]
-};if(typeof module==='object'&&module.exports)module.exports=schema;else root.WeeklySchema=schema;})(typeof window==='object'?window:globalThis);
+};if(typeof module==="object"&&module.exports)module.exports=schema;else root.WeeklySchema=schema;})(typeof window==="object"?window:globalThis);

@@ -29,7 +29,7 @@ function validate(body,now=new Date()){
  if(answers['26']?.includes('其他')){if(!text(source.diet_other,80))throw Error('请补充第 26 题的其他饮食限制');answers.diet_other=source.diet_other.trim();}
  const stars=body.important;if(!Array.isArray(stars)||stars.length>5||new Set(stars).size!==stars.length)throw Error('最多可将 5 道题设为重要');
  const allowed=new Set(schema.questions.filter(q=>q.important&&(!q.conditional||active)).map(q=>q.group));
- const important=stars.filter(x=>!['13','15','16'].includes(x)||active);
+ const important=stars.filter(x=>!['15','16'].includes(x)&&(x!=='13'||active));
  if(important.some(x=>typeof x!=='string'||!allowed.has(x)))throw Error('包含不能设为重要的题目');
  const scales=schema.questions.filter(q=>q.type==='scale'&&Number.isInteger(answers[q.id])).map(q=>answers[q.id]);
  const uniform=scales.length>0&&Math.max(...[1,2,3,4,5,6,7].map(n=>scales.filter(x=>x===n).length))/scales.length>=.9;

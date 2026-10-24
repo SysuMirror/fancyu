@@ -4,7 +4,7 @@ buddy=importlib.util.module_from_spec(spec);spec.loader.exec_module(buddy)
 
 def objective(chosen, data):
     edges={tuple((e['a'],e['b'])):e for e in data['edges']}
-    return len(chosen),int(any(data['requested'] in p for p in chosen)),sum(edges[tuple(p)]['score'] for p in chosen)
+    return len(chosen),int(any(data.get('requested') in p for p in chosen)),sum(edges[tuple(p)]['score'] for p in chosen)
 
 def brute(data):
     best=(0,0,0)
@@ -23,7 +23,7 @@ for n in range(2,10):
     for trial in range(12):
         accounts=[rng.randrange(max(2,n//2)) for _ in range(n)]
         edges=[{'a':a,'b':b,'owners':':'.join(map(str,sorted([accounts[a],accounts[b]]))),'score':rng.randrange(101)} for a in range(n) for b in range(a+1,n) if accounts[a]!=accounts[b] and rng.random()<.6]
-        d={'n':n,'accounts':accounts,'edges':edges,'requested':rng.randrange(n)}
+        d={'n':n,'accounts':accounts,'edges':edges,**({'requested':rng.randrange(n)} if trial%2 else {})}
         result=buddy.solve(d)
         assert objective(result,d)==brute(d),(d,result,brute(d))
         used=[accounts[i] for pair in result for i in pair]

@@ -701,8 +701,10 @@ require('./profile')(app, { getPool, verifyToken });
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
 const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly});
 weeklyMatch.start();
-const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
-analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
+const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,getBuddy:()=>buddyMatch,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
+const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,observe:analytics.observe});
+buddyMatch.start();
+analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {

@@ -1,13 +1,12 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const {weekKey,validateCard,MAX}=require('./friends-rules');
-const recommend=require('./buddy-recommend');
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
-module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},invalidateWeekly=async()=>{},now=()=>new Date()}){
+module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},invalidateWeekly=async()=>{},now=()=>new Date(),getBuddy=()=>null}){
  let ready;
  function ensureSchema(){if(!ready)ready=(async()=>{await daily.ensureSchema();const p=await getPool();for(const sql of fs.readFileSync(path.join(__dirname,'friends-schema.sql'),'utf8').split(';').map(s=>s.trim()).filter(Boolean))await p.query(sql);})().catch(e=>{ready=null;throw e;});return ready;}
  const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
- const route=fn=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{await ensureSchema();const result=await daily.transaction(async c=>{const week=weekKey(now());await c.execute("UPDATE friend_card_pairs SET status='expired',a_wechat=NULL,b_wechat=NULL WHERE status='pending' AND week_key<>?",[week]);return fn(req,c,week);});res.json({code:200,...result});}catch(e){console.error('Friends:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'交友服务暂不可用，请稍后重试'});}};
+ const route=fn=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{await ensureSchema();const buddy=getBuddy();if(buddy)await buddy.ensureSchema();const result=await daily.transaction(async c=>{const time=now(),week=weekKey(time);if(buddy)await buddy.sync(c,time);await c.execute("UPDATE friend_card_pairs SET status='expired',a_wechat=NULL,b_wechat=NULL WHERE status='pending' AND week_key<>?",[week]);const result=await fn(req,c,week);if(buddy&&req.method!=='GET')await buddy.sync(c,time);return result;});res.json({code:200,...result});}catch(e){console.error('Friends:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'交友服务暂不可用，请稍后重试'});}};
  async function eligible(c,id){const [tables]=await c.query("SHOW TABLES LIKE 'weekly_match_bans'");if(tables.length){const [b]=await c.execute('SELECT account_id FROM weekly_match_bans WHERE account_id=?',[id]);if(b.length)return false;}const [r]=await c.execute('SELECT a.id FROM accounts a JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings s ON s.account_id=a.id WHERE a.id=? AND COALESCE(s.banned,0)=0',[id]);return !!r.length;}
  async function requireEligible(c,id){if(!await eligible(c,id))fail(403,'请先验证学生邮箱；受限制账号暂不能参与匹配');}
  async function own(c,id,cardId){if(!Number.isSafeInteger(Number(cardId))||Number(cardId)<1)fail(400,'搭子卡编号无效');const [r]=await c.execute('SELECT * FROM friend_cards WHERE id=? AND account_id=? AND deleted=0',[cardId,id]);if(!r.length)fail(404,'搭子卡不存在');return {...r[0],v:parse(r[0].data)};}
@@ -28,7 +27,7 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   const [ps]=await c.execute("SELECT * FROM friend_card_pairs WHERE (a_id=? OR b_id=?) AND status IN ('pending','connected') ORDER BY id DESC",[id,id]);
   const pairs=[];for(const p of ps){const x=await present(c,p,id);if(x)pairs.push(x);}
   const [blocks]=await c.execute('SELECT b.target_id,a.username FROM daily_blocks b JOIN accounts a ON a.id=b.target_id WHERE b.owner_id=?',[id]);
-  return {week,quota_used:used.length>0,verified:await studentVerification.verified(c,id),eligible:await eligible(c,id),gender:settings[0]?.gender||'不透露',cards:rows.map(x=>({id:x.id,type:x.type,on:!!x.enabled,v:parse(x.data),used:used.length>0})),pairs,blocks};
+  return {...(getBuddy()?{schedule:await getBuddy().state(c,now(),id)}:{}),week,quota_used:used.length>0,verified:await studentVerification.verified(c,id),eligible:await eligible(c,id),gender:settings[0]?.gender||'不透露',cards:rows.map(x=>({id:x.id,type:x.type,on:!!x.enabled,v:parse(x.data),used:used.length>0})),pairs,blocks};
  }));
  app.put('/account/friends/settings',authMiddleware,route(async(req,c)=>{
   const gender=req.body?.gender;if(!['男生','女生','不透露'].includes(gender))fail(400,'请选择有效性别');
@@ -53,14 +52,7 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   await c.execute('UPDATE friend_cards SET enabled=? WHERE id=?',[on?1:0,card.id]);return {msg:on?'已开启这张搭子卡':'已暂停，待确认推荐已撤回，已有连接保留'};
  }));
  app.delete('/account/friends/cards/:id',authMiddleware,route(async(req,c)=>{const card=await own(c,req.account.account_id,req.params.id);await cancel(c,card.id,true);await c.execute('UPDATE friend_cards SET deleted=1,enabled=0 WHERE id=?',[card.id]);return {msg:'已删除搭子卡并撤回关联配对，本周名额不重置'};}));
- app.post('/account/friends/cards/:id/recommend',authMiddleware,route(async(req,c,week)=>{
-  const id=req.account.account_id;await requireEligible(c,id);const card=await own(c,id,req.params.id);if(!card.enabled)fail(400,'请先开启这张搭子卡');
-  const [used]=await c.execute('SELECT pair_id FROM friend_account_weeks WHERE account_id=? AND week_key=?',[id,week]);if(used.length)return {msg:'你的账号本周已推荐过，不再补配',pair_id:used[0].pair_id};
-  const b=await recommend(c,card,week,now());if(!b){await observe(c,{mode:'quick',accountId:id,unit:week,outcome:'empty',time:now()});return {empty:true,msg:'本周暂时没有可分配的合适搭子，可稍后再试，不占用名额'};}
-  const [r]=await c.execute('INSERT INTO friend_card_pairs(a_card,b_card,a_id,b_id,week_key) VALUES (?,?,?,?,?)',[card.id,b.id,id,b.account_id,week]);
-  await c.execute('INSERT INTO friend_account_weeks(account_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[id,week,r.insertId,b.account_id,week,r.insertId]);
-  await c.execute('INSERT INTO friend_card_weeks(card_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[card.id,week,r.insertId,b.id,week,r.insertId]);await observe(c,{mode:'quick',accountId:id,unit:week,outcome:'recommended',pairId:r.insertId,time:now()});await observe(c,{mode:'quick',accountId:b.account_id,unit:week,outcome:'recommended',pairId:r.insertId,time:now()});return {pair_id:r.insertId,msg:'本周搭子已推荐，双方都可以查看并决定是否认识'};
- }));
+ app.post('/account/friends/cards/:id/recommend',authMiddleware,route(async()=>{fail(410,'已改为每周统一配对，无需点击推荐；开启搭子卡即可参与');}));
  app.post('/account/friends/pairs/:id/respond',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id;await requireEligible(c,id);const p=await pair(c,id,req.params.id);if(!await visible(c,p))fail(409,'这段推荐已结束或不可访问');if(p.status==='connected')return {msg:'你们已经建立连接'};
   if(req.body?.choice==='skip'){await c.execute("UPDATE friend_card_pairs SET status='skipped',a_wechat=NULL,b_wechat=NULL WHERE id=?",[p.id]);return {msg:'已跳过，本周账号不再补配'};}

@@ -17,7 +17,7 @@ const assert=require('assert/strict'),mysql=require('mysql2/promise'),crypto=req
   server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port+'/account/friends';
   async function api(i,path='',method='GET',body){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json','x-fixture':String(ids[i]||0)},...(body?{body:JSON.stringify(body)}:{})});return {http:r.status,...await r.json()};}
   const value={type:'game',v:{item:'fixture_game',level:'一般',mic:'都行',time:['周末晚上'],gender:'不限',freq:'每周'}};
-  const cs=[];for(let i=0;i<8;i++)cs.push((await api(i,'/cards','POST',{...value,v:{...value.v,item:i<4?'fixture_game':i<6?'fixture_pair':'fixture_empty'}})).id);
+  const cs=[];for(let i=0;i<8;i++)cs.push((await api(i,'/cards','POST',{...value,v:{...value.v,item:'fixture_game_'+i,time:[i<4?'周末晚上':i<6?'周末白天':'工作日白天']}})).id);
   const second=(await api(0,'/cards','POST',value)).id;
   assert.equal((await api(7,'/cards/'+cs[7]+'/toggle','POST',{enabled:true})).http,403);
   assert.equal((await api(6,'/cards/'+cs[6]+'/recommend','POST')).empty,true);assert.equal((await api(6)).quota_used,false);

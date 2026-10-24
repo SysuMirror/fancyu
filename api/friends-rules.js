@@ -21,8 +21,6 @@ function compatible(a,b){
  if(!overlap(x.time,y.time))return false;
  if((x.gender!=='不限'&&x.gender!==b.gender)||(y.gender!=='不限'&&y.gender!==a.gender))return false;
  if(!t.online&&x.campus!==y.campus&&(x.cross==='只要本校区'||y.cross==='只要本校区'))return false;
- const item=s=>s.normalize('NFKC').toLowerCase().replace(/\s+/g,'');
- if(x.item!=='都行'&&y.item!=='都行'&&item(x.item)!==item(y.item))return false;
  if(a.type==='sport'&&(!x.want.includes('都行')&&!x.want.includes(y.level)||!y.want.includes('都行')&&!y.want.includes(x.level)))return false;
  if(a.type==='game'&&x.mic!=='都行'&&y.mic!=='都行'&&x.mic!==y.mic)return false;
  return true;
@@ -34,7 +32,8 @@ function score(a,b){
  let extra=0;for(const f of t.extra){if(f.key==='want')extra+=((x.want.includes(y.level)||x.want.includes('都行'))?1:0)/t.extra.length;else extra+=similarity(x[f.key],y[f.key])/t.extra.length;}
  // Symmetric scores: sport's desired level is evaluated in both directions.
  if(a.type==='sport'){extra=0;for(const f of t.extra)extra+=(f.key==='want'?1:similarity(x[f.key],y[f.key]))/t.extra.length;}
- const main=x.item==='都行'||y.item==='都行'?.7:1;
+ const item=s=>s.normalize('NFKC').toLowerCase().replace(/\s+/g,'');
+ const main=x.item==='都行'||y.item==='都行'?.7:item(x.item)===item(y.item)?1:0;
  return Math.round(20*main+30*times+15*similarity(x.freq,y.freq)+25*extra+(t.online?10:10*(x.campus===y.campus?1:.5)));
 }
 module.exports={weekKey,validateCard,compatible,score,MAX};

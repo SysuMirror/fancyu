@@ -1,5 +1,5 @@
 'use strict';
-const VERSIONS={daily:'daily-v1',quick:'buddy-v2-account'};
+const VERSIONS={daily:'daily-v1',quick:'buddy-v3-project'};
 function dateRange(query={},now=new Date()){
  const today=new Date(now.getTime()+8*3600000).toISOString().slice(0,10);
  const end=query.end||today,start=query.start||new Date(new Date(today+'T00:00:00Z').getTime()-29*86400000).toISOString().slice(0,10);

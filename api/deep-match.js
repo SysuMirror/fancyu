@@ -10,10 +10,10 @@ const canonical=x=>JSON.stringify(x,(_,v)=>v&&typeof v==='object'&&!Array.isArra
 const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
 module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,prepare=async()=>{},saveLegacy=async()=>{},invalidateOthers=async()=>{},now=()=>new Date(),solver=solve,observe=async()=>{}}){
  let ready,running=false;
- function ensureSchema(){if(!ready)ready=(async()=>{await daily.ensureSchema();await prepare();const db=await getPool();for(const s of fs.readFileSync(path.join(__dirname,'deep-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await db.query(s);})().catch(e=>{ready=null;throw e;});return ready;}
+ function ensureSchema(){if(!ready)ready=(async()=>{await daily.ensureSchema();await prepare();const db=await getPool();for(const s of fs.readFileSync(path.join(__dirname,'deep-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await db.query(s);await db.execute("UPDATE deep_batches SET algorithm='deep-v2-soft-education',status='open',plan=NULL,stats=NULL,approved_revision=NULL,approved_by=NULL,revision=revision+1 WHERE algorithm='deep-v1' AND status IN ('open','preview')");})().catch(e=>{ready=null;throw e;});return ready;}
  async function cards(c){const [rows]=await c.query("SELECT s.account_id,s.data FROM deep_surveys s JOIN accounts a ON a.id=s.account_id JOIN verified_students v ON v.account_id=a.id AND v.email=a.email JOIN account_preferences p ON p.account_id=a.id LEFT JOIN daily_settings d ON d.account_id=a.id WHERE p.join_friend_matching=1 AND COALESCE(d.banned,0)=0 ORDER BY s.account_id");const banned=new Set();const [bt]=await c.query("SHOW TABLES LIKE 'weekly_match_bans'");if(bt.length){const [bs]=await c.query('SELECT account_id FROM weekly_match_bans');for(const b of bs)banned.add(b.account_id);}const people=[];for(const r of rows){if(banned.has(r.account_id))continue;try{people.push({id:r.account_id,account_id:r.account_id,data:validate(json(r.data))});}catch{}}return people;}
  async function sync(c,time){
-  const next=openBatch(time),current=await cards(c);await c.execute('INSERT IGNORE INTO deep_batches(batch_key) VALUES (?)',[next.key]);
+  const next=openBatch(time),current=await cards(c);await c.execute("INSERT IGNORE INTO deep_batches(batch_key,algorithm) VALUES (?,'deep-v2-soft-education')",[next.key]);
   const [batches]=await c.query("SELECT batch_key FROM deep_batches WHERE status IN ('open','preview') ORDER BY batch_key");
   const live=new Map(current.map(x=>[x.id,x]));
   for(const b of batches){const times=batchTimes(b.batch_key);
@@ -42,7 +42,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,pr
  }
  async function batch(c,id){try{batchTimes(id);}catch{fail(400,'批次编号无效');}const [r]=await c.execute('SELECT * FROM deep_batches WHERE batch_key=?',[id]);if(!r.length)fail(404,'批次不存在');return r[0];}
  async function build(c,b,time){
-  const t=batchTimes(b.batch_key);if(b.algorithm!=='deep-v1')fail(409,'批次算法版本不一致');if(b.status==='published')fail(409,'已发布批次不能重算');if(time<t.cutoff||time>=t.expires)fail(409,'请在周三截止后、周日 20:00 前生成预览');
+  const t=batchTimes(b.batch_key);if(b.algorithm!=='deep-v2-soft-education')fail(409,'批次算法版本不一致');if(b.status==='published')fail(409,'已发布批次不能重算');if(time<t.cutoff||time>=t.expires)fail(409,'请在周三截止后、周日 20:00 前生成预览');
   const {people,edges,fingerprint,accounts}=await pool(c,b,time),chosen=await solver({n:people.length,edges,accounts});
   const map=new Map(edges.map(e=>[key(e.a,e.b),e])),used=new Set(),owners=new Set(),usedAccounts=new Set();
   const plan=chosen.map(([a,b])=>{const e=map.get(key(a,b));if(!e||used.has(a)||used.has(b)||owners.has(e.owners)||usedAccounts.has(accounts[a])||usedAccounts.has(accounts[b]))throw Error('invalid_deep_plan');used.add(a);used.add(b);owners.add(e.owners);usedAccounts.add(accounts[a]);usedAccounts.add(accounts[b]);return {a:people[a].id,b:people[b].id,a_id:people[a].account_id,b_id:people[b].account_id,score:e.score};});

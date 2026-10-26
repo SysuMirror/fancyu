@@ -46,7 +46,7 @@ module.exports=function({getPool}){
    const legacy=`SELECT survey_type,match_round,LEAST(account_id,match_account_id) a,GREATEST(account_id,match_account_id) b,MIN(created_at) created_at,MAX(contact_exchanged) connected FROM match_history GROUP BY survey_type,match_round,LEAST(account_id,match_account_id),GREATEST(account_id,match_account_id) UNION ALL SELECT 'love',batch_key,a_id,b_id,created_at,IF(connected_at IS NOT NULL,1,0) FROM weekly_match_pairs UNION ALL SELECT 'friend',week_key,a_id,b_id,created_at,IF(a_agreed=1 AND b_agreed=1,1,0) FROM deep_pairs`;
    for(const [key,type,name]of [['weekly','love','每周恋爱配对'],['deep','friend','深度交友']]){
     const [row]=await q(`SELECT COUNT(*) pairs,COALESCE(SUM(connected=1),0) connected FROM (${legacy}) m WHERE survey_type=? AND created_at>=? AND created_at<?`,[type,...times]);
-    modes.push({key,name,active:active[key],pairs:Number(row.pairs),connected:Number(row.connected),skipped:null,paused:null,exchange_rate:percent(row.connected,row.pairs),algorithm:key==='weekly'?'weekly-love-v1（含历史导入）':'deep-v1（含历史导入）'});
+    modes.push({key,name,active:active[key],pairs:Number(row.pairs),connected:Number(row.connected),skipped:null,paused:null,exchange_rate:percent(row.connected,row.pairs),algorithm:key==='weekly'?'weekly-love-v1（含历史导入）':'deep-v2-soft-education（含历史导入）'});
    }
    for(const [key,name,table,connected]of [['daily','日常配对','daily_pairs','connected_at IS NOT NULL'],['quick','快速交友','friend_card_pairs','a_agreed=1 AND b_agreed=1']]){
     const [row]=await q(`SELECT COUNT(*) pairs,COALESCE(SUM(${connected}),0) connected,COALESCE(SUM(status='skipped'),0) skipped,COALESCE(SUM(status='pending'),0) pending FROM ${table} WHERE created_at>=? AND created_at<?`,times);

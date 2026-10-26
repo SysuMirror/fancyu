@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS deep_batches (
  batch_key CHAR(10) PRIMARY KEY, status VARCHAR(16) NOT NULL DEFAULT 'open',
- algorithm VARCHAR(32) NOT NULL DEFAULT 'deep-v2-soft-education', plan JSON NULL, stats JSON NULL,
+ algorithm VARCHAR(32) NOT NULL DEFAULT 'deep-v3-education-weight', plan JSON NULL, stats JSON NULL,
  revision INT NOT NULL DEFAULT 0, approved_revision INT NULL, approved_by VARCHAR(100) NULL,
  published_at DATETIME NULL, last_error VARCHAR(64) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

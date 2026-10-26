@@ -26,7 +26,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,fr
    else {const [entries]=await c.execute('SELECT card_id,snapshot FROM buddy_entries WHERE batch_key=? AND active=1',[b.batch_key]);for(const e of entries){const p=live.get(e.card_id);if(!p||canonical(p)!==canonical(json(e.snapshot)))await c.execute('UPDATE buddy_entries SET active=0 WHERE batch_key=? AND card_id=?',[b.batch_key,e.card_id]);}}
   }
  }
- async function conflicts(c,time){const set=new Set();
+ async function conflicts(c,time){const set=new Set();for(const p of await require('./deep-conflicts').pairs(c,time))set.add(key(p.a,p.b));
   for(const [sql,args]of [
    ['SELECT owner_id a,target_id b FROM daily_blocks',[]],
    ["SELECT a_id a,b_id b FROM friend_card_pairs WHERE week_key=? OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?",[weekKey(time),stamp(new Date(+time-30*86400000))]],

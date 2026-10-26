@@ -2,7 +2,7 @@ const assert=require('assert/strict'),mysql=require('mysql2/promise'),crypto=req
 (async()=>{
  const real=mysql.createPool({host:process.env.MYSQL_HOST,port:process.env.MYSQL_PORT,user:process.env.MYSQL_USER,password:process.env.MYSQL_PASSWORD,database:process.env.MYSQL_DATABASE,connectionLimit:8});
  const prefix='buddytest_'+crypto.randomBytes(5).toString('hex')+'_';
- const names=['accounts','account_profiles','verified_students','secure_email_codes','daily_mutex','daily_settings','daily_pairs','daily_days','daily_blocks','complaints','account_preferences','match_history','friend_card_settings','friend_cards','friend_card_pairs','friend_card_weeks','friend_account_weeks','weekly_match_pairs','weekly_match_bans','buddy_batches','buddy_entries'];
+ const names=['deep_pairs','accounts','account_profiles','verified_students','secure_email_codes','daily_mutex','daily_settings','daily_pairs','daily_days','daily_blocks','complaints','account_preferences','match_history','friend_card_settings','friend_cards','friend_card_pairs','friend_card_weeks','friend_account_weeks','weekly_match_pairs','weekly_match_bans','buddy_batches','buddy_entries'];
  const re=new RegExp('\\b('+names.join('|')+')\\b','g'),sql=s=>s.replace(re,x=>prefix+x);
  const wrap=c=>({query:(s,a)=>c.query(sql(s),a),execute:(s,a)=>c.execute(sql(s),a),beginTransaction:()=>c.beginTransaction(),commit:()=>c.commit(),rollback:()=>c.rollback(),release:()=>c.release()});
  const db={...wrap(real),getConnection:async()=>wrap(await real.getConnection())};let server;

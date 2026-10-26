@@ -474,7 +474,7 @@ async function updateSurveyData(serialNumber, newData, surveyType) {
     await pool.execute(query, values);
 }
 
-async function saveFriendSurveyData(accountId, data) {
+async function saveFriendSurveyData(accountId, data, connection) {
     const sensitiveFields = ['friend_goal', 'interests', 'interest_custom', 'self_description', 'ideal_friend'];
     for (const field of sensitiveFields) {
         if (data[field]) {
@@ -497,14 +497,10 @@ async function saveFriendSurveyData(accountId, data) {
         data['contact_info'] = JSON.stringify(data['contact_entries']);
     }
 
-    const pool = await getPool();
+    const pool = connection || await getPool();
 
-    try {
-        await pool.execute(`ALTER TABLE friend_survey ADD COLUMN IF NOT EXISTS friend_goal VARCHAR(50) NULL AFTER relationship_goal`);
-    } catch (e) {}
-    try {
-        await pool.execute(`ALTER TABLE friend_survey ADD COLUMN IF NOT EXISTS ideal_friend TEXT NULL AFTER self_description`);
-    } catch (e) {}
+
+
 
     const existingQuery = `SELECT id FROM friend_survey WHERE account_id = ? AND survey_type = 'friend' LIMIT 1`;
     const [existing] = await pool.execute(existingQuery, [accountId]);
@@ -704,7 +700,9 @@ weeklyMatch.start();
 const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,getBuddy:()=>buddyMatch,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
 const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,observe:analytics.observe});
 buddyMatch.start();
-analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
+const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
+deepMatch.start();
+analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {
@@ -1298,7 +1296,7 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
     try {
         const result = await daily.transaction(async (pool,time) => {
         const { matches, match_round = 1, survey_type = 'love' } = req.body;
-        if(survey_type==='love')return {code:400,msg:'每周恋爱配对请使用批次预览和发布，不再接受手工导入'};
+        if(['love','friend'].includes(survey_type))return {code:400,msg:'每周恋爱配对请使用批次预览和发布，不再接受手工导入'};
         
         if (!Array.isArray(matches)) {
             return { code: 400, msg: 'matches 必须是数组' };
@@ -2367,7 +2365,7 @@ app.post('/', async (req, res) => {
             }
 
             data['email'] = userEmail;
-            const result = await saveFriendSurveyData(accountId, data);
+            const result = await deepMatch.saveSurvey(accountId, data);
 
             return res.json({ code: 200, msg: '提交成功' });
         }

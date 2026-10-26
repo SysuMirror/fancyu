@@ -454,7 +454,7 @@
             <div class="step-progress-fill" id="progressFill" style="width: 16.67%"></div>
         </div>
     </div>
-    <a href="index.html" class="back-link">← 返回首页</a>
+    <a href="deep.html" class="back-link">← 返回深度交友</a>
 
     <!-- ========== STEP 01: 基础背景 ========== -->
     <div class="step-content active" id="step1">
@@ -578,7 +578,7 @@
             </div>
         </div>
         <div class="card" id="expectCampusCard">
-            <div class="card-label">期望对方的学校和校区（可多选）</div>
+            <div class="card-label">期望对方的学校和校区（可多选）</div><p class="input-hint">此项与期望性别、年级、专业作为双方筛选条件；不填视为不限。性格和兴趣用于评分，不作为硬限制。</p>
             <div class="sub-label">选择快捷选项或指定具体学校+校区</div>
             <div class="tags-container" id="expectQuickTags" style="margin-bottom: 12px;">
                 <button class="tag-btn quick-btn" data-value="不限">不限</button>
@@ -995,7 +995,7 @@
         <div class="success-icon">✓</div>
         <div class="success-title">提交成功</div>
         <div class="success-desc">你的交友问卷已成功提交<br>我们将在每周匹配后<br>通知你结果</div>
-        <a href="index.html" class="success-btn">返回首页</a>
+        <a href="deep.html" class="success-btn">进入深度交友</a>
     </div>
 </div>
 
@@ -1012,7 +1012,7 @@ function requireLogin() {
 
     const TOTAL_STEPS = 6;
     let currentStep = 1;
-    let formData = JSON.parse(localStorage.getItem('friendSurveyData') || '{}');
+    let draftKey='friendSurveyData:unavailable';let formData = {};
     let userAccount = null;
     let authToken = null;
 
@@ -1543,7 +1543,7 @@ function requireLogin() {
     // 兴趣爱好模块
     function initInterestsModule() {
         if (formData.interests && formData.interests.length > 0) {
-            interestsData = formData.interests;
+            interestsData = Array.from({length:3},(_,i)=>formData.interests[i]||{category:'',subcategories:[],skillLevel:'',skillLevelExpect:[],frequency:''});
         }
         renderInterestSelectors();
     }
@@ -1884,11 +1884,11 @@ function requireLogin() {
 
     function saveData() {
         formData.interests = interestsData.filter(i => i.category);
-        localStorage.setItem('friendSurveyData', JSON.stringify(formData));
+        localStorage.setItem(draftKey, JSON.stringify(formData));
     }
 
     function restoreDraft() {
-        const draft = JSON.parse(localStorage.getItem('friendSurveyData') || '{}');
+        const draft = formData;
         if (Object.keys(draft).length === 0) return;
         document.querySelectorAll('.input-field').forEach(input => {
             const field = input.dataset.field;
@@ -1984,15 +1984,16 @@ function requireLogin() {
                     formData['my_school'] = getSchoolFromEmail(userAccount.email);
                 }
 
-                const response = await fetch(API_URL, {
-                    method: 'POST',
+                for(let i=1;i<=6;i++){formData['personality_self_'+i]=Number(document.getElementById('personality_self_'+i).value);formData['personality_expect_'+i]=Number(document.getElementById('personality_expect_'+i).value);formData['personality_expect_'+i+'_no_pref']=personalityNoPreference[i-1];}
+                const response = await fetch(API_URL+'/account/deep-survey', {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                    body: JSON.stringify({ action: 'submitFriendSurvey', data: formData })
+                    body: JSON.stringify(formData)
                 });
                 const result = await response.json();
                 if (handleApiResponse(result)) return;
                 if (result.code === 200) {
-                    localStorage.removeItem('friendSurveyData');
+                    localStorage.removeItem(draftKey);
                     document.getElementById('successModal').classList.add('show');
                 } else {
                     showToast(result.msg || '提交失败，请重试', true);
@@ -2015,7 +2016,8 @@ function requireLogin() {
         if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    init();
+    async function boot(){if(!checkAuth())return;try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData=saved.data||{};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
+    boot();
 </script>
 </body>
 </html>

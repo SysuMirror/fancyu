@@ -2,7 +2,7 @@ const assert=require('assert/strict'),mysql=require('mysql2/promise'),crypto=req
 const {fixture}=require('./weekly-match-rules.test');
 (async()=>{const pool=mysql.createPool({host:process.env.MYSQL_HOST,port:process.env.MYSQL_PORT,user:process.env.MYSQL_USER,password:process.env.MYSQL_PASSWORD,database:process.env.MYSQL_DATABASE,connectionLimit:8});
  const prefix='wmt_'+crypto.randomBytes(5).toString('hex')+'_';
- const names=['accounts','account_profiles','verified_students','secure_email_codes','daily_mutex','daily_settings','daily_pairs','daily_days','daily_blocks','complaints','account_preferences','match_history','weekly_questionnaires','weekly_match_bans','weekly_match_batches','weekly_match_enrollments','weekly_match_pairs','weekly_match_slots','weekly_match_feedback','friend_card_pairs'];
+ const names=['deep_pairs','accounts','account_profiles','verified_students','secure_email_codes','daily_mutex','daily_settings','daily_pairs','daily_days','daily_blocks','complaints','account_preferences','match_history','weekly_questionnaires','weekly_match_bans','weekly_match_batches','weekly_match_enrollments','weekly_match_pairs','weekly_match_slots','weekly_match_feedback','friend_card_pairs'];
  const re=new RegExp('\\b('+names.join('|')+')\\b','g'),sql=s=>s.replace(re,x=>prefix+x);
  const wrap=c=>({query:(s,a)=>c.query(sql(s),a),execute:(s,a)=>c.execute(sql(s),a),beginTransaction:()=>c.beginTransaction(),commit:()=>c.commit(),rollback:()=>c.rollback(),release:()=>c.release()});
  const db={...wrap(pool),getConnection:async()=>wrap(await pool.getConnection())};let server;

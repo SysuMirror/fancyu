@@ -5,3 +5,6 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
 .intro{text-wrap:balance}
+
+/* Keep the original payment code intact; frame its white area with CSS. */
+.support-payment{margin:20px auto;padding:24px 18px;background:#eef4e9;border:1px solid #cbdcc9;border-radius:16px;text-align:center;max-width:350px}.support-eyebrow{color:#52675c;font-size:13px;letter-spacing:1px}.support-payment h3{font-size:24px;margin:10px 0 4px;color:#173d2c}.support-payment p{margin:4px 0 16px;font-size:14px;color:#52675c}.support-code{position:relative;width:min(100%,280px);aspect-ratio:1;margin:18px auto;overflow:hidden;background:white;border-radius:10px}.support-details .support-code img{position:absolute;display:block;width:224.166667%;max-width:none;height:auto;margin:0;left:-62%;top:-70%;border-radius:0}.support-payment .support-recipient{margin:10px 0;font-size:14px;color:#173d2c}.support-caption{display:block;color:#52675c;font-size:12px}

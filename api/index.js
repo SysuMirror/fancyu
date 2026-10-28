@@ -607,6 +607,12 @@ app.use((req, res, next) => {
 
 // ==================== 账号系统 API ====================
 
+// Daily matching is retired. Legacy verification URLs remain available for all modes.
+app.use('/daily', (req,res,next)=>{
+ if(['/verification/send','/verification/confirm'].includes(req.path))return next();
+ res.setHeader('Cache-Control','no-store');return res.status(410).json({code:410,msg:'日常配对功能已下线'});
+});
+app.use('/admin/daily',(req,res)=>res.status(410).json({code:410,msg:'日常配对功能已下线'}));
 const analytics = require('./admin-analytics')({getPool});
 const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b),banWeekly:(c,id)=>weeklyMatch.ban(c,id),prepare:async pool=>{
     await analytics.ensureSchema();
@@ -2525,6 +2531,7 @@ saveSurveyData = async function(email, data) {
 app.use((req,res,next)=>{
     let decodedPath;try{decodedPath=decodeURIComponent(req.path);}catch(e){return res.status(400).end();}
     if(/^\/(all_users\.html|photos(?:\/|$))/i.test(decodedPath))return res.status(403).send('请通过已授权的资料页面访问');
+    if(/^\/daily\.(html|js|css)$/i.test(decodedPath))return res.status(410).set('Cache-Control','no-store').send('日常配对功能已下线，请返回首页。');
     next();
 });
 app.use(express.static(WEB_DIR));

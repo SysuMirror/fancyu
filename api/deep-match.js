@@ -26,7 +26,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,pr
    ['SELECT owner_id a,target_id b FROM daily_blocks',[]],
    ["SELECT a_id a,b_id b FROM deep_pairs WHERE week_key=? OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?",[weekKey(time),stamp(new Date(+time-30*86400000))]],
    ["SELECT a_id a,b_id b FROM friend_card_pairs WHERE week_key=? OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?",[weekKey(time),stamp(new Date(+time-30*86400000))]],
-   ["SELECT low_id a,high_id b FROM daily_pairs WHERE status IN ('pending','connected','closed','blocked') OR cooldown_until>?",[stamp(time)]],
+   ["SELECT low_id a,high_id b FROM daily_pairs WHERE status IN ('connected','closed','blocked') OR cooldown_until>?",[stamp(time)]],
    ['SELECT account_id a,match_account_id b FROM match_history WHERE contact_exchanged=1 OR created_at>?',[stamp(new Date(+time-72*3600000))]]
   ]){const [rows]=await c.execute(sql,args);for(const p of rows)set.add(key(p.a,p.b));}
   const [tables]=await c.query("SHOW TABLES LIKE 'weekly_match_pairs'");if(tables.length){const [rows]=await c.execute("SELECT a_id a,b_id b FROM weekly_match_pairs WHERE (status='pending' AND expires_at>?) OR connected_at IS NOT NULL OR cooldown_until>?",[stamp(time),stamp(time)]);for(const p of rows)set.add(key(p.a,p.b));}return set;

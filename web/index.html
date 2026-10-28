@@ -1576,7 +1576,6 @@
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 每周配对
             </button>
-            <button type="button" class="love-menu-item" id="dailyMatchBtn"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>日常配对</button>
         </div>
         <p style="text-align:center;color:var(--text-secondary);font-size:13px;margin-top:18px">每周配对需主动报名，周三 20:00 截止，周四 20:00 发布。</p>
     </div>
@@ -1838,7 +1837,7 @@ function requireLogin() {
 
     // 恢复匹配开关状态
     async function restoreToggleState() {
-        ['love','friend'].forEach(type=>document.getElementById(type+'MatchToggle').classList.remove('on'));
+        ['love','friend'].forEach(type=>document.getElementById(type+'MatchToggle')?.classList.remove('on'));
         const token=localStorage.getItem('token');if(!token)return;
         try {
             const res=await fetch(API_URL+'/account/me',{headers:{Authorization:'Bearer '+token}});
@@ -1857,7 +1856,6 @@ function requireLogin() {
 
     // 恋爱板块弹窗
     document.getElementById("loveSurveyBtn")?.addEventListener("click", goToLoveSurvey);
-    document.getElementById("dailyMatchBtn")?.addEventListener("click", () => { location.href="daily.html"; });
     document.getElementById("loveMenuCloseBtn")?.addEventListener("click", closeAllModals);
     loveMenuModal?.addEventListener("click", (e) => { if (e.target === loveMenuModal) closeAllModals(); });
 

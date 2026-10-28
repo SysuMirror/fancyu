@@ -439,6 +439,15 @@
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; transition: none !important; }
         }
+        /* Keep grade text readable in the native dropdown in both themes. */
+        select[data-field="grade"],
+        select[data-field="grade"]:focus,
+        select[data-field="grade"] option,
+        select[data-field="grade"] optgroup {
+            color: #003D1A;
+            background-color: #FAFAF8;
+        }
+        select[data-field="grade"] { color-scheme: light; }
     </style>
 <script src="auth-session.js"></script>
 <script src="matching-verification.js" defer></script>

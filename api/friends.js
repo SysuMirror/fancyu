@@ -15,10 +15,10 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
  async function visible(c,p){if(!['pending','connected'].includes(p.status)||!await eligible(c,p.a_id)||!await eligible(c,p.b_id)||await daily.blocked(c,p.a_id,p.b_id))return false;
   const [r]=await c.execute('SELECT * FROM friend_cards WHERE id IN (?,?) AND deleted=0',[p.a_card,p.b_card]);return r.length===2&&(p.status==='connected'||r.every(x=>x.enabled));}
  async function present(c,p,id){if(!await visible(c,p))return null;const mine=p.a_id===id,other=mine?p.b_id:p.a_id;
-  const [r]=await c.execute('SELECT a.username,p.profile_id,p.avatar,p.bio,p.tags,p.photos FROM accounts a LEFT JOIN account_profiles p ON p.account_id=a.id WHERE a.id=?',[other]);
+  const [r]=await c.execute('SELECT a.username FROM accounts a WHERE a.id=?',[other]);
   const [cards]=await c.execute('SELECT type,data FROM friend_cards WHERE id=?',[mine?p.b_card:p.a_card]);
   const v=parse(cards[0].data);const {gender,...publicValues}=v;const a=r[0];
-  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.profile_id||a.username,avatar:a.avatar||'',bio:a.bio||'',tags:parse(a.tags)||[],photos:parse(a.photos)||[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:mine?p.b_wechat:p.a_wechat}:{})};
+  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:mine?p.b_wechat:p.a_wechat}:{})};
  }
  app.get('/account/friends',authMiddleware,route(async(req,c,week)=>{
   const id=req.account.account_id;const [rows]=await c.execute('SELECT * FROM friend_cards WHERE account_id=? AND deleted=0 ORDER BY slot',[id]);

@@ -698,8 +698,8 @@ app.post('/account/bind', async (req, res) => {
 
 // 密码登录由 secure-auth 模块处理。
 
-// 个人主页：独立模块，使用有效账号令牌，不使用游客账号回退。
-require('./profile')(app, { getPool, verifyToken });
+// Personal showcase retired; account management stays available.
+app.use('/account/profile',(req,res)=>res.status(410).set('Cache-Control','no-store').json({code:410,msg:'个人主页功能已下线'}));
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
 const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly});
 weeklyMatch.start();
@@ -2533,6 +2533,11 @@ app.use((req,res,next)=>{
     if(/^\/(all_users\.html|photos(?:\/|$))/i.test(decodedPath))return res.status(403).send('请通过已授权的资料页面访问');
     if(/^\/daily\.(html|js|css)$/i.test(decodedPath))return res.status(410).set('Cache-Control','no-store').send('日常配对功能已下线，请返回首页。');
     next();
+});
+app.use((req,res,next)=>{
+ let p;try{p=decodeURIComponent(req.path);}catch{return res.status(400).end();}
+ if(/^\/homepage\.(html|js|css)$/i.test(p))return res.status(410).set('Cache-Control','no-store').send('个人主页功能已下线，请返回个人中心。');
+ next();
 });
 app.use(express.static(WEB_DIR));
 app.use((req, res) => {

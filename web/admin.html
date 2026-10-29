@@ -319,9 +319,9 @@
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-message">
                             <h2>👋 你好！我是 FancyU AI 助手</h2>
-                            <p>我只读取当前运营统计，不修改用户或配对数据。默认最近30天，也可指定日期范围。你可以问我：</p>
+                            <p>我可只读查询用户、问卷、搭子卡、配对与举报等业务数据。认证信息不可读取，联系方式默认脱敏。查询完整联系方式请使用：查看用户「账号名」的联系方式。每次最多4项查询，每项50条，可指定偏移量继续查看。</p>
                             <div class="example-questions">
-                                <div class="example-item" onclick="askExample('统计最近7天的注册和验证人数')">📊 统计最近7天的注册和验证人数</div>
+                                <div class="example-item" onclick="askExample('查询最近7天注册的用户')">📊 查询最近7天注册的用户</div>
                                 <div class="example-item" onclick="askExample('比较三种配对方式的参与人数和交换率')">📈 比较三种配对方式的参与人数和交换率</div>
                                 <div class="example-item" onclick="askExample('统计当前开启的搭子卡类别')">🔍 统计当前开启的搭子卡类别</div>
                                 <div class="example-item" onclick="askExample('分析最近30天的注册趋势')">🧠 分析最近30天的注册趋势</div>
@@ -721,11 +721,11 @@ function deleteChat(chatId, event) {
 function renderChatList() {
     const chatList = document.getElementById('chatList');
     if (!chatList) return;
-    
+
     const sortedChats = Object.values(chatHistory).sort(function(a, b) {
         return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
-    
+
     chatList.innerHTML = sortedChats.map(function(chat) {
         const isActive = chat.id === currentChatId;
         const time = new Date(chat.updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -740,20 +740,20 @@ function renderChatList() {
 function renderMessages(messages) {
     const container = document.getElementById('chatMessages');
     if (!container) return;
-    
+
     if (messages.length === 0) {
         container.innerHTML = '<div class="welcome-message">' +
             '<h2>👋 你好！我是 FancyU AI 助手</h2>' +
             '<p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>' +
             '<div class="example-questions">' +
-            '<div class="example-item" onclick="askExample(\'统计最近7天的注册和验证人数\')">📊 统计最近7天的注册和验证人数</div>' +
+            '<div class="example-item" onclick="askExample(\'查询最近7天注册的用户\')">📊 查询最近7天注册的用户</div>' +
             '<div class="example-item" onclick="askExample(\'比较三种配对方式的参与人数和交换率\')">📈 比较三种配对方式的参与人数和交换率</div>' +
             '<div class="example-item" onclick="askExample(\'统计当前开启的搭子卡类别\')">🔍 统计当前开启的搭子卡类别</div>' +
             '<div class="example-item" onclick="askExample(\'分析最近30天的注册趋势\')">🧠 分析最近30天的注册趋势</div>' +
             '</div></div>';
         return;
     }
-    
+
     container.innerHTML = messages.map(function(msg) {
         const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         const avatar = msg.role === 'user' ? '你' : 'AI';
@@ -764,7 +764,7 @@ function renderMessages(messages) {
             '<div class="message-time">' + time + '</div>' +
             '</div></div>';
     }).join('');
-    
+
     container.scrollTop = container.scrollHeight;
 }
 
@@ -792,53 +792,53 @@ async function sendMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     if (!message) return;
-    
+
     input.value = '';
     input.style.height = 'auto';
-    
+
     const chat = chatHistory[currentChatId];
     if (!chat) return;
-    
+
     chat.messages.push({
         role: 'user',
         content: message,
         timestamp: new Date().toISOString()
     });
-    
+
     if (chat.messages.length === 1) {
         chat.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
     }
-    
+
     chat.updatedAt = new Date().toISOString();
     saveChatHistory();
     renderMessages(chat.messages);
     renderChatList();
-    
+
     showTypingIndicator();
-    
+
     try {
         const response = await queryDatabase(message);
-        
+
         hideTypingIndicator();
-        
+
         chat.messages.push({
             role: 'assistant',
             content: response,
             timestamp: new Date().toISOString()
         });
-        
+
         chat.updatedAt = new Date().toISOString();
         saveChatHistory();
         renderMessages(chat.messages);
     } catch (error) {
         hideTypingIndicator();
-        
+
         chat.messages.push({
             role: 'assistant',
             content: '抱歉，查询数据库时出现错误：' + error.message,
             timestamp: new Date().toISOString()
         });
-        
+
         chat.updatedAt = new Date().toISOString();
         saveChatHistory();
         renderMessages(chat.messages);
@@ -858,15 +858,15 @@ async function queryDatabase(query) {
         '- 查询单个用户：GET ' + API + '/admin/user/{serial_number}\n' +
         '- 统计数据：GET ' + API + '/admin/stats\n\n' +
         '注意：所有 API 请求都需要在 header 中添加 Authorization: Bearer ' + adminToken;
-    
+
     const messages = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: query }
     ];
-    
+
     const response = await fetch(LLM_API, {
         method: 'POST',
-        headers: { 
+        headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + adminToken
         },
@@ -876,16 +876,16 @@ async function queryDatabase(query) {
             temperature: 0.7
         })
     });
-    
+
     if (!response.ok) {
         throw new Error('LLM API 请求失败');
     }
-    
+
     const result = await response.json();
     if (result.code !== 200) {
         throw new Error(result.msg || 'LLM 服务错误');
     }
-    
+
     return result.data.choices[0].message.content;
 }
 

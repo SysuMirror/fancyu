@@ -215,11 +215,11 @@ function filterByDisplaySelf(userData, displaySelf) {
 
 function cleanDisplaySelf(value) {
     if (value === undefined || value === null) return null;
-    
+
     if (Array.isArray(value)) {
         return JSON.stringify(value);
     }
-    
+
     if (typeof value === 'string') {
         try {
             const parsed = JSON.parse(value);
@@ -234,7 +234,7 @@ function cleanDisplaySelf(value) {
         }
         return JSON.stringify([]);
     }
-    
+
     return JSON.stringify([]);
 }
 
@@ -469,7 +469,7 @@ async function updateSurveyData(serialNumber, newData, surveyType) {
         return Array.isArray(val) ? JSON.stringify(val) : val;
     });
     values.push(serialNumber);
-    
+
     const query = `UPDATE ${tableName} SET ${setClause}, updated_at = NOW() WHERE serial_number = ?`;
     await pool.execute(query, values);
 }
@@ -627,58 +627,58 @@ const studentVerification = require('./verification-guard')(app,{getPool,ensureS
 app.post('/account/bind', async (req, res) => {
     const { serial_number, email, code, password, username } = req.body;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    
+
     try {
         if (!checkRateLimit(clientIp, 'bind', 5, 60000)) {
             return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
         }
-        
+
         if (!serial_number || !email || !code || !password) {
             return res.json({ code: 400, msg: '序列号、邮箱、验证码和密码不能为空' });
         }
-        
+
         if (!isValidSysuEmail(email)) {
             return res.json({ code: 400, msg: '仅支持指定学校官方邮箱' });
         }
-        
+
         if (password.length < 8) {
             return res.json({ code: 400, msg: '密码长度至少为8位' });
         }
-        
+
         const isValid = await verifyAndDeleteCode(email, code);
         if (!isValid) {
             return res.json({ code: 400, msg: '验证码错误或已过期' });
         }
-        
+
         const userData = await queryUserBySerial(serial_number);
         if (!userData) {
             return res.json({ code: 404, msg: '序列号不存在' });
         }
-        
+
         if (userData.email !== email && userData.contact_email !== email) {
             return res.json({ code: 403, msg: '序列号与邮箱不匹配' });
         }
-        
+
         if (userData.account_id) {
             return res.json({ code: 400, msg: '该序列号已绑定账号' });
         }
-        
+
         const existingAccount = await findAccountByEmailOrUsername(email);
         if (existingAccount) {
             return res.json({ code: 400, msg: '该邮箱已注册，请直接登录' });
         }
-        
+
         const finalUsername = username || email.split('@')[0];
         const usernameCheck = await findAccountByEmailOrUsername(finalUsername);
         if (usernameCheck) {
             return res.json({ code: 400, msg: '该用户名已被使用' });
         }
-        
+
         const account = await createAccount(email, password, finalUsername);
         await linkAccountToSerial(account.id, serial_number);
         const token = generateToken(account);
         await updateLastLogin(account.id);
-        
+
         return res.json({
             code: 200,
             msg: '绑定成功',
@@ -756,17 +756,17 @@ app.post('/account/change-password', authMiddleware, async (req, res) => {
         if (new_password.length < 8) {
             return res.json({ code: 400, msg: '新密码长度不能少于8位' });
         }
-        
+
         const account = await findAccountByEmailOrUsername(req.account.email);
         if (!account) {
             return res.json({ code: 404, msg: '账号不存在' });
         }
-        
+
         const isMatch = await bcrypt.compare(old_password, account.password_hash);
         if (!isMatch) {
             return res.json({ code: 400, msg: '旧密码错误' });
         }
-        
+
         await updateAccountPassword(req.account.account_id, new_password);
         return res.json({ code: 200, msg: '密码修改成功' });
     } catch (error) {
@@ -790,19 +790,19 @@ app.post('/account/change-username', authMiddleware, async (req, res) => {
         if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(new_username)) {
             return res.json({ code: 400, msg: '用户名只能包含字母、数字、下划线和中文' });
         }
-        
+
         if (new_username !== req.account.username && await isUsernameTaken(new_username)) {
             return res.json({ code: 400, msg: '该用户名已被使用' });
         }
-        
+
         await updateAccountUsername(req.account.account_id, new_username);
-        
+
         const newToken = generateToken({
             id: req.account.account_id,
             email: req.account.email,
             username: new_username
         });
-        
+
         return res.json({ code: 200, msg: '用户名修改成功', token: newToken, username: new_username });
     } catch (error) {
         console.error('Change Username Error:', error);
@@ -817,12 +817,12 @@ app.post('/account/change-contact-email', authMiddleware, async (req, res) => {
         if (!contact_email) {
             return res.json({ code: 400, msg: '联系邮箱不能为空' });
         }
-        
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(contact_email)) {
             return res.json({ code: 400, msg: '邮箱格式不正确' });
         }
-        
+
         await updateContactEmailByAccountId(req.account.account_id, contact_email);
         return res.json({ code: 200, msg: '联系邮箱修改成功' });
     } catch (error) {
@@ -838,17 +838,17 @@ app.post('/account/delete', authMiddleware, async (req, res) => {
         if (!password) {
             return res.json({ code: 400, msg: '请输入密码确认注销' });
         }
-        
+
         const account = await findAccountByEmailOrUsername(req.account.email);
         if (!account) {
             return res.json({ code: 404, msg: '账号不存在' });
         }
-        
+
         const isMatch = await bcrypt.compare(password, account.password_hash);
         if (!isMatch) {
             return res.json({ code: 400, msg: '密码错误' });
         }
-        
+
         await deleteAccount(req.account.account_id);
         return res.json({ code: 200, msg: '账号已注销' });
     } catch (error) {
@@ -1200,10 +1200,10 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
         const safePage = Math.max(1, parseInt(page) || 1);
         const safeSize = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
         const offset = (safePage - 1) * safeSize;
-        
+
         let where = ['1=1'];
         let params = [];
-        
+
         if (search) {
             where.push(`(COALESCE(u.nickname,a.username) LIKE ? OR u.serial_number LIKE ? OR COALESCE(a.email,u.email) LIKE ? OR u.contact_email LIKE ?)`);
             const s = `%${search}%`;
@@ -1216,18 +1216,18 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
             where.push(`a.join_matching = ?`);
             params.push(join_matching === 'true' || join_matching === '1' ? 1 : 0);
         }
-        
+
         const allowedSorts = ['created_at', 'updated_at', 'nickname', 'sex', 'campus', 'grade', 'height'];
         const sortField = allowedSorts.includes(sort) ? sort : 'created_at';
         const sortOrder = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-        
+
         const countQuery = `SELECT COUNT(*) as total FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')}`;
         const [countResult] = await pool.execute(countQuery, params);
         const total = countResult[0].total;
-        
+
         const dataQuery = `SELECT u.*, EXISTS(SELECT 1 FROM weekly_questionnaires w WHERE w.account_id=a.id) AS has_love, EXISTS(SELECT 1 FROM deep_surveys d WHERE d.account_id=a.id) AS has_deep, EXISTS(SELECT 1 FROM friend_survey f WHERE f.account_id=a.id) AS has_legacy_deep, (SELECT COUNT(*) FROM friend_cards c WHERE c.account_id=a.id AND c.deleted=0) AS buddy_count, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')} ORDER BY ${sortField === 'created_at' ? 'COALESCE(a.created_at,u.created_at)' : sortField === 'nickname' ? 'COALESCE(u.nickname,a.username)' : 'u.'+sortField} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
         const [rows] = await pool.execute(dataQuery, params);
-        
+
         return res.json({ code: 200, data: rows, total, page: safePage, pageSize: safeSize });
     } catch (error) {
         console.error('Admin Users Error:', error);
@@ -1271,7 +1271,7 @@ app.get('/admin/accounts/:id/materials', adminAuthMiddleware, async (req,res)=>{
 app.get('/admin/stats', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
-        
+
         const [[{totalUsers}]] = await pool.execute(`SELECT COUNT(*) as totalUsers FROM users`);
         const [[{totalAccounts}]] = await pool.execute(`SELECT COUNT(*) as totalAccounts FROM accounts`);
         const [[{joinMatching}]] = await pool.execute(`SELECT COUNT(*) as joinMatching FROM accounts WHERE join_matching = 1`);
@@ -1286,7 +1286,7 @@ app.get('/admin/stats', adminAuthMiddleware, async (req, res) => {
         const [dailySurvey] = await pool.execute(`SELECT DATE(created_at) as date, COUNT(*) as count FROM users GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 30`);
         const [sexChoiceDist] = await pool.execute(`SELECT sex_choice, COUNT(*) as count FROM users GROUP BY sex_choice`);
         const [majorDist] = await pool.execute(`SELECT major, COUNT(*) as count FROM users WHERE major IS NOT NULL AND major != '' GROUP BY major ORDER BY count DESC LIMIT 20`);
-        
+
         return res.json({
             code: 200,
             data: {
@@ -1308,7 +1308,7 @@ app.get('/admin/friend-surveys', adminAuthMiddleware, async (req, res) => {
         const pool = await getPool();
         const { page = 1, pageSize = 50 } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(pageSize);
-        
+
         const [[{total}]] = await pool.execute(`SELECT COUNT(*) as total FROM friend_survey`);
         const [rows] = await pool.execute(
             `SELECT f.*, a.email as account_email FROM friend_survey f LEFT JOIN accounts a ON f.account_id = a.id ORDER BY f.created_at DESC LIMIT ${parseInt(pageSize)} OFFSET ${offset}`
@@ -1326,30 +1326,30 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
         const result = await daily.transaction(async (pool,time) => {
         const { matches, match_round = 1, survey_type = 'love' } = req.body;
         if(['love','friend'].includes(survey_type))return {code:400,msg:'每周恋爱配对请使用批次预览和发布，不再接受手工导入'};
-        
+
         if (!Array.isArray(matches)) {
             return { code: 400, msg: 'matches 必须是数组' };
         }
-        
+
         let successCount = 0;
         let skipCount = 0;
         let failCount = 0;
-        
+
         for (const match of matches) {
             const { account_email, match_email, match_data } = match;
-            
+
             // 查找account_id
             const [accRows1] = await pool.execute(`SELECT id FROM accounts WHERE email = ?`, [account_email]);
             const [accRows2] = await pool.execute(`SELECT id FROM accounts WHERE email = ?`, [match_email]);
-            
+
             if (!accRows1.length || !accRows2.length) {
                 failCount++;
                 continue;
             }
-            
+
             const accountId = accRows1[0].id;
             const matchAccountId = accRows2[0].id;
-            
+
             if(!await studentVerification.verified(pool,accountId)||!await studentVerification.verified(pool,matchAccountId)){skipCount++;continue;}
             if(accountId===matchAccountId || await daily.weeklyGuard(pool,accountId,matchAccountId,time)){skipCount++;continue;}
             // 检查是否已存在
@@ -1361,14 +1361,14 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
                 skipCount++;
                 continue;
             }
-            
+
             await pool.execute(
                 `INSERT INTO match_history (account_id, match_account_id, survey_type, match_round, match_data, user_agreed, match_agreed, contact_exchanged, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, 0, 0, NOW(), NOW())`,
                 [accountId, matchAccountId, survey_type, match_round, JSON.stringify(match_data)]
             );
             successCount++;
         }
-        
+
         return { code: 200, data: { success: successCount, skip: skipCount, fail: failCount } };
         });
         return res.json(result);
@@ -1400,7 +1400,7 @@ app.delete('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
 const adminAiConfigPath = require('path').join(__dirname, '../.private/admin-ai.json');
 const adminAiConfig = require('fs').existsSync(adminAiConfigPath)
   ? JSON.parse(require('fs').readFileSync(adminAiConfigPath, 'utf8')) : {};
-app.post('/llm/chat', adminAuthMiddleware, require('./admin-ai')({analytics,env:{...process.env,...adminAiConfig}}));
+app.post('/llm/chat', adminAuthMiddleware, require('./admin-ai')({analytics,business:require('./admin-business')({getPool}),env:{...process.env,...adminAiConfig}}));
 
 // ==================== AI助手对话存储 ====================
 
@@ -1567,7 +1567,7 @@ app.get('/', async (req, res) => {
         return res.sendFile(path.join(WEB_DIR, 'index.html'));
     }
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    
+
     try {
         if (action === 'generateSerial') {
             if (!checkRateLimit(clientIp, 'generateSerial', 5, 60000)) {
@@ -1579,7 +1579,7 @@ app.get('/', async (req, res) => {
             const serialNumber = generateUniqueSerialNumber();
             return res.json({ code: 200, serialNumber });
         }
-        
+
         if (action === 'query') {
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -1621,7 +1621,7 @@ app.get('/', async (req, res) => {
                 full_data: userData
             }});
         }
-        
+
         if (action === 'getSurveyData') {
             if (!checkRateLimit(clientIp, 'getSurveyData', 10, 60000)) {
                 return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
@@ -1629,12 +1629,12 @@ app.get('/', async (req, res) => {
             if (!serial || !email || !code) {
                 return res.json({ code: 400, msg: '缺少必要参数（serial, email, code）' });
             }
-            
+
             const isValidCode = await verifyAndDeleteCode(email, code);
             if (!isValidCode) {
                 return res.json({ code: 400, msg: '验证码错误或已过期' });
             }
-            
+
             const userData = await queryUserBySerial(serial);
             if (!userData) {
                 return res.json({ code: 404, msg: '未找到该序列号对应的问卷' });
@@ -1642,7 +1642,7 @@ app.get('/', async (req, res) => {
             if (userData.email !== email && userData.contact_email !== email) {
                 return res.json({ code: 403, msg: '序列号与邮箱不匹配' });
             }
-            
+
             return res.json({ code: 200, data: userData });
         }
 
@@ -1691,7 +1691,7 @@ app.get('/', async (req, res) => {
 app.post('/', async (req, res) => {
     const { action, email, code, serial, source, data } = req.body;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    
+
     try {
         if (action === 'verifyMatch') {
             if (!checkRateLimit(clientIp, 'verifyMatch', 5, 60000)) {
@@ -1700,20 +1700,20 @@ app.post('/', async (req, res) => {
             if (!serial || !email) {
                 return res.json({ code: 400, msg: '序列号和邮箱不能为空' });
             }
-            
+
             const isMatch = await verifySerialAndEmail(serial, email);
             if (!isMatch) {
                 return res.json({ code: 403, msg: '序列号与邮箱不匹配' });
             }
-            
+
             if (await checkRecentSend(email)) {
                 return res.json({ code: 400, msg: '请等待60秒后再试' });
             }
-            
+
             const result = await secureAuth.send(email,'register');
             return res.status(result.code).json(result);
         }
-        
+
         if (action === 'submitSurvey') {
             if (!checkRateLimit(clientIp, 'submitSurvey', 5, 60000)) {
                 return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
@@ -1775,7 +1775,7 @@ app.post('/', async (req, res) => {
                     console.error('确认邮件发送失败:', emailError);
                 }
             }
-            
+
             return res.json({ code: 200, msg: '提交成功', serialNumber: result.serialNumber });
         }
 
@@ -1813,7 +1813,7 @@ app.post('/', async (req, res) => {
 
             return res.json({ code: 200, msg: '提交成功' });
         }
-        
+
         if (action === 'updateSurvey' || action === 'modifySurvey') {
             if (!checkRateLimit(clientIp, 'updateSurvey', 3, 60000)) {
                 return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
@@ -1821,7 +1821,7 @@ app.post('/', async (req, res) => {
             if (!serial || !email || !data) {
                 return res.json({ code: 400, msg: '缺少必要参数（serial, email, data）' });
             }
-            
+
             const existingUser = await queryUserBySerial(serial);
             if (!existingUser) {
                 return res.json({ code: 404, msg: '未找到该序列号对应的问卷' });
@@ -1829,7 +1829,7 @@ app.post('/', async (req, res) => {
             if (existingUser.email !== email && existingUser.contact_email !== email) {
                 return res.json({ code: 403, msg: '序列号与邮箱不匹配' });
             }
-            
+
             // 前端字段映射: own_campus → campus
             if (data['own_campus'] && !data['campus']) {
                 data['campus'] = data['own_campus'];
@@ -1839,7 +1839,7 @@ app.post('/', async (req, res) => {
 
             return res.json({ code: 200, msg: '更新成功' });
         }
-        
+
         return res.json({ code: 400, msg: '无效请求' });
     } catch (error) {
         console.error('POST API Error:', error);

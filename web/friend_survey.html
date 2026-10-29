@@ -557,25 +557,10 @@
         <div class="card">
             <div class="card-label">学校 <span class="required-mark">*必填</span></div>
             <div class="select-wrapper">
-                <select class="select-field" data-field="school" id="schoolSelect">
-                    <option value="">选择学校</option>
-                    <option value="中山大学">中山大学</option>
-                    <option value="华南理工大学">华南理工大学</option>
-                    <option value="暨南大学">暨南大学</option>
-                    <option value="华南师范大学">华南师范大学</option>
-                    <option value="华南农业大学">华南农业大学</option>
-                    <option value="广州中医药大学">广州中医药大学</option>
-                    <option value="广州医科大学">广州医科大学</option>
-                    <option value="星海音乐学院">星海音乐学院</option>
-                    <option value="广州美术学院">广州美术学院</option>
-                    <option value="广东药科大学">广东药科大学</option>
-                    <option value="广东工业大学">广东工业大学</option>
-                    <option value="广州大学">广州大学</option>
-                    <option value="广东外语外贸大学">广东外语外贸大学</option>
-                </select>
+                <select class="select-field" data-field="school" id="schoolSelect"><option value="">选择学校</option><option value="中山大学">中山大学</option></select>
                 <span class="select-arrow">▼</span>
             </div>
-            <div class="input-hint">当前学校功能仍在开发中，如果暂时找不到你的学校实在抱歉，我们正在持续完善～</div>
+            <div class="input-hint">目前仅开放中山大学，请选择你所在的校区。</div>
         </div>
         <div class="card" id="ownCampusCard" style="display: none;">
             <div class="card-label">所在校区 <span class="required-mark">*必填</span></div>
@@ -589,29 +574,14 @@
         </div>
         <div class="card" id="expectCampusCard">
             <div class="card-label">期望对方的学校和校区（可多选）</div><p class="input-hint">此项与期望性别作为双方筛选条件；不填视为不限。年级、专业、性格和兴趣仅用于评分，不作为硬限制。</p>
-            <div class="sub-label">选择快捷选项或指定具体学校+校区</div>
+            <div class="sub-label">选择中山大学，并勾选愿意认识的校区；不填视为不限校区。</div>
             <div class="tags-container" id="expectQuickTags" style="margin-bottom: 12px;">
                 <button class="tag-btn quick-btn" data-value="不限">不限</button>
                 <button class="tag-btn quick-btn" data-value="广州所有校区">广州所有校区</button>
-                <button class="tag-btn quick-btn" data-value="大学城所有校区">大学城所有校区</button>
+
             </div>
             <div class="select-wrapper">
-                <select class="select-field" id="expectSchool">
-                    <option value="">+ 添加期望学校</option>
-                    <option value="中山大学">中山大学</option>
-                    <option value="华南理工大学">华南理工大学</option>
-                    <option value="暨南大学">暨南大学</option>
-                    <option value="华南师范大学">华南师范大学</option>
-                    <option value="华南农业大学">华南农业大学</option>
-                    <option value="广州中医药大学">广州中医药大学</option>
-                    <option value="广州医科大学">广州医科大学</option>
-                    <option value="星海音乐学院">星海音乐学院</option>
-                    <option value="广州美术学院">广州美术学院</option>
-                    <option value="广东药科大学">广东药科大学</option>
-                    <option value="广东工业大学">广东工业大学</option>
-                    <option value="广州大学">广州大学</option>
-                    <option value="广东外语外贸大学">广东外语外贸大学</option>
-                </select>
+                <select class="select-field" id="expectSchool"><option value="">+ 添加中山大学校区偏好</option><option value="中山大学">中山大学</option></select>
                 <span class="select-arrow">▼</span>
             </div>
             <div id="expectSchoolsContainer"></div>
@@ -1027,21 +997,7 @@ function requireLogin() {
     let authToken = null;
 
     // 学校-校区映射
-    const SCHOOL_CAMPUSES = {
-        "中山大学": ["广州海珠南校", "广州天河东校", "广州越秀北校", "深圳校区", "珠海校区"],
-        "华南理工大学": ["广州天河五山", "广州番禺大学城", "广州花都国际"],
-        "暨南大学": ["广州天河石牌", "广州番禺校区", "广州增城广园东", "珠海校区", "深圳校区"],
-        "华南师范大学": ["广州天河石牌", "广州番禺大学城", "佛山南海校区"],
-        "华南农业大学": ["广州天河校区"],
-        "广州中医药大学": ["广州番禺大学城", "广州白云三元里"],
-        "广州医科大学": ["广州番禺校区", "广州越秀校区"],
-        "星海音乐学院": ["广州番禺大学城", "广州天河沙河"],
-        "广州美术学院": ["广州番禺大学城", "广州海珠昌岗"],
-        "广东药科大学": ["广州番禺大学城", "中山校区", "云浮校区"],
-        "广东工业大学": ["广州番禺大学城", "广州越秀东风东", "广州天河龙洞", "广州番禺校区", "揭阳校区"],
-        "广州大学": ["广州番禺大学城", "广州越秀桂花岗"],
-        "广东外语外贸大学": ["广州白云校区", "广州番禺大学城", "广州天河校区"]
-    };
+    const SCHOOL_CAMPUSES = {"中山大学": ["广州南校园", "广州北校园", "广州东校园", "珠海校区", "深圳校区"]};
 
     // 兴趣大类列表
     const INTEREST_CATEGORIES = [
@@ -2026,7 +1982,7 @@ function requireLogin() {
         if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    async function boot(){if(!checkAuth())return;try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData=saved.data||{};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
+    async function boot(){if(!checkAuth())return;try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData=saved.data||{};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=formData.school||'中山大学';formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
     boot();
 </script>
 </body>

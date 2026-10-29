@@ -1,12 +1,13 @@
 'use strict';
 const {schools,categories}=require('./deep-options.json');
+const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};
 const GRADES=['大一','大二','大三','大四','大五（医学）','研0','研一','研二','研三','博士'];
 const MAJORS=['人文社科类','经济管理类','理学类','工学类','医学类','艺术体育类','其他'];
 const GOALS=['学习搭子','饭搭子','运动搭子','游戏搭子','聊天搭子','综合交友'];
 const LEVELS=['完全小白','云玩家','入门','一般般','精通'],FREQ=['每日','每周','每月','每学期','没要求'];
 const DISPLAY=['基础背景','个人特质','兴趣爱好','自我介绍','照片'];
 function validate(d){
- if(!d||typeof d!=='object'||Array.isArray(d))throw Error('问卷格式无效');const out={};
+ if(!d||typeof d!=='object'||Array.isArray(d))throw Error('问卷格式无效');d={...d,own_campus:campusAliases[d.own_campus]||d.own_campus,expect_school_campuses:Object.fromEntries(Object.entries(d.expect_school_campuses||{}).map(([k,v])=>[k,Array.isArray(v)?v.map(x=>campusAliases[x]||x):v]))};const out={};
  const select=(k,opts,required=false)=>{const v=d[k];if(v==null||v===''){if(required)throw Error('请填写 '+k);return;}if(!opts.includes(v))throw Error('请检查 '+k);out[k]=v;};
  const list=(k,opts,defaults=[])=>{const v=d[k]??defaults;if(!Array.isArray(v)||v.length>opts.length||new Set(v).size!==v.length||v.some(x=>!opts.includes(x)))throw Error('请检查 '+k);out[k]=v.includes('不限')?['不限']:v;};
  const text=(k,max)=>{if(d[k]==null)return;if(typeof d[k]!=='string'||d[k].length>max)throw Error('请检查 '+k);out[k]=d[k].trim();};
@@ -24,7 +25,7 @@ function validate(d){
  return out;
 }
 const permits=(arr,v)=>!arr.length||arr.includes('不限')||arr.includes(v);
-function locationAllows(a,b){if(a.expect_quick==='不限')return true;const explicit=a.expect_schools.includes(b.school)&&(!a.expect_school_campuses[b.school]?.length||a.expect_school_campuses[b.school].includes(b.own_campus));const quick=a.expect_quick==='广州所有校区'?b.own_campus?.startsWith('广州'):a.expect_quick==='大学城所有校区'?b.own_campus?.includes('大学城'):false;return !a.expect_quick&&!a.expect_schools.length||!!explicit||!!quick;}
+function locationAllows(a,b){if(a.expect_quick==='不限')return true;const explicit=a.expect_schools.includes(b.school)&&(!a.expect_school_campuses[b.school]?.length||a.expect_school_campuses[b.school].includes(b.own_campus));const quick=a.expect_quick==='广州所有校区'?b.own_campus?.startsWith('广州'):a.expect_quick==='大学城所有校区'?(b.own_campus?.includes('大学城')||(b.school==='中山大学'&&b.own_campus==='广州东校园')):false;return !a.expect_quick&&!a.expect_schools.length||!!explicit||!!quick;}
 function directional(a,b){
  let total=0,weight=0;const add=(v,w)=>{if(v!=null){total+=v*w;weight+=w;}};
  if(a.interests.length&&b.interests.length){let n=0,den=0;a.interests.forEach((x,i)=>{const rank=3-i,y=b.interests.find(z=>z.category===x.category);den+=rank;if(!y)return;let v=.5;if(x.subcategories.length&&y.subcategories.length)v+=.25*x.subcategories.filter(z=>y.subcategories.includes(z)).length/new Set([...x.subcategories,...y.subcategories]).size;else v+=.125;if(!x.skillLevelExpect.length||x.skillLevelExpect.includes('没要求'))v+=.125;else if(y.skillLevel&&x.skillLevelExpect.includes(y.skillLevel))v+=.125;if(x.frequency&&y.frequency){v+=.125*(x.frequency==='没要求'||y.frequency==='没要求'?1:1-Math.abs(FREQ.indexOf(x.frequency)-FREQ.indexOf(y.frequency))/3);}n+=rank*v;});add(n/den,35);}

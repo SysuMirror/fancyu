@@ -19,3 +19,5 @@ body{background:radial-gradient(ellipse at 5% 30%,#e8dfcc66,transparent 26%),#fa
 .hero{overflow:clip}.hero-art{overflow:hidden}html{overflow-x:hidden}
 
 .support-details .support-code img{position:static;width:100%;max-width:100%;height:auto;margin:0;left:auto;top:auto}
+
+.hero-art{object-fit:contain;object-position:center center}

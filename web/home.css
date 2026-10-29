@@ -17,3 +17,5 @@ body{background:radial-gradient(ellipse at 5% 30%,#e8dfcc66,transparent 26%),#fa
 @media(max-width:760px){.wrap{width:calc(100% - 32px)}.brand{font-size:19px}.site-header{height:72px}.hero{padding:38px 8px 140px;min-height:430px}.hero-art{width:80%;height:290px;right:-22%;top:130px;opacity:.38}.hero h1{font-size:clamp(42px,9vw,65px)}.eyebrow{font-size:15px}.intro{font-size:16px;margin:16px 0 0;text-wrap:initial}.status-banner{margin-top:-35px;border-radius:17px;padding:17px;min-height:88px}.status-banner strong{font-size:16px}.status-icon{width:28px;height:28px}.status-copy{font-size:13px}.status-arrow{width:28px;height:28px}.modes h2{font-size:28px}.section-copy{font-size:15px}.mode-grid{grid-template-columns:1fr;gap:14px}.mode-card{min-height:160px;padding:26px 62px 25px 115px}.mode-art{width:88px;left:14px;top:30px}.mode-card h3{font-size:27px}.pill{font-size:13px}.mode-button{bottom:24px;right:18px}.trust-strip{gap:15px}.hero:before{width:70px;height:60px;left:-50px}}
 
 .hero{overflow:clip}.hero-art{overflow:hidden}html{overflow-x:hidden}
+
+.support-details .support-code img{position:static;width:100%;max-width:100%;height:auto;margin:0;left:auto;top:auto}

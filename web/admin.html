@@ -319,12 +319,12 @@
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-message">
                             <h2>👋 你好！我是 FancyU AI 助手</h2>
-                            <p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>
+                            <p>我只读取当前运营统计，不修改用户或配对数据。默认最近30天，也可指定日期范围。你可以问我：</p>
                             <div class="example-questions">
-                                <div class="example-item" onclick="askExample('查询最近注册的10个用户')">📊 查询最近注册的10个用户</div>
-                                <div class="example-item" onclick="askExample('统计各校区的用户数量')">📈 统计各校区的用户数量</div>
-                                <div class="example-item" onclick="askExample('查找所有参与匹配的女生')">🔍 查找所有参与匹配的女生</div>
-                                <div class="example-item" onclick="askExample('分析用户的MBTI分布')">🧠 分析用户的MBTI分布</div>
+                                <div class="example-item" onclick="askExample('统计最近7天的注册和验证人数')">📊 统计最近7天的注册和验证人数</div>
+                                <div class="example-item" onclick="askExample('比较三种配对方式的参与人数和交换率')">📈 比较三种配对方式的参与人数和交换率</div>
+                                <div class="example-item" onclick="askExample('统计当前开启的搭子卡类别')">🔍 统计当前开启的搭子卡类别</div>
+                                <div class="example-item" onclick="askExample('分析最近30天的注册趋势')">🧠 分析最近30天的注册趋势</div>
                             </div>
                         </div>
                     </div>
@@ -719,10 +719,10 @@ function renderMessages(messages) {
             '<h2>👋 你好！我是 FancyU AI 助手</h2>' +
             '<p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>' +
             '<div class="example-questions">' +
-            '<div class="example-item" onclick="askExample(\'查询最近注册的10个用户\')">📊 查询最近注册的10个用户</div>' +
-            '<div class="example-item" onclick="askExample(\'统计各校区的用户数量\')">📈 统计各校区的用户数量</div>' +
-            '<div class="example-item" onclick="askExample(\'查找所有参与匹配的女生\')">🔍 查找所有参与匹配的女生</div>' +
-            '<div class="example-item" onclick="askExample(\'分析用户的MBTI分布\')">🧠 分析用户的MBTI分布</div>' +
+            '<div class="example-item" onclick="askExample(\'统计最近7天的注册和验证人数\')">📊 统计最近7天的注册和验证人数</div>' +
+            '<div class="example-item" onclick="askExample(\'比较三种配对方式的参与人数和交换率\')">📈 比较三种配对方式的参与人数和交换率</div>' +
+            '<div class="example-item" onclick="askExample(\'统计当前开启的搭子卡类别\')">🔍 统计当前开启的搭子卡类别</div>' +
+            '<div class="example-item" onclick="askExample(\'分析最近30天的注册趋势\')">🧠 分析最近30天的注册趋势</div>' +
             '</div></div>';
         return;
     }
@@ -742,7 +742,7 @@ function renderMessages(messages) {
 }
 
 function formatMessage(content) {
-    return content
+    return String(content).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]))
         .replace(/```([\s\S]*?)```/g, '<pre class="code-block">$1</pre>')
         .replace(/`([^`]+)`/g, '<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:monospace;">$1</code>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')

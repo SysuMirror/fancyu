@@ -25,13 +25,13 @@ module.exports=function({getPool}){
   const at=time.toISOString().slice(0,19).replace('T',' ');
   await c.execute(`INSERT INTO recommendation_observations(mode,account_id,unit_key,algorithm_version,outcome,pair_id,first_at,last_at) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE outcome=IF(outcome='recommended',outcome,VALUES(outcome)),pair_id=COALESCE(pair_id,VALUES(pair_id)),last_at=VALUES(last_at)`,[mode,accountId,unit,VERSIONS[mode],outcome,pairId,at,at]);
  }
- async function summary(range){
-  await ensureSchema();const pool=await getPool(),c=await pool.getConnection();
+ async function summary(range,{readOnly=false}={}){
+  if(!readOnly)await ensureSchema();const pool=await getPool(),c=await pool.getConnection();
   const q=async(sql,args=[])=>{const [r]=await c.execute(sql,args);return r;};
   const count=async(sql,args=[])=>Number((await q(sql,args))[0].n||0);
   const times=[range.from,range.until];
   try{await c.query("SET time_zone = '+00:00'");await c.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');await c.query('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY');
-   const totals={accounts:await count('SELECT COUNT(*) n FROM accounts'),verified:await count('SELECT COUNT(*) n FROM accounts a JOIN verified_students v ON v.account_id=a.id AND v.email=a.email'),weekly_surveys:await count('SELECT COUNT(*) n FROM weekly_questionnaires'),friend_surveys:await count('SELECT COUNT(DISTINCT f.account_id) n FROM friend_survey f JOIN accounts a ON a.id=f.account_id'),cards:await count('SELECT COUNT(*) n FROM friend_cards WHERE deleted=0'),pending_reports:await count("SELECT COUNT(*) n FROM complaints WHERE status IN ('pending','processing')")};
+   const totals={accounts:await count('SELECT COUNT(*) n FROM accounts'),verified:await count('SELECT COUNT(*) n FROM accounts a JOIN verified_students v ON v.account_id=a.id AND v.email=a.email'),weekly_surveys:await count('SELECT COUNT(*) n FROM weekly_questionnaires'),friend_surveys:await count('SELECT COUNT(DISTINCT f.account_id) n FROM deep_surveys f JOIN accounts a ON a.id=f.account_id'),cards:await count('SELECT COUNT(*) n FROM friend_cards WHERE deleted=0'),pending_reports:await count("SELECT COUNT(*) n FROM complaints WHERE status IN ('pending','processing')")};
    totals.verification_rate=percent(totals.verified,totals.accounts);
    const period={registrations:await count('SELECT COUNT(*) n FROM accounts WHERE created_at>=? AND created_at<?',times),verifications:await count('SELECT COUNT(*) n FROM verified_students v JOIN accounts a ON a.id=v.account_id AND a.email=v.email WHERE v.verified_at>=? AND v.verified_at<?',times),reports:await count('SELECT COUNT(*) n FROM complaints WHERE created_at>=? AND created_at<?',times),blocks:await count('SELECT COUNT(*) n FROM daily_blocks WHERE created_at>=? AND created_at<?',times)};
    const active={};

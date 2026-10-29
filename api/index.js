@@ -1225,7 +1225,7 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
         const [countResult] = await pool.execute(countQuery, params);
         const total = countResult[0].total;
         
-        const dataQuery = `SELECT u.*, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')} ORDER BY ${sortField === 'created_at' ? 'COALESCE(a.created_at,u.created_at)' : sortField === 'nickname' ? 'COALESCE(u.nickname,a.username)' : 'u.'+sortField} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
+        const dataQuery = `SELECT u.*, EXISTS(SELECT 1 FROM weekly_questionnaires w WHERE w.account_id=a.id) AS has_love, EXISTS(SELECT 1 FROM deep_surveys d WHERE d.account_id=a.id) AS has_deep, EXISTS(SELECT 1 FROM friend_survey f WHERE f.account_id=a.id) AS has_legacy_deep, (SELECT COUNT(*) FROM friend_cards c WHERE c.account_id=a.id AND c.deleted=0) AS buddy_count, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')} ORDER BY ${sortField === 'created_at' ? 'COALESCE(a.created_at,u.created_at)' : sortField === 'nickname' ? 'COALESCE(u.nickname,a.username)' : 'u.'+sortField} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
         const [rows] = await pool.execute(dataQuery, params);
         
         return res.json({ code: 200, data: rows, total, page: safePage, pageSize: safeSize });
@@ -1249,6 +1249,23 @@ app.get('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
         console.error('Admin User Detail Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
     }
+});
+
+
+app.get('/admin/accounts/:id/materials', adminAuthMiddleware, async (req,res)=>{
+ res.setHeader('Cache-Control','no-store');
+ if(!/^\d+$/.test(req.params.id)||!Number.isSafeInteger(Number(req.params.id)))return res.status(400).json({code:400,msg:'账号编号无效'});
+ try{
+ const p=await getPool(),id=Number(req.params.id);
+ const [a]=await p.execute('SELECT id FROM accounts WHERE id=?',[id]);
+ if(!a.length)return res.status(404).json({code:404,msg:'账号不存在'});
+ const [love]=await p.execute('SELECT version,answers,important,updated_at FROM weekly_questionnaires WHERE account_id=?',[id]);
+ const [deep]=await p.execute('SELECT data FROM deep_surveys WHERE account_id=?',[id]);
+ const [old]=deep.length? [[]]:await p.execute('SELECT sex,grade,major,hometown,friend_goal,mbti,interests,self_description,ideal_friend,photos,display_self,contact_info FROM friend_survey WHERE account_id=? ORDER BY id DESC LIMIT 1',[id]);
+ const [cards]=await p.execute('SELECT id,type,enabled,data FROM friend_cards WHERE account_id=? AND deleted=0 ORDER BY slot',[id]);
+ const parse=x=>typeof x==='string'?JSON.parse(x):x;
+ res.json({code:200,love:love.length?{...love[0],answers:parse(love[0].answers),important:parse(love[0].important)}:null,deep:deep.length?parse(deep[0].data):old[0]||null,deep_legacy:!deep.length&&!!old.length,cards:cards.map(c=>({...c,data:parse(c.data)}))});
+ }catch(e){console.error('Admin materials:',e.code||e.name);res.status(503).json({code:503,msg:'资料暂时无法读取，请重试'});}
 });
 
 app.get('/admin/stats', adminAuthMiddleware, async (req, res) => {

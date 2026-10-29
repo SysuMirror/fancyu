@@ -472,7 +472,16 @@ async function loadUsers(page) {
             var tagMatch = u.join_matching == 1 ? '<span class="tag tag-on">参与</span>' : '<span class="tag tag-off">未参与</span>';
             var serial = escHtml(u.serial_number || '');
             var detailKey = serial || ('account-' + Number(u.account_id));
-            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">查看</button>' + (serial ? ' <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除问卷</button>' : ' <span>未填写恋爱问卷</span>') + '</td></tr>';
+            var materialButtons = '';
+            if(u.account_id){
+                var aid=Number(u.account_id);
+                materialButtons = ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'love\')" '+(!u.has_love&&!serial?'disabled':'')+'>恋爱问卷'+(!u.has_love&&!serial?'（未填写）':'')+'</button>'
+                + ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'deep\')" '+(!u.has_deep&&!u.has_legacy_deep?'disabled':'')+'>深度交友问卷'+(!u.has_deep&&!u.has_legacy_deep?'（未填写）':'')+'</button>'
+                + ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'cards\')" '+(!u.buddy_count?'disabled':'')+'>搭子卡（'+Number(u.buddy_count||0)+'）</button>';
+                if(!u.has_love&&serial)materialButtons=materialButtons.replace('viewMaterials('+aid+',\'love\')','viewDetail(\''+serial+'\')');
+            }
+
+            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">基本资料</button>' + materialButtons + (serial ? ' <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除问卷</button>' : '') + '</td></tr>';
         });
 
         var pagHtml = '';
@@ -502,6 +511,23 @@ function sortBy(field) {
     document.querySelectorAll('.sort-arrow').forEach(function(el) { el.textContent = ''; });
     document.getElementById('sort-' + field).textContent = currentOrder === 'DESC' ? '↓' : '↑';
     loadUsers(1);
+}
+
+
+async function viewMaterials(id,kind){
+ try{
+ const r=await fetch(API+'/admin/accounts/'+id+'/materials',{headers:getAdminHeaders()});const d=await r.json();
+ if(!r.ok||d.code!==200)throw Error(d.msg||'读取失败');
+ const labels={sex:'性别',grade:'年级',major:'专业',hometown:'家乡',school:'学校',own_campus:'所在校区',campus:'校区',mbti:'MBTI',interests:'兴趣',self_description:'自我介绍',bio:'自我介绍',ideal_friend:'理想朋友',friend_goal:'交友目的',photos:'照片',display_self:'展示信息',contact_info:'联系方式',contact_entries:'联系方式',wechat:'微信',phone:'手机',email:'邮箱',gender:'性别',time:'时间',location:'地点',note:'补充说明',category:'分类',subcategories:'子分类',value:'内容',type:'类型',enabled:'是否开启',important:'重视的题目',version:'问卷版本',updated_at:'更新时间',answers:'问卷答案'};
+ function fields(obj){if(obj===null||obj===undefined)return '未填写';if(Array.isArray(obj))return obj.map(x=>typeof x==='object'?fields(x):escHtml(String(x))).join('、');if(typeof obj!=='object')return escHtml(String(obj));return '<div class="detail-grid">'+Object.entries(obj).map(([k,v])=>'<div class="detail-field"><label>'+escHtml(labels[k]||k)+'</label><div class="val" style="white-space:pre-wrap;overflow-wrap:anywhere">'+fields(v)+'</div></div>').join('')+'</div>';}
+ let title={love:'恋爱问卷',deep:'深度交友问卷',cards:'搭子卡'}[kind],body='';
+ if(kind==='love'){
+ if(d.love){const qs=window.WeeklySchema.questions;const answers=d.love.answers;body='<p>更新：'+escHtml(String(d.love.updated_at||''))+'</p>'+Object.entries(answers).map(([k,v])=>{const q=qs.find(q=>String(q.id)===k);return '<div class="detail-field"><label>'+escHtml(q?q.title:k)+'</label><div class="val">'+fields(v)+'</div></div>';}).join('')+'<h3>重点偏好</h3>'+fields(d.love.important);}else body='未填写恋爱问卷';
+ }else if(kind==='deep')body=(d.deep_legacy?'<p>历史问卷，尚未重新保存新版偏好。</p>':'')+fields(d.deep);
+ else body=d.cards.map(c=>{const t=window.FriendsSchema.TYPES[c.type];if(t){labels[t.main.key]=t.main.label;for(const x of t.extra||[])labels[x.key]=x.label;}return '<section class="detail-section"><h3>'+escHtml(t?t.name:c.type)+' · '+(c.enabled?'已开启':'已暂停')+'</h3>'+fields(c.data)+'</section>';}).join('')||'暂无搭子卡';
+ document.getElementById('detailBox').innerHTML='<button class="close-btn" onclick="closeDetail()">×</button><h2>'+title+'</h2>'+body;
+ document.getElementById('detailOverlay').classList.add('active');
+ }catch(e){alert(e.message||'读取失败');}
 }
 
 async function viewDetail(serial) {
@@ -894,5 +920,6 @@ function hideTypingIndicator() {
     }
 })();
 </script>
+<script src="weekly-schema.js"></script><script src="friends-schema.js"></script>
 </body>
 </html>

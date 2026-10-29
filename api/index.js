@@ -1197,13 +1197,15 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         const { page = 1, pageSize = 20, sort = 'created_at', order = 'DESC', search, sex, campus, grade, join_matching } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(pageSize);
+        const safePage = Math.max(1, parseInt(page) || 1);
+        const safeSize = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
+        const offset = (safePage - 1) * safeSize;
         
         let where = ['1=1'];
         let params = [];
         
         if (search) {
-            where.push(`(u.nickname LIKE ? OR u.serial_number LIKE ? OR u.email LIKE ? OR u.contact_email LIKE ?)`);
+            where.push(`(COALESCE(u.nickname,a.username) LIKE ? OR u.serial_number LIKE ? OR COALESCE(a.email,u.email) LIKE ? OR u.contact_email LIKE ?)`);
             const s = `%${search}%`;
             params.push(s, s, s, s);
         }
@@ -1217,16 +1219,16 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
         
         const allowedSorts = ['created_at', 'updated_at', 'nickname', 'sex', 'campus', 'grade', 'height'];
         const sortField = allowedSorts.includes(sort) ? sort : 'created_at';
-        const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+        const sortOrder = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
         
-        const countQuery = `SELECT COUNT(*) as total FROM users u LEFT JOIN accounts a ON u.account_id = a.id WHERE ${where.join(' AND ')}`;
+        const countQuery = `SELECT COUNT(*) as total FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')}`;
         const [countResult] = await pool.execute(countQuery, params);
         const total = countResult[0].total;
         
-        const dataQuery = `SELECT u.*, a.join_matching, a.username as account_username FROM users u LEFT JOIN accounts a ON u.account_id = a.id WHERE ${where.join(' AND ')} ORDER BY u.${sortField} ${sortOrder} LIMIT ${parseInt(pageSize)} OFFSET ${offset}`;
+        const dataQuery = `SELECT u.*, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')} ORDER BY ${sortField === 'created_at' ? 'COALESCE(a.created_at,u.created_at)' : sortField === 'nickname' ? 'COALESCE(u.nickname,a.username)' : 'u.'+sortField} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
         const [rows] = await pool.execute(dataQuery, params);
         
-        return res.json({ code: 200, data: rows, total, page: parseInt(page), pageSize: parseInt(pageSize) });
+        return res.json({ code: 200, data: rows, total, page: safePage, pageSize: safeSize });
     } catch (error) {
         console.error('Admin Users Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
@@ -1236,7 +1238,11 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
 app.get('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
-        const [rows] = await pool.execute(`SELECT u.*, a.join_matching, a.username as account_username, a.email as account_email, a.created_at as account_created_at FROM users u LEFT JOIN accounts a ON u.account_id = a.id WHERE u.serial_number = ?`, [req.params.serial]);
+        if (/^account-\d+$/.test(req.params.serial)) {
+            const [accounts] = await pool.execute('SELECT id AS account_id, username AS nickname, email, email_verified, created_at, last_login_at FROM accounts WHERE id = ?', [req.params.serial.slice(8)]);
+            return res.json(accounts.length ? {code:200,data:accounts[0]} : {code:404,msg:'未找到该账号'});
+        }
+        const [rows] = await pool.execute(`SELECT u.*, a.join_matching, a.username as account_username, a.email as account_email, a.created_at as account_created_at FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE u.serial_number = ?`, [req.params.serial]);
         if (rows.length === 0) return res.json({ code: 404, msg: '未找到该用户' });
         return res.json({ code: 200, data: rows[0] });
     } catch (error) {

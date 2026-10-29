@@ -278,7 +278,7 @@
         </div>
         <div class="panel" id="panelUsers">
             <div class="filters">
-                <input type="text" class="search-input" id="searchInput" placeholder="搜索昵称/序列号/邮箱...">
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索账号/昵称/序列号/邮箱...">
                 <select id="filterSex"><option value="">全部性别</option><option value="男">男</option><option value="女">女</option></select>
                 <select id="filterCampus"><option value="">全部校区</option><option value="南校园">南校园</option><option value="东校园">东校园</option><option value="北校园">北校园</option><option value="珠海">珠海</option><option value="深圳">深圳</option></select>
                 <select id="filterGrade"><option value="">全部年级</option><option value="大一">大一</option><option value="大二">大二</option><option value="大三">大三</option><option value="大四">大四</option><option value="研一">研一</option><option value="研二">研二</option><option value="研三">研三</option><option value="博士">博士</option></select>
@@ -296,7 +296,7 @@
                             <th onclick="sortBy('grade')">年级 <span class="sort-arrow" id="sort-grade"></span></th>
                             <th onclick="sortBy('height')">身高 <span class="sort-arrow" id="sort-height"></span></th>
                             <th>MBTI</th>
-                            <th onclick="sortBy('created_at')">提交时间 <span class="sort-arrow" id="sort-created_at"></span></th>
+                            <th onclick="sortBy('created_at')">注册时间 <span class="sort-arrow" id="sort-created_at"></span></th>
                             <th>匹配</th>
                             <th>操作</th>
                         </tr>
@@ -471,7 +471,8 @@ async function loadUsers(page) {
             var tagSex = u.sex === '男' ? '<span class="tag tag-male">男</span>' : u.sex === '女' ? '<span class="tag tag-female">女</span>' : '-';
             var tagMatch = u.join_matching == 1 ? '<span class="tag tag-on">参与</span>' : '<span class="tag tag-off">未参与</span>';
             var serial = escHtml(u.serial_number || '');
-            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">查看</button> <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除</button></td></tr>';
+            var detailKey = serial || ('account-' + Number(u.account_id));
+            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">查看</button>' + (serial ? ' <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除问卷</button>' : ' <span>未填写恋爱问卷</span>') + '</td></tr>';
         });
 
         var pagHtml = '';
@@ -520,7 +521,7 @@ async function viewDetail(serial) {
         }
         var photoHtml = photos.map(function(p) { return '<img src="' + escHtml(p) + '" onclick="showImage(this.src)">'; }).join('');
         var fields = [
-            ['序列号', u.serial_number], ['昵称', u.nickname], ['性别', u.sex], ['校区', u.campus],
+            ['账号 ID', u.account_id], ['邮箱验证', u.email_verified == 1 ? '已验证' : '未验证'], ['序列号', u.serial_number], ['昵称', u.nickname], ['性别', u.sex], ['校区', u.campus],
             ['年级', u.grade], ['专业', u.major], ['身高', u.height ? u.height + ' cm' : '-'], ['体重', u.weight ? u.weight + ' kg' : '-'],
             ['生日', u.birthday], ['星座', u.constellation], ['MBTI', u.mbti],
             ['恋爱目的', u.relationship_goal], ['理想对象', u.ideal_partner],

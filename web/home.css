@@ -21,3 +21,5 @@ body{background:radial-gradient(ellipse at 5% 30%,#e8dfcc66,transparent 26%),#fa
 .support-details .support-code img{position:static;width:100%;max-width:100%;height:auto;margin:0;left:auto;top:auto}
 
 .hero-art{object-fit:contain;object-position:center center}
+
+@media(max-width:480px){.site-header .account-nav{gap:6px}.site-header .account-nav #userName{display:none}.site-header .account-nav .avatar{width:32px;height:32px;font-size:17px}.site-header .user-menu summary{gap:3px}.site-header .chevron{font-size:16px}.site-header [data-chat-link]{white-space:nowrap}}

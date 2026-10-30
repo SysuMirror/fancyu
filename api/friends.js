@@ -18,7 +18,7 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   const [r]=await c.execute('SELECT a.username FROM accounts a WHERE a.id=?',[other]);
   const [cards]=await c.execute('SELECT type,data FROM friend_cards WHERE id=?',[mine?p.b_card:p.a_card]);
   const v=parse(cards[0].data);const {gender,...publicValues}=v;const a=r[0];
-  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:mine?p.b_wechat:p.a_wechat}:{})};
+  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:p.a_wechat&&p.b_wechat?(mine?p.b_wechat:p.a_wechat):null}:{})};
  }
  app.get('/account/friends',authMiddleware,route(async(req,c,week)=>{
   const id=req.account.account_id;const [rows]=await c.execute('SELECT * FROM friend_cards WHERE account_id=? AND deleted=0 ORDER BY slot',[id]);
@@ -56,8 +56,8 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
  app.post('/account/friends/pairs/:id/respond',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id;await requireEligible(c,id);const p=await pair(c,id,req.params.id);if(!await visible(c,p))fail(409,'这段推荐已结束或不可访问');if(p.status==='connected')return {msg:'你们已经建立连接'};
   if(req.body?.choice==='skip'){await c.execute("UPDATE friend_card_pairs SET status='skipped',a_wechat=NULL,b_wechat=NULL WHERE id=?",[p.id]);return {msg:'已跳过，本周账号不再补配'};}
-  const {choice,wechat,consent}=req.body||{};if(choice!=='like'||consent!==true||typeof wechat!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{5,31}$/.test(wechat))fail(400,'请填写 6–32 位有效微信号，并同意双方确认后展示');
-  const side=p.a_id===id?'a':'b',other=side==='a'?'b':'a';await c.execute(`UPDATE friend_card_pairs SET ${side}_agreed=1,${side}_wechat=?,status=? WHERE id=?`,[wechat,p[other+'_agreed']?'connected':'pending',p.id]);return {msg:p[other+'_agreed']?'双方都愿意认识，可以查看微信号':'已记录，双方同意后才展示微信号'};
+  const {choice}=req.body||{};if(choice!=='like')fail(400,'请选择是否愿意认识');
+  const side=p.a_id===id?'a':'b',other=side==='a'?'b':'a';await c.execute(`UPDATE friend_card_pairs SET ${side}_agreed=1,${side}_wechat=NULL,status=? WHERE id=?`,[p[other+'_agreed']?'connected':'pending',p.id]);return {msg:p[other+'_agreed']?'双方都愿意认识，可以开始站内聊天':'已记录，等待双方同意后开始站内聊天'};
  }));
  app.post('/account/friends/pairs/:id/close',authMiddleware,route(async(req,c)=>{const p=await pair(c,req.account.account_id,req.params.id);await c.execute("UPDATE friend_card_pairs SET status='closed',a_wechat=NULL,b_wechat=NULL WHERE id=?",[p.id]);return {msg:'已结束连接，停止展示联系方式'};}));
  app.post('/account/friends/pairs/:id/block',authMiddleware,route(async(req,c)=>{

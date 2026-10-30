@@ -44,7 +44,7 @@ const assert=require('assert/strict'),mysql=require('mysql2/promise'),crypto=req
   const [pairs]=await db.query('SELECT * FROM friend_card_pairs');assert.equal(pairs.length,3);const [quotas]=await db.query('SELECT account_id,COUNT(*) n FROM friend_account_weeks GROUP BY account_id');assert.equal(quotas.length,6);assert.ok(quotas.every(x=>x.n===1));
   const p=pairs[0],a=ids.indexOf(p.a_id),bidx=ids.indexOf(p.b_id);assert.equal((await api(6,'/pairs/'+p.id+'/respond','POST',{choice:'skip'})).http,404);
   await api(a,'/pairs/'+p.id+'/respond','POST',{choice:'like',wechat:'fixture_one',consent:true});assert.equal((await api(bidx)).pairs.find(x=>x.id===p.id).wechat,undefined);
-  await api(bidx,'/pairs/'+p.id+'/respond','POST',{choice:'like',wechat:'fixture_two',consent:true});assert.equal((await api(a)).pairs.find(x=>x.id===p.id).wechat,'fixture_two');
+  await api(bidx,'/pairs/'+p.id+'/respond','POST',{choice:'like'});assert.equal((await api(a)).pairs.find(x=>x.id===p.id).wechat,null);
   assert.equal((await api(6)).schedule.entries.find(e=>e.batch_key===batch).status,'published');assert.equal((await api(6)).quota_used,false);
   await buddy.tick();assert.equal((await db.query('SELECT COUNT(*) n FROM friend_card_pairs'))[0][0].n,3);
   await api(a,'/pairs/'+p.id+'/block','POST');assert.equal((await api(bidx)).pairs.length,0);

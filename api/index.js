@@ -707,6 +707,7 @@ const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVe
 const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,observe:analytics.observe});
 buddyMatch.start();
 const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
+const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken});
 deepMatch.start();
 analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
@@ -1986,8 +1987,6 @@ app.use((req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await userChat.ensureSchema();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Chat startup failed:',e.code||e.name);process.exit(1);});
 
 console.log('Function instance started successfully');

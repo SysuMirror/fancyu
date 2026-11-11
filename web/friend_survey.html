@@ -450,6 +450,7 @@
         select[data-field="grade"] { color-scheme: light; }
     </style>
 <script src="auth-session.js"></script>
+<script src="survey-metrics.js?v=20261111"></script>
 <script src="matching-verification.js" defer></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261028a">
 </head>
@@ -1110,7 +1111,10 @@ function requireLogin() {
         6: ['contact_entries']
     };
 
+    const surveyMetrics=window.createSurveyMetrics('deep',()=>authToken);
     function init() {
+        for(const name of ['input','change'])document.addEventListener(name,e=>{if(e.target.closest('[data-field], .step-content, .question-card'))surveyMetrics.start();});
+        document.addEventListener('click',e=>{if(e.target.closest('.option-btn, .tag-btn, .multi-select-tag'))surveyMetrics.start();});
         if (!checkAuth()) return;
 
         if (userAccount) {
@@ -1951,6 +1955,7 @@ function requireLogin() {
                 }
 
                 for(let i=1;i<=6;i++){formData['personality_self_'+i]=Number(document.getElementById('personality_self_'+i).value);formData['personality_expect_'+i]=Number(document.getElementById('personality_expect_'+i).value);formData['personality_expect_'+i+'_no_pref']=personalityNoPreference[i-1];}
+                await surveyMetrics.start();
                 const response = await fetch(API_URL+'/account/deep-survey', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },

@@ -20,6 +20,7 @@ module.exports=function({getPool}){
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
  await p.query(`CREATE TABLE IF NOT EXISTS analytics_metadata (name VARCHAR(40) PRIMARY KEY,started_at DATETIME NOT NULL) ENGINE=InnoDB`);
  await p.query("INSERT IGNORE INTO analytics_metadata(name,started_at) VALUES ('recommendations',UTC_TIMESTAMP())");
+ await require('./core-metrics').ensureSchema(p);
  })().catch(e=>{ready=null;throw e;});return ready;}
  async function observe(c,{mode,accountId,unit,outcome,pairId=null,time=new Date()}){
   const at=time.toISOString().slice(0,19).replace('T',' ');
@@ -66,7 +67,8 @@ module.exports=function({getPool}){
    const reports=await q('SELECT status,COUNT(*) count FROM complaints WHERE created_at>=? AND created_at<? GROUP BY status',times);
    const survey_versions=await q('SELECT version,COUNT(*) count FROM weekly_questionnaires GROUP BY version');
    const [meta]=await q("SELECT DATE_FORMAT(started_at,'%Y-%m-%dT%H:%i:%sZ') started_at FROM analytics_metadata WHERE name='recommendations'");
-   await c.commit();return {range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at};
+   const core_metrics=await require('./core-metrics').summary(c,range);
+   await c.commit();return {core_metrics,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at};
   }catch(e){await c.rollback();throw e;}finally{c.release();}
  }
  function register(app,{adminAuthMiddleware,prepare}){

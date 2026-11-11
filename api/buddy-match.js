@@ -10,7 +10,7 @@ const canonical=x=>JSON.stringify(x,(_,v)=>v&&typeof v==='object'&&!Array.isArra
 const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
 module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,now=()=>new Date(),solver=solve,observe=async()=>{}}){
  let ready,running=false;
- function ensureSchema(){if(!ready)ready=(async()=>{await friends.ensureSchema();const db=await getPool();for(const s of fs.readFileSync(path.join(__dirname,'buddy-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await db.query(s);})().catch(e=>{ready=null;throw e;});return ready;}
+ function ensureSchema(){if(!ready)ready=(async()=>{await friends.ensureSchema();const db=await getPool();await require('./core-metrics').ensureSchema(db);for(const s of fs.readFileSync(path.join(__dirname,'buddy-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await db.query(s);})().catch(e=>{ready=null;throw e;});return ready;}
  async function cards(c){
   const [rows]=await c.query(`SELECT c.id,c.account_id,c.type,c.data,s.gender FROM friend_cards c JOIN accounts a ON a.id=c.account_id JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings d ON d.account_id=a.id LEFT JOIN friend_card_settings s ON s.account_id=a.id WHERE c.enabled=1 AND c.deleted=0 AND COALESCE(d.banned,0)=0 ORDER BY c.id`);
   const banned=new Set();const [bt]=await c.query("SHOW TABLES LIKE 'weekly_match_bans'");if(bt.length){const [bs]=await c.query('SELECT account_id FROM weekly_match_bans');for(const b of bs)banned.add(b.account_id);}
@@ -60,6 +60,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,fr
   const current=await pool(c,b,time);if(current.fingerprint!==json(b.stats)?.fingerprint){await build(c,b,time);return {needs_review:true,msg:'卡片或关系已变化，已重算，请再次确认'};}
   const plan=json(b.plan);for(const p of plan){const [r]=await c.execute('INSERT INTO friend_card_pairs(a_card,b_card,a_id,b_id,week_key,created_at) VALUES (?,?,?,?,?,?)',[p.a,p.b,p.a_id,p.b_id,b.batch_key,stamp(time)]);await c.execute('INSERT INTO friend_account_weeks(account_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[p.a_id,b.batch_key,r.insertId,p.b_id,b.batch_key,r.insertId]);for(const id of [p.a_id,p.b_id])await observe(c,{mode:'quick',accountId:id,unit:b.batch_key,outcome:'recommended',pairId:r.insertId,time});await c.execute('INSERT INTO friend_card_weeks(card_id,week_key,pair_id) VALUES (?,?,?),(?,?,?)',[p.a,b.batch_key,r.insertId,p.b,b.batch_key,r.insertId]);}
   const matched=new Set(plan.flatMap(p=>[p.a_id,p.b_id]));for(const id of new Set(current.people.map(p=>p.account_id)))if(!matched.has(id))await observe(c,{mode:'quick',accountId:id,unit:b.batch_key,outcome:'empty',time});
+  await require('./core-metrics').publication(c,{mode:'buddy',key:b.batch_key,algorithm:b.algorithm,ids:current.people.map(p=>p.account_id),matched:plan.flatMap(p=>[p.a_id,p.b_id]),time});
   await c.execute("UPDATE buddy_batches SET status='published',published_at=?,last_error=NULL WHERE batch_key=?",[stamp(time),b.batch_key]);return {pairs:plan.length,msg:'本周搭子已发布'};
  }
  async function tx(fn){await ensureSchema();return daily.transaction(async c=>{const time=now();await sync(c,time);return fn(c,time);});}

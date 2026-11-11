@@ -1,6 +1,8 @@
 'use strict';
 const schema=WeeklySchema,$=id=>document.getElementById(id),token=localStorage.getItem('token');
 let answers={},important=[],section=0,dirty=false,saving=false;
+const surveyMetrics=window.createSurveyMetrics('love',()=>token);
+for(const event of ['input','change'])$('surveyForm').addEventListener(event,()=>surveyMetrics.start());
 if(!token)location.replace('login.html?redirect=survey.html');
 const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 function input(type,name,value){const i=el('input');i.type=type;i.name=name;if(value!==undefined)i.value=value;return i;}
@@ -57,6 +59,6 @@ async function load(){try{const r=await fetch('/api/account/weekly-survey',{head
 $('previous').onclick=()=>{show(section-1);window.scrollTo(0,0);};$('next').onclick=()=>{show(section+1);window.scrollTo(0,0);};$('retry').onclick=load;
 $('surveyForm').onsubmit=async e=>{e.preventDefault();if(saving)return;let clean;try{sync();clean=WeeklyValidation.validate({answers:read(),important});}catch(e){$('message').textContent=e.message;const id=e.message.match(/第 (\d+[ab]?)/)?.[1],q=schema.questions.find(q=>q.id===id);if(q){show(q.section);$('q'+id).scrollIntoView({behavior:'smooth',block:'center'});}return;}
 if(clean.uniform&&!confirm('你在 90% 以上的 1–7 分题中选择了同一个数字。请确认答案是否反映真实想法，点击确定继续保存。'))return;
-saving=true;$('save').disabled=true;try{const r=await fetch('/api/account/weekly-survey',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(clean)});const d=await r.json();if(d.code!==200)throw Error(d.msg||'保存失败');answers=clean.answers;important=clean.important;dirty=false;$('message').textContent='问卷已保存，之后可从每周配对入口继续修改。';window.scrollTo(0,0);}catch(e){$('message').textContent=e.message;}finally{saving=false;$('save').disabled=false;}};
+saving=true;$('save').disabled=true;try{await surveyMetrics.start();const r=await fetch('/api/account/weekly-survey',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(clean)});const d=await r.json();if(d.code!==200)throw Error(d.msg||'保存失败');answers=clean.answers;important=clean.important;dirty=false;$('message').textContent='问卷已保存，之后可从每周配对入口继续修改。';window.scrollTo(0,0);}catch(e){$('message').textContent=e.message;}finally{saving=false;$('save').disabled=false;}};
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 render();if(token)load();

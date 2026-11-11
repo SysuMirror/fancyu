@@ -56,6 +56,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
    await c.execute('INSERT INTO weekly_match_slots(batch_key,account_id,pair_id) VALUES (?,?,?),(?,?,?)',[b.batch_key,p.a,r.insertId,b.batch_key,p.b,r.insertId]);
    await c.execute('UPDATE weekly_match_enrollments SET assigned=1 WHERE batch_key=? AND account_id IN (?,?)',[b.batch_key,p.a,p.b]);
   }
+  await require('./core-metrics').publication(c,{mode:'love',key:b.batch_key,algorithm:b.algorithm,ids:people.map(p=>p.id),matched:plan.flatMap(p=>[p.a,p.b]),time});
   await c.execute("UPDATE weekly_match_batches SET status='published',published_at=?,expires_at=?,last_error=NULL WHERE batch_key=?",[stamp(time),stamp(new Date(+time+72*3600000)),b.batch_key]);return {msg:'本批结果已发布',pairs:plan.length};
  }
  async function ownPair(c,id,pairId){if(!Number.isSafeInteger(Number(pairId))||Number(pairId)<1)fail(400,'配对编号无效');const [r]=await c.execute('SELECT *,DATE_FORMAT(expires_at,\'%Y-%m-%dT%H:%i:%sZ\') expiry,DATE_FORMAT(connected_at,\'%Y-%m-%dT%H:%i:%sZ\') connected FROM weekly_match_pairs WHERE id=? AND (a_id=? OR b_id=?)',[pairId,id,id]);if(!r.length)fail(404,'配对不存在');return r[0];}

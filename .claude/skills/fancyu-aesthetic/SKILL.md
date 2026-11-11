@@ -60,12 +60,12 @@ description: FancyU（中意你）站点统一审美规范 —— 以首页 inde
 
 ```html
 <header class="fu-header fu-wrap">
-  <a href="index.html" class="fu-brand" aria-label="FancyU 中意你首页">
+  <a href="/" class="fu-brand" aria-label="FancyU 中意你首页">
     <svg><use href="#leaf"/></svg><span>FancyU · 中意你</span>
   </a>
   <nav class="fu-nav" aria-label="页面导航">
-    <a href="index.html">首页</a>
-    <a class="fu-back" href="dashboard.html">← 返回用户中心</a>
+    <a href="/">首页</a>
+    <a class="fu-back" href="/dashboard">← 返回用户中心</a>
   </nav>
 </header>
 
@@ -83,9 +83,9 @@ description: FancyU（中意你）站点统一审美规范 —— 以首页 inde
 </main>
 
 <footer class="fu-footer">
-  <a href="index.html" class="fu-brand" style="font-size:17px"><svg style="width:25px;height:28px"><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
+  <a href="/" class="fu-brand" style="font-size:17px"><svg style="width:25px;height:28px"><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
   <nav aria-label="网站说明">
-    <a href="index.html">关于我们</a><a href="terms.html">用户条款</a><a href="dashboard.html">用户中心</a>
+    <a href="/">关于我们</a><a href="/terms">用户条款</a><a href="/dashboard">用户中心</a>
   </nav>
 </footer>
 ```
@@ -119,6 +119,8 @@ description: FancyU（中意你）站点统一审美规范 —— 以首页 inde
 - **改 `web/` 即时生效**；改 `api/*.js` 必须 `supervisorctl -c ~/deploy/supervisord.conf restart sysudate`。
 - **修样式别动 JS 契约**：迁移页面时保留原有的 id / class（如 `pay.js` 依赖 `#items #paycard #ents #orders`、`.item .t .d .price .badge .paybox .ok .err`），结构美化了但选择器不能变。
 - 静态资源换版用 `?v=N` 查询串（脚本 URL 固定，不加版本号会被浏览器缓存卡住）。
+- **URL 不带 `.html`**：`/pay`、`/login` 这类干净地址由 `api/index.js` 兜底 —— `/xxx` → 渲染 `web/xxx.html`；`/xxx.html` → `302` 到 `/xxx`（保留查询串）；`/index.html` → `/`。页面内部链接**直接写干净地址**（`href="/pay"`、`href="/"`），不要再写 `.html`（旧链接仍可用，只是多一跳）。
+- **改 `api/*.js` 后重启**：`kubectl -n clouds exec <pod> -- su - cloud -c '/home/cloud/.local/bin/supervisorctl -c /home/cloud/deploy/supervisord.conf restart sysudate'`。
 
 ## 7. 迁移一个旧页面的步骤
 
@@ -137,13 +139,13 @@ for w in (1280, 390):
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(viewport={"width": w, "height": 900})
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto("https://ssemarket.cn:23028/<page>.html", wait_until="networkidle")
+        pg.goto("https://ssemarket.cn:23028/<page>", wait_until="networkidle")
         assert not pg.evaluate("document.documentElement.scrollWidth>window.innerWidth+1"), "横向溢出"
         print(w, "overflowX ok", errs); b.close()
 ```
 - 需要登录/带数据的页面：`page.route("**/api/**", ...)` 打桩返回 mock JSON。
 - 通过标准：**无横向滚动、无 pageerror、关键内容已渲染**（如 `items rows: 3`）。
-- 已迁移页面清单（完成后回来登记）：`pay.html` ✅、`index.html`（就是标准本身）。
+- 已迁移页面清单：`index.html`（标准本身）、`pay.html` ✅、`profile.html` ✅、以及 21 个 `data-ui="campus"` 页面（共享 `web/campus-ui.css` 已对齐首页标准）。
 
 ## 9. 反面例子（不要这么写）
 

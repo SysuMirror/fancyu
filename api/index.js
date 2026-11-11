@@ -1981,6 +1981,22 @@ app.use((req,res,next)=>{
  if(/^\/homepage\.(html|js|css)$/i.test(p))return res.status(410).set('Cache-Control','no-store').send('个人主页功能已下线，请返回个人中心。');
  next();
 });
+// 部署补丁: 免 .html 的干净链接。/pay → web/pay.html；/pay.html → 302 到 /pay（保留查询串）。
+app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    let p; try { p = decodeURIComponent(req.path); } catch (e) { return res.status(400).end(); }
+    if (/^\/(all_users)(\.html)?$/i.test(p)) return res.status(403).send('请通过已授权的资料页面访问');
+    if (/^\/(daily|homepage)(\.html)?$/i.test(p)) return res.status(410).set('Cache-Control','no-store').send('该功能已下线，请返回首页。');
+    if (/\.html$/i.test(p)) {
+        let target = req.originalUrl.replace(/\.html(?=$|[?#])/i, '');
+        if (/^\/index(?=$|[?#])/i.test(target)) target = '/' + target.slice(6);
+        return res.redirect(302, target);
+    }
+    if (p === '/' || p.includes('.')) return next();
+    const file = path.join(WEB_DIR, p.replace(/^\/+/, '') + '.html');
+    if (file.startsWith(WEB_DIR + path.sep) && require('fs').existsSync(file)) return res.sendFile(file);
+    next();
+});
 app.use(express.static(WEB_DIR));
 app.use((req, res) => {
     if (req.method === 'GET' && !req.path.startsWith('/account') && !req.path.startsWith('/admin') && !req.path.startsWith('/api') && !req.path.startsWith('/llm')) {

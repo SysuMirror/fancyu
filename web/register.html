@@ -201,6 +201,48 @@
             color: var(--sysu-green);
         }
 
+        /* 邮箱前缀 + @ + 后缀下拉框，同一行 */
+        .email-row {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .email-row input {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .email-row .email-at {
+            display: flex;
+            align-items: center;
+            flex: 0 0 auto;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .email-row select {
+            width: auto;
+            flex: 0 0 auto;
+            cursor: pointer;
+        }
+
+        /* 「或」分隔线 */
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: -4px 0 22px;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 88, 38, 0.14);
+        }
+
         /* 防止浏览器自动填充样式覆盖 */
         .form-group input:-webkit-autofill,
         .email-row input:-webkit-autofill {
@@ -386,10 +428,28 @@
         <div class="step active" id="step1">
             <form id="emailForm">
                 <div class="form-group">
-                    <label for="emailInput">学校邮箱</label>
-                    <input type="email" id="emailInput" placeholder="请输入完整邮箱地址，如 xxx@sysu.edu.cn" required>
-                    <div id="schoolHint" class="hint">请输入学校官方邮箱</div>
+                    <label for="emailPrefix">学校邮箱</label>
+                    <div class="email-row">
+                        <input type="text" id="emailPrefix" placeholder="邮箱前缀" autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <span class="email-at" aria-hidden="true">@</span>
+                        <select id="emailSuffix" aria-label="选择邮箱后缀">
+                            <option value="mail.sysu.edu.cn">mail.sysu.edu.cn</option>
+                            <option value="mail2.sysu.edu.cn" selected>mail2.sysu.edu.cn</option>
+                            <option value="mail3.sysu.edu.cn">mail3.sysu.edu.cn</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="emailInput">
+                    <div id="schoolHint" class="hint">填写邮箱前缀（后缀默认 mail2），或填写自定义用户名</div>
                 </div>
+
+                <div class="or-divider"><span>或</span></div>
+
+                <div class="form-group">
+                    <label for="username">用户名（可选）</label>
+                    <input type="text" id="username" placeholder="自定义用户名，默认为邮箱前缀">
+                    <div class="hint" id="usernameHint">2-20个字符，留空则使用邮箱前缀</div>
+                </div>
+
                 <button type="submit" class="btn" id="sendCodeBtn">发送验证码</button>
             </form>
         </div>
@@ -408,11 +468,6 @@
         <!-- 步骤3：设置密码 -->
         <div class="step" id="step3">
             <form id="passwordForm">
-                <div class="form-group">
-                    <label for="username">用户名（可选）</label>
-                    <input type="text" id="username" placeholder="自定义用户名，默认为邮箱前缀">
-                    <div class="hint" id="usernameHint">2-20个字符，留空则使用邮箱前缀</div>
-                </div>
                 <div class="form-group">
                     <label for="password">密码</label>
                     <input type="password" id="password" placeholder="至少8位" required minlength="8">
@@ -469,6 +524,17 @@
         // 邮箱自动匹配学校
         const emailInput = document.getElementById('emailInput');
         const schoolHint = document.getElementById('schoolHint');
+        const emailPrefix = document.getElementById('emailPrefix');
+        const emailSuffix = document.getElementById('emailSuffix');
+
+        // 把「前缀 + 后缀」合成完整邮箱，写回 emailInput（后续校验/提交都用它）
+        function syncEmail() {
+            const prefix = emailPrefix.value.trim().replace(/\s+/g, '');
+            emailInput.value = prefix ? prefix + '@' + emailSuffix.value : '';
+            emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        emailPrefix.addEventListener('input', syncEmail);
+        emailSuffix.addEventListener('change', syncEmail);
 
         emailInput.addEventListener('input', (e) => {
             const email = e.target.value.trim();

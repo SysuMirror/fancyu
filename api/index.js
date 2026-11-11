@@ -6,7 +6,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+// 保留原始请求体字节，供支付回调 HMAC 验签使用（与学人汇签名逐字节一致）。
+app.use(express.json({ limit: '10mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // ===== 部署补丁: /api 前缀剥离 + 静态页面托管 =====
 const path = require('path');
@@ -708,6 +709,8 @@ const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthM
 buddyMatch.start();
 const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
 const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken});
+// 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
+const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
 deepMatch.start();
 analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 

@@ -13,3 +13,5 @@
         return response;
     };
 })();
+
+(()=>{const s=document.createElement('script');s.src='/school-email.js?v=1';document.head.appendChild(s);})();

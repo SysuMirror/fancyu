@@ -2,7 +2,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 module.exports = function(app, { getPool, generateToken, authMiddleware, transporter, emailConfigured, from, ensureSchema, secret }) {
-    const validEmail = x => typeof x === 'string' && /^[^\s@]+@(mail2\.)?sysu\.edu\.cn$|^[^\s@]+@mail\.sysu\.edu\.cn$/.test(x);
+    const validEmail = x => typeof x === 'string' && /^[^\s@]+@(?:mail[23]?\.)?sysu\.edu\.cn$/.test(x);
     const digest = (email, purpose, code) => crypto.createHmac('sha256', secret).update(email + ':' + purpose + ':' + code).digest('hex');
     const wrap = fn => async (req,res,next) => { try { await ensureSchema(); await fn(req,res,next); } catch(e) { console.error('Secure auth:',e.code || e.name); if (!res.headersSent) res.status(503).json({code:503,msg:'服务暂时不可用，请稍后重试'}); } };
     const attempts = new Map();

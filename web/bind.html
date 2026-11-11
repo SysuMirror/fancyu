@@ -363,7 +363,7 @@
         }
     </style>
 <link rel="stylesheet" href="campus-ui.css?v=20261028a">
-</head>
+<script defer src=school-email.js></script></head>
 <body data-ui="campus" data-page="auth">
     <div class="bg-pattern"></div>
 
@@ -411,7 +411,7 @@
                 <div class="form-group">
                     <label for="email2">中山大学邮箱</label>
                     <input type="email" id="email2" placeholder="xxx@mail.sysu.edu.cn" required>
-                    <div class="hint">用于注册新账号，仅支持 @mail.sysu.edu.cn 或 @mail2.sysu.edu.cn</div>
+                    <div class="hint">用于注册新账号，仅支持 @mail.sysu.edu.cn、@mail2.sysu.edu.cn 或 @mail3.sysu.edu.cn</div>
                 </div>
                 <button type="submit" class="btn" id="sendCodeBtn">发送验证码</button>
             </form>
@@ -461,6 +461,7 @@
 
         function isValidSysuEmail(email) {
             const allowedSuffixes = [
+                'mail3.sysu.edu.cn',
                 'mail2.sysu.edu.cn',
                 'mail.sysu.edu.cn',
                 'sysu.edu.cn'

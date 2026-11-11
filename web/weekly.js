@@ -50,7 +50,7 @@ const set=(name,value)=>$('surveyForm').elements.namedItem(name).value=value??''
 $('surveyForm').elements.age_unlimited.checked=!!answers['4']?.unlimited;set('age_older',answers['4']?.older);set('age_younger',answers['4']?.younger);set('degree',answers['5']?.degree);set('year',answers['5']?.year);set('province',answers['11']?.province);set('city',answers['11']?.city);set('height_min',answers['10b']?.min);set('height_max',answers['10b']?.max);set('diet_other',answers.diet_other);}
 function sync(){const active=val('12')===schema.longTerm;
 for(const q of schema.questions){const hide=q.conditional&&!active;const box=$('q'+q.id);box.hidden=q.section!==section||hide;box.querySelectorAll('input,select,textarea').forEach(i=>{i.disabled=hide;if(hide){if(i.type==='radio'||i.type==='checkbox')i.checked=false;else i.value='';}});if(hide)delete answers[q.id];}
-if(!active)important=important.filter(x=>!['13','15','16'].includes(x));
+if(!active)important=important.filter(x=>!['13','15','16','18'].includes(x));
 const unlimited=$('surveyForm').elements.age_unlimited.checked;for(const name of ['age_older','age_younger']){const i=$('surveyForm').elements.namedItem(name);i.disabled=unlimited;if(unlimited)i.value='';}
 const diet=[...document.querySelectorAll('input[name="26"]:checked')].some(i=>i.value==='其他');const extra=$('surveyForm').elements.diet_other;extra.parentElement.hidden=!diet;extra.disabled=!diet;if(!diet)extra.value='';
 document.querySelectorAll('.star').forEach(b=>{const yes=important.includes(b.dataset.group);b.setAttribute('aria-pressed',String(yes));b.textContent=yes?'★ 已设重要':'☆ 设为重要';});$('stars').textContent='重要 '+important.length+' / 5';}

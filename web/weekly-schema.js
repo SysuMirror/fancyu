@@ -297,7 +297,7 @@
       "important": true,
       "display": false,
       "optional": false,
-      "conditional": false,
+      "conditional": true,
       "type": "radio"
     },
     {

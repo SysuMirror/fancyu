@@ -9,3 +9,9 @@ test('90% same response prompts without preventing save; omitted optional answer
 module.exports={fixture};
 
 test('removed marriage and children questions and legacy stars are stripped',()=>{const f=fixture();f.answers['15']=7;f.answers['16']=1;const c=validate(f);assert.equal(c.answers['15'],undefined);assert.equal(c.answers['16'],undefined);assert.ok(!c.important.includes('15'));assert.ok(!c.important.includes('16'));assert.equal(c.version,'1.2');});
+
+test('Q18 is required only for the exact long-term Q12 choice and hidden answers/stars are stripped',()=>{
+ const long=fixture();long.important=['18'];delete long.answers['18'];assert.throws(()=>validate(long),/18/);
+ long.answers['18']=schema.questions.find(q=>q.id==='18').options[0];assert.equal(validate(long).important[0],'18');
+ for(const choice of schema.questions.find(q=>q.id==='12').options.slice(1)){const f=fixture();f.answers['12']=choice;f.important=['18','17'];const clean=validate(f);assert.equal(clean.answers['18'],undefined);assert.deepEqual(clean.important,['17']);}
+});

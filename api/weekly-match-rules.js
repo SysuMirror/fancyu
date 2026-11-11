@@ -27,7 +27,8 @@ function hard(a,b,now){
 }
 function directional(a,b,stars){const values={};
  for(const id of ['19','20','22','25','40','41','44','45','46'])values[id]=similar(a[id],b[id]);
- for(const id of ['18','23','30','32','33'])values[id]=ordinal(id,a[id],b[id]);
+ for(const id of ['23','30','32','33'])values[id]=ordinal(id,a[id],b[id]);
+ if(a['18']!==undefined&&b['18']!==undefined)values['18']=ordinal('18',a['18'],b['18']);
  values['12']=a['12']===b['12']?1:([a['12'],b['12']].includes(schema.longTerm)?.5:.7);
  if(a['13']!==undefined&&b['13']!==undefined){const x=a['13'],y=b['13'];values['13']=x==='还没想好'||y==='还没想好'?.5:x!==y?.3:x===OPTIONS['13'][2]&&a['11'].province!==b['11'].province?.3:1;}
  for(const id of ['17','42'])if(a[id+'b']!=='没有要求')values[id]=similar(a[id+'b'],b[id+'a']);

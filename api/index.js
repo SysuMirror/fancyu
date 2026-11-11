@@ -1981,19 +1981,40 @@ app.use((req,res,next)=>{
  if(/^\/homepage\.(html|js|css)$/i.test(p))return res.status(410).set('Cache-Control','no-store').send('个人主页功能已下线，请返回个人中心。');
  next();
 });
-// 部署补丁: 免 .html 的干净链接。/pay → web/pay.html；/pay.html → 302 到 /pay（保留查询串）。
+// 部署补丁: 干净链接 + 一级/二级层级。规范见 .claude/skills/fancyu-aesthetic/SKILL.md。
+// 映射：/pay → web/pay.html；/admin/pay → web/admin-pay.html。
+// 规范化（302，保留查询串）：/x.html → /x；/index.html → /；旧一级 /admin-x → 新二级 /admin/x。
+// 注意：后端另有裸 /admin/* API 命名空间（/admin/chat-reports、/admin/users ...），
+//       所以二级地址一律用下面的显式路由表，不能靠 <组>-<名> 猜测（chat-reports 会撞 API）。
 app.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     let p; try { p = decodeURIComponent(req.path); } catch (e) { return res.status(400).end(); }
-    if (/^\/(all_users)(\.html)?$/i.test(p)) return res.status(403).send('请通过已授权的资料页面访问');
+    if (/^\/(all_users)(\/|\.html)?$/i.test(p)) return res.status(403).send('请通过已授权的资料页面访问');
     if (/^\/(daily|homepage)(\.html)?$/i.test(p)) return res.status(410).set('Cache-Control','no-store').send('该功能已下线，请返回首页。');
-    if (/\.html$/i.test(p)) {
-        let target = req.originalUrl.replace(/\.html(?=$|[?#])/i, '');
-        if (/^\/index(?=$|[?#])/i.test(target)) target = '/' + target.slice(6);
-        return res.redirect(302, target);
-    }
+
+    // 二级页面路由表：'<一级>/<二级>' → web 下的真实文件名
+    const PAGES2 = {
+        'admin/pay': 'admin-pay.html',
+        'admin/weekly': 'admin-weekly.html',
+        'admin/deep': 'admin-deep.html',
+        'admin/buddy': 'admin-buddy.html',
+        'admin/reports': 'admin-chat-reports.html'
+    };
+    const FLAT2HIER = {                       // 旧一级地址 → 新二级地址
+        'admin-pay': 'admin/pay', 'admin-weekly': 'admin/weekly', 'admin-deep': 'admin/deep',
+        'admin-buddy': 'admin/buddy', 'admin-chat-reports': 'admin/reports'
+    };
+
+    let std = p.replace(/\.html$/i, '');
+    if (std === '/index') std = '/';
+    const flatKey = std.replace(/^\//, '');
+    if (FLAT2HIER[flatKey]) std = '/' + FLAT2HIER[flatKey];
+    if (std !== p) return res.redirect(302, std + req.originalUrl.slice(req.path.length));
+
     if (p === '/' || p.includes('.')) return next();
-    const file = path.join(WEB_DIR, p.replace(/^\/+/, '') + '.html');
+    const rel = p.replace(/^\/+/, '').replace(/\/+$/, '');
+    const name = PAGES2[rel] || rel + '.html';
+    const file = path.join(WEB_DIR, name);
     if (file.startsWith(WEB_DIR + path.sep) && require('fs').existsSync(file)) return res.sendFile(file);
     next();
 });

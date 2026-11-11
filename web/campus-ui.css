@@ -150,3 +150,15 @@ body[data-page="maintenance"] :is(.construction-graphic,.brand-icon-group){displ
  body[data-ui="campus"] button,body[data-ui="campus"] .btn,body[data-ui="campus"] .button{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){body[data-ui="campus"] *,body[data-ui="campus"] *::before,body[data-ui="campus"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Admin 子页共用 */
+body[data-page="admin"] .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:22px 0}
+body[data-page="admin"] .stat{background:var(--card-grad);border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px;min-width:0}
+body[data-page="admin"] .stat .v{font-family:var(--serif);font-weight:900;font-size:clamp(20px,2vw,26px);line-height:1.25;color:var(--ink)}
+body[data-page="admin"] .stat .l{font-size:13px;color:var(--muted);margin-top:4px}
+body[data-page="admin"] .row{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;justify-content:space-between;padding:15px 0;border-top:1px solid var(--line-hair)}
+body[data-page="admin"] .row:first-child{border-top:0;padding-top:4px}
+body[data-page="admin"] .row>div{min-width:0;flex:1 1 220px}
+body[data-page="admin"] .row b{color:var(--ink);font-weight:650}
+body[data-page="admin"] .actions{display:flex;gap:8px;flex:0 0 auto}
+body[data-page="admin"] .actions button{min-height:44px;padding:0 16px}

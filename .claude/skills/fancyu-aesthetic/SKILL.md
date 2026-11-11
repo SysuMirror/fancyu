@@ -120,6 +120,7 @@ description: FancyU（中意你）站点统一审美规范 —— 以首页 inde
 - **修样式别动 JS 契约**：迁移页面时保留原有的 id / class（如 `pay.js` 依赖 `#items #paycard #ents #orders`、`.item .t .d .price .badge .paybox .ok .err`），结构美化了但选择器不能变。
 - 静态资源换版用 `?v=N` 查询串（脚本 URL 固定，不加版本号会被浏览器缓存卡住）。
 - **URL 不带 `.html`**：`/pay`、`/login` 这类干净地址由 `api/index.js` 兜底 —— `/xxx` → 渲染 `web/xxx.html`；`/xxx.html` → `302` 到 `/xxx`（保留查询串）；`/index.html` → `/`。页面内部链接**直接写干净地址**（`href="/pay"`、`href="/"`），不要再写 `.html`（旧链接仍可用，只是多一跳）。
+- **一级/二级层级**：`api/index.js` 里有一张**显式路由表** `PAGES2`（`'admin/pay' → 'admin-pay.html'`）+ `FLAT2HIER`（旧一级 `/admin-pay` → `302 /admin/pay`）。新增二级页面：往两张表各加一行，文件名 `<一级>-<名>.html`，内部链接写 `/一级/名`。**别用 `<组>-<名>` 猜**：后端另有裸 `/admin/*` API 命名空间（`/admin/chat-reports`、`/admin/users` …），撞名会被 API 抢走 —— 所以聊天举报页的二级地址是 `/admin/reports`（文件仍叫 `admin-chat-reports.html`）。表外的一级地址不受影响（`/weekly-match`、`/forgot-password` 照旧）。
 - **改 `api/*.js` 后重启**：`kubectl -n clouds exec <pod> -- su - cloud -c '/home/cloud/.local/bin/supervisorctl -c /home/cloud/deploy/supervisord.conf restart sysudate'`。
 
 ## 7. 迁移一个旧页面的步骤

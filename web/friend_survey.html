@@ -439,6 +439,17 @@
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; transition: none !important; }
         }
+        body[data-ui=campus] .interest-category {
+            background: #fcfdf9;
+            border-color: #b7ccb9;
+            color: #214b38;
+        }
+        body[data-ui=campus] .interest-category:hover {
+            background: #edf4e9;
+            border-color: #82a78c;
+        }
+        body[data-ui=campus] .interest-category :is(.placeholder, .arrow) { color: #496452; }
+        body[data-ui=campus] .interest-category .selected-value { color: #145236; }
         /* Keep grade text readable in the native dropdown in both themes. */
         select[data-field="grade"],
         select[data-field="grade"]:focus,
@@ -878,7 +889,7 @@
 
     <!-- ========== STEP 03: 兴趣爱好 ========== -->
     <div class="step-content" id="step3">
-        <h1 class="page-title">找搭子</h1>
+        <h1 class="page-title">你的兴趣</h1>
         <div class="card">
             <div class="card-label">选择你的兴趣大类（按顺序来，优先考虑1哦）</div>
             <div id="interestsContainer"></div>

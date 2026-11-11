@@ -308,7 +308,7 @@
 <body data-ui="campus" data-page="matching">
 <div class="container">
     <div style="margin-bottom: 20px;">
-        <a href="index.html" style="text-decoration: none; color: #1e4a32; font-size: 16px; display: inline-flex; align-items: center; gap: 8px;">
+        <a href="/" style="text-decoration: none; color: #1e4a32; font-size: 16px; display: inline-flex; align-items: center; gap: 8px;">
             ← 返回首页
         </a>
     </div>
@@ -329,7 +329,7 @@ function requireLogin() {
     if(window.__loginRedirecting)return;
     window.__loginRedirecting=true;
     localStorage.removeItem('token');localStorage.removeItem('user');
-    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
+    location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
 }
 
 let authToken = null;

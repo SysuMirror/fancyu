@@ -16,7 +16,7 @@
       ...(opts.body ? { body: JSON.stringify(opts.body) } : {})
     });
     const j = await r.json().catch(() => ({}));
-    if (r.status === 401) { location.href = 'login.html?redirect=pay.html'; throw Error('请先登录'); }
+    if (r.status === 401) { location.href = '/login?redirect=/pay'; throw Error('请先登录'); }
     if (!r.ok || j.code !== 200) throw Error(j.msg || '请求失败');
     return j;
   }

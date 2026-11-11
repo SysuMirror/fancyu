@@ -3,7 +3,7 @@ const schema=WeeklySchema,$=id=>document.getElementById(id),token=localStorage.g
 let answers={},important=[],section=0,dirty=false,saving=false;
 const surveyMetrics=window.createSurveyMetrics('love',()=>token);
 for(const event of ['input','change'])$('surveyForm').addEventListener(event,()=>surveyMetrics.start());
-if(!token)location.replace('login.html?redirect=survey.html');
+if(!token)location.replace('/login?redirect=/survey');
 const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 function input(type,name,value){const i=el('input');i.type=type;i.name=name;if(value!==undefined)i.value=value;return i;}
 function field(box,label,type,name,value){const l=el('label',label),i=input(type,name,value);l.append(i);box.append(l);return i;}

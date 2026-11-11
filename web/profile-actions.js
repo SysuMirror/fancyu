@@ -67,7 +67,7 @@
             if (result.code === 200) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = 'index.html';
+                window.location.href = '/';
             } else {
                 showToast(result.msg || '注销失败', true);
             }

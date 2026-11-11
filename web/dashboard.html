@@ -363,11 +363,11 @@
         <div class="card">
             <h2>快捷操作</h2>
             <div class="nav-links">
-                <a href="survey.html">填写问卷</a>
-                <a href="modify.html">修改资料</a>
-                <a href="query.html">查询匹配</a>
-                <a href="pay.html">支付中心</a>
-                <a href="bind.html" class="secondary">绑定新序列号</a>
+                <a href="/survey">填写问卷</a>
+                <a href="/modify">修改资料</a>
+                <a href="/query">查询匹配</a>
+                <a href="/pay">支付中心</a>
+                <a href="/bind" class="secondary">绑定新序列号</a>
             </div>
         </div>
         
@@ -485,7 +485,7 @@ function requireLogin() {
     if(window.__loginRedirecting)return;
     window.__loginRedirecting=true;
     localStorage.removeItem('token');localStorage.removeItem('user');
-    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
+    location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
 }
 
         
@@ -762,7 +762,7 @@ function requireLogin() {
                 container.innerHTML = `
                     <div class="empty-state">
                         <p>你还没有绑定任何序列号</p>
-                        <p style="margin-top:8px"><a href="bind.html">绑定序列号</a> 或 <a href="survey.html">填写问卷</a></p>
+                        <p style="margin-top:8px"><a href="/bind">绑定序列号</a> 或 <a href="/survey">填写问卷</a></p>
                     </div>
                 `;
                 return;
@@ -775,8 +775,8 @@ function requireLogin() {
                     <li>
                         <code>${escapedSerial}</code>
                         <div class="actions">
-                            <a href="modify.html?serial=${encodeURIComponent(serial)}">修改资料</a>
-                            <a href="query.html?serial=${encodeURIComponent(serial)}">查看匹配</a>
+                            <a href="/modify?serial=${encodeURIComponent(serial)}">修改资料</a>
+                            <a href="/query?serial=${encodeURIComponent(serial)}">查看匹配</a>
                         </div>
                     </li>
                 `;

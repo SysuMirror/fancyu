@@ -513,7 +513,7 @@
     <div class="bg-pattern"></div>
 
     <div class="container">
-    <a class="campus-home-link" href="index.html">← FancyU · 中意你</a>
+    <a class="campus-home-link" href="/">← FancyU · 中意你</a>
         <div class="logo">
             <div class="brand-wrapper">
                 <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
@@ -546,11 +546,11 @@
         <div class="divider"></div>
 
         <div class="links">
-            <a href="index.html">返回首页</a>
+            <a href="/">返回首页</a>
         </div>
 
         <div class="legacy-note">
-            <a href="bind.html">绑定序列号</a> · <a href="modify.html">用序列号修改资料</a>
+            <a href="/bind">绑定序列号</a> · <a href="/modify">用序列号修改资料</a>
             <br><span style="font-size:11px">（兼容旧数据）</span>
         </div>
     </div>
@@ -589,7 +589,7 @@
                 <div class="form-group" style="display:flex;align-items:flex-start;gap:8px;margin-top:4px;">
                     <input type="checkbox" id="agreeTerms" style="margin-top:4px;accent-color:var(--sysu-green);cursor:pointer;">
                     <label for="agreeTerms" style="font-size:13px;color:var(--text-secondary);cursor:pointer;line-height:1.5;">
-                        我已阅读并同意 <a href="terms.html" target="_blank" style="color:var(--sysu-green);text-decoration:underline;">《用户服务协议与隐私政策》</a>
+                        我已阅读并同意 <a href="/terms" target="_blank" style="color:var(--sysu-green);text-decoration:underline;">《用户服务协议与隐私政策》</a>
                     </label>
                 </div>
                 <button type="submit" class="btn" id="registerBtn">注册</button>
@@ -833,8 +833,8 @@
                     localStorage.setItem('user', JSON.stringify(data.user));
                     showMsg('登录成功，正在跳转...', 'success');
                     setTimeout(() => {
-                        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : 'index.html';
+                        const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
+                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : '/';
                         window.location.href = safeRedirect;
                     }, 800);
                 } else {
@@ -901,8 +901,8 @@
                     }
                     showMsg('注册成功！正在跳转...', 'success', 'registerMsg');
                     setTimeout(() => {
-                        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : 'index.html';
+                        const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
+                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : '/';
                         window.location.href = safeRedirect;
                     }, 1200);
                 } else {

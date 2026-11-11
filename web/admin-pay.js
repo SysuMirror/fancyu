@@ -1,6 +1,6 @@
 (() => {
   const token = localStorage.getItem('adminToken');
-  if (!token) { location.replace('admin.html'); return; }
+  if (!token) { location.replace('/admin'); return; }
   const app = document.getElementById('app'), ordersEl = document.getElementById('orders'), statsEl = document.getElementById('stats');
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const yuan = c => '¥' + (Number(c || 0) / 100).toFixed(2);
@@ -16,7 +16,7 @@
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {})
     });
-    if (r.status === 401) { localStorage.removeItem('adminToken'); location.replace('admin.html'); throw Error('请重新登录'); }
+    if (r.status === 401) { localStorage.removeItem('adminToken'); location.replace('/admin'); throw Error('请重新登录'); }
     const j = await r.json();
     if (!r.ok || j.code !== 200) throw Error(j.msg || '请求失败');
     return j;

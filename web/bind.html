@@ -368,7 +368,7 @@
     <div class="bg-pattern"></div>
 
     <div class="container">
-    <a class="campus-home-link" href="index.html">← FancyU · 中意你</a>
+    <a class="campus-home-link" href="/">← FancyU · 中意你</a>
         <div class="logo">
             <div class="brand-wrapper">
                 <span class="brand-decoration"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.5 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
@@ -441,15 +441,15 @@
         </div>
 
         <div class="links">
-            <a href="login.html">已有账号？登录</a>
+            <a href="/login">已有账号？登录</a>
             <span style="color:var(--text-muted)">|</span>
-            <a href="register.html">注册新账号</a>
+            <a href="/register">注册新账号</a>
         </div>
 
         <div class="links" style="margin-top:12px">
-            <a href="index.html">返回首页</a>
+            <a href="/">返回首页</a>
             <span style="color:var(--text-muted)">|</span>
-            <a href="modify.html">用序列号修改资料</a>
+            <a href="/modify">用序列号修改资料</a>
         </div>
     </div>
 
@@ -607,7 +607,7 @@
                     localStorage.setItem('user', JSON.stringify(data.user));
                     showMsg('绑定成功，正在跳转...', 'success');
                     setTimeout(() => {
-                        window.location.href = 'profile.html';
+                        window.location.href = '/profile';
                     }, 1000);
                 } else {
                     showMsg(data.msg, 'error');

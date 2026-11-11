@@ -476,7 +476,7 @@
             <div class="step-progress-fill" id="progressFill" style="width: 16.67%"></div>
         </div>
     </div>
-    <a href="deep.html" class="back-link">← 返回深度交友</a>
+    <a href="/deep" class="back-link">← 返回深度交友</a>
 
     <!-- ========== STEP 01: 基础背景 ========== -->
     <div class="step-content active" id="step1">
@@ -981,7 +981,7 @@
         <div class="success-icon">✓</div>
         <div class="success-title">提交成功</div>
         <div class="success-desc">你的交友问卷已成功提交<br>我们将在每周匹配后<br>通知你结果</div>
-        <a href="deep.html" class="success-btn">进入深度交友</a>
+        <a href="/deep" class="success-btn">进入深度交友</a>
     </div>
 </div>
 
@@ -993,7 +993,7 @@ function requireLogin() {
     if(window.__loginRedirecting)return;
     window.__loginRedirecting=true;
     localStorage.removeItem('token');localStorage.removeItem('user');
-    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
+    location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
 }
 
     const TOTAL_STEPS = 6;

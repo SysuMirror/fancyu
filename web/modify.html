@@ -831,7 +831,7 @@
         <div class="logo">中意你 · 修改心意</div>
     </div>
 
-    <a href="index.html" class="back-link">← 返回首页</a>
+    <a href="/" class="back-link">← 返回首页</a>
 
     <!-- 验证卡片 -->
     <div class="verify-card" id="verifyCard">
@@ -897,7 +897,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 01: 基础背景（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 01: 基础背景（完全复制 /survey） ========== -->
         <div class="step-content" id="step1">
             <h1 class="page-title">基础背景</h1>
             <div class="cards-row">
@@ -1098,7 +1098,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 02: 个人特质（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 02: 个人特质（完全复制 /survey） ========== -->
         <div class="step-content" id="step2">
             <h1 class="page-title">个人特质</h1>
             <div class="card">
@@ -1213,7 +1213,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 03: 外貌与偏好（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 03: 外貌与偏好（完全复制 /survey） ========== -->
         <div class="step-content" id="step3">
             <h1 class="page-title">外貌与偏好</h1>
             <div class="card">
@@ -1293,7 +1293,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 04: 匹配问题（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 04: 匹配问题（完全复制 /survey） ========== -->
         <div class="step-content" id="step4">
             <h1 class="page-title">匹配问题</h1>
             <div class="card">
@@ -1367,7 +1367,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 05: 自我介绍（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 05: 自我介绍（完全复制 /survey） ========== -->
         <div class="step-content" id="step5">
             <h1 class="page-title">自我介绍</h1>
             <div class="card">
@@ -1385,7 +1385,7 @@
             </div>
         </div>
 
-        <!-- ========== STEP 06: 上传照片（完全复制 survey.html） ========== -->
+        <!-- ========== STEP 06: 上传照片（完全复制 /survey） ========== -->
         <div class="step-content" id="step6">
             <h1 class="page-title">上传照片</h1>
             <div class="card">
@@ -1459,7 +1459,7 @@
         <div class="success-desc">
             你的问卷已成功修改
         </div>
-        <a href="index.html" class="success-btn">返回首页</a>
+        <a href="/" class="success-btn">返回首页</a>
     </div>
 </div>
 
@@ -1471,7 +1471,7 @@ function requireLogin() {
     if(window.__loginRedirecting)return;
     window.__loginRedirecting=true;
     localStorage.removeItem('token');localStorage.removeItem('user');
-    location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
+    location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
 }
 
     const TOTAL_STEPS = 6;

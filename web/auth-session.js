@@ -8,7 +8,7 @@
         const url=String(args[0]);
         if(response.status===401 && (url.startsWith('/api/account/')||url.startsWith('/api/daily/'))&&!url.endsWith('/login')) {
             localStorage.removeItem('token');localStorage.removeItem('user');
-            location.replace('login.html?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'index.html'));
+            location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
         }
         return response;
     };

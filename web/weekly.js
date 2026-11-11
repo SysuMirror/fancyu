@@ -9,7 +9,7 @@ function input(type,name,value){const i=el('input');i.type=type;i.name=name;if(v
 function field(box,label,type,name,value){const l=el('label',label),i=input(type,name,value);l.append(i);box.append(l);return i;}
 function select(box,label,name,values){const l=el('label',label),s=el('select');s.name=name;s.append(new Option('请选择',''));values.forEach(v=>s.append(new Option(v,v)));l.append(s);box.append(l);return s;}
 function datalist(i,name,values){i.setAttribute('list',name);const d=el('datalist');d.id=name;values.forEach(v=>d.append(new Option(v,v)));i.after(d);}
-const majorCategories=['文学','历史学','哲学','理学','工学','医学','经济学','管理学','法学','教育学','艺术学','农学','其他'];
+const majorCategories=AcademicFields.categories;
 const provinces='北京 天津 上海 重庆 河北 山西 辽宁 吉林 黑龙江 江苏 浙江 安徽 福建 江西 山东 河南 湖北 湖南 广东 海南 四川 贵州 云南 陕西 甘肃 青海 内蒙古 广西 西藏 宁夏 新疆 香港 澳门 台湾 海外'.split(' ');
 function render(){schema.sections.forEach((s,i)=>{const b=el('button',s);b.type='button';b.onclick=()=>show(i);$('sections').append(b);});
 for(const q of schema.questions){const box=el('section');box.className='question';box.id='q'+q.id;box.dataset.section=q.section;const head=el('div');head.className='qhead';const title=el('h2',q.id+'｜'+(q.type==='college'?'我的专业':q.title));if(q.display){const t=el('span','会展示');t.className='display';title.append(t);}head.append(title);
@@ -24,7 +24,7 @@ if(['radio','multi','scale'].includes(q.type)){const opts=el('div');opts.classNa
  if(q.type==='age'){const l=el('label');l.className='none';l.append(input('checkbox','age_unlimited'),document.createTextNode('没有特殊要求，先看看'));box.prepend(l);for(const [key,label]of [['older','比我大最多（岁）'],['younger','比我小最多（岁）']]){const i=field(fields,label,'number','age_'+key);i.min=0;i.max=82;}}
  if(q.type==='education'){select(fields,'身份','degree',['本科','硕士','博士']);select(fields,'年级','year',[1,2,3,4,5,6,7,8,9,10]);}
  if(q.type==='height'){for(const key of ['min','max']){const i=field(fields,key==='min'?'最低身高（cm）':'最高身高（cm）','number','height_'+key);i.min=100;i.max=250;}const hint=el('p','设置身高要求后，仅推荐填写了身高且在范围内的人，可匹配人数可能减少。两项留空表示不限。');hint.className='hint';box.append(hint);}
- if(q.type==='college'){select(fields,'专业大类',q.id+'_category',majorCategories);const i=field(fields,'细分专业','text',q.id+'_major');i.maxLength=60;i.placeholder='例如：汉语言文学、计算机科学与技术、临床医学';}
+ if(q.type==='college'){const school=field(fields,'学校','text','school',AcademicFields.school);school.readOnly=true;select(fields,'专业大类',q.id+'_category',majorCategories);const i=field(fields,'细分专业','text',q.id+'_major');i.maxLength=60;i.placeholder='例如：汉语言文学、计算机科学与技术、临床医学';}
  if(q.type==='hometown'){const i=field(fields,'省份 / 地区','text','province');i.maxLength=30;datalist(i,'provinces',provinces);const city=field(fields,'城市（可选择或输入）','text','city');city.maxLength=40;datalist(city,'cities',['广州','深圳','珠海','佛山','东莞','北京','上海','杭州','南京','成都','武汉']);}
  if(q.type==='text'){const t=el('textarea');t.name=q.id;t.rows=3;t.placeholder='50 字以内，可以留空';fields.append(t);}
 } $('questions').append(box);

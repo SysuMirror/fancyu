@@ -4,7 +4,7 @@ const schema=typeof module==='object'&&module.exports?require('./weekly-schema')
 const campuses=schema.questions.find(q=>q.id==='7').options;
 function validate(body,now=new Date()){
  const source=body?.answers;if(!source||typeof source!=='object'||Array.isArray(source))throw Error('请填写问卷');
- const answers={},fail=q=>{throw Error('请检查第 '+q.id+' 题：'+q.title);};
+ const answers={school:'中山大学'},fail=q=>{throw Error('请检查第 '+q.id+' 题：'+q.title);};
  const text=(x,max)=>typeof x==='string'&&x.trim().length>0&&[...x.trim()].length<=max;
  const number=(x,min,max)=>Number.isInteger(x)&&x>=min&&x<=max;
  const active=source['12']===schema.longTerm;

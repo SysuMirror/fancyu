@@ -1,6 +1,7 @@
 'use strict';
 const {schools,categories}=require('./deep-options.json');
 const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};
+const academic=require('../web/academic-fields');
 const GRADES=['大一','大二','大三','大四','大五（医学）','研0','研一','研二','研三','博士'];
 const MAJORS=['人文社科类','经济管理类','理学类','工学类','医学类','艺术体育类','其他'];
 const GOALS=['学习搭子','饭搭子','运动搭子','游戏搭子','聊天搭子','综合交友'];
@@ -11,7 +12,9 @@ function validate(d){
  const select=(k,opts,required=false)=>{const v=d[k];if(v==null||v===''){if(required)throw Error('请填写 '+k);return;}if(!opts.includes(v))throw Error('请检查 '+k);out[k]=v;};
  const list=(k,opts,defaults=[])=>{const v=d[k]??defaults;if(!Array.isArray(v)||v.length>opts.length||new Set(v).size!==v.length||v.some(x=>!opts.includes(x)))throw Error('请检查 '+k);out[k]=v.includes('不限')?['不限']:v;};
  const text=(k,max)=>{if(d[k]==null)return;if(typeof d[k]!=='string'||d[k].length>max)throw Error('请检查 '+k);out[k]=d[k].trim();};
- select('sex',['男','女'],true);select('grade',GRADES,true);select('major',MAJORS);select('school',Object.keys(schools),true);select('own_campus',schools[out.school]);
+ select('sex',['男','女'],true);select('grade',GRADES,true);select('major_category',academic.categories);text('major_detail',60);
+ if(out.major_category)out.major=academic.groups[out.major_category];else select('major',MAJORS);
+ select('school',Object.keys(schools),true);select('own_campus',schools[out.school]);
  list('sex_prefer',['男','女','不限']);list('grade_prefer',[...GRADES,'不限']);list('major_prefer',[...MAJORS,'不限']);
  select('expect_quick',['不限','广州所有校区','大学城所有校区']);list('expect_schools',Object.keys(schools));out.expect_school_campuses={};
  const m=d.expect_school_campuses||{};if(typeof m!=='object'||Array.isArray(m))throw Error('校区要求格式无效');

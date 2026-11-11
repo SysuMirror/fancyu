@@ -27,7 +27,7 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   const [ps]=await c.execute("SELECT * FROM friend_card_pairs WHERE (a_id=? OR b_id=?) AND status IN ('pending','connected') ORDER BY id DESC",[id,id]);
   const pairs=[];for(const p of ps){const x=await present(c,p,id);if(x)pairs.push(x);}
   const [blocks]=await c.execute('SELECT b.target_id,a.username FROM daily_blocks b JOIN accounts a ON a.id=b.target_id WHERE b.owner_id=?',[id]);
-  return {...(getBuddy()?{schedule:await getBuddy().state(c,now(),id)}:{}),week,quota_used:used.length>0,verified:await studentVerification.verified(c,id),eligible:await eligible(c,id),gender:settings[0]?.gender||'不透露',cards:rows.map(x=>({id:x.id,type:x.type,on:!!x.enabled,v:parse(x.data),used:used.length>0})),pairs,blocks};
+  return {...(getBuddy()?{schedule:await getBuddy().state(c,now(),id)}:{}),prefill:await require('./reuse-defaults').forAccount(c,id,'buddy'),week,quota_used:used.length>0,verified:await studentVerification.verified(c,id),eligible:await eligible(c,id),gender:settings[0]?.gender||'不透露',cards:rows.map(x=>({id:x.id,type:x.type,on:!!x.enabled,v:parse(x.data),used:used.length>0})),pairs,blocks};
  }));
  app.put('/account/friends/settings',authMiddleware,route(async(req,c)=>{
   const gender=req.body?.gender;if(!['男生','女生','不透露'].includes(gender))fail(400,'请选择有效性别');

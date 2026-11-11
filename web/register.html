@@ -342,8 +342,11 @@
             .form-group label { font-size: 13px; margin-bottom: 6px; }
             .form-group input, .email-row input, .email-row select { padding: 12px 14px; font-size: 16px; min-height: 48px; }
             .btn { padding: 14px; font-size: 16px; min-height: 52px; }
-            .email-row { flex-direction: column !important; gap: 6px !important; }
-            .email-row input, .email-row select { width: 100%; min-width: auto; max-width: none; flex: auto; }
+            /* 手机上也要保持「前缀 @ 后缀」同一行 */
+            .email-row { gap: 6px !important; }
+            .email-row input { flex: 1 1 auto; min-width: 0; width: auto; }
+            .email-row select { flex: 0 1 auto; min-width: 0; width: auto; max-width: 50%; padding: 12px 10px; font-size: 13px; }
+            .email-row .email-at { font-size: 14px; }
             .links { margin-top: 20px; font-size: 13px; }
             .hint { font-size: 11px; }
         }
@@ -400,7 +403,7 @@
         }
     </style>
 <script src="auth-session.js"></script>
-<link rel="stylesheet" href="campus-ui.css?v=20261028a">
+<link rel="stylesheet" href="campus-ui.css?v=20261111a">
 </head>
 <body data-ui="campus" data-page="auth">
     <div class="bg-pattern"></div>

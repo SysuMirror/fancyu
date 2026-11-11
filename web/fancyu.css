@@ -1,0 +1,145 @@
+/* FancyU 共享视觉系统 —— 以首页(index.html / home.css)为唯一审美标准。
+   用法：<html data-ui="fancyu">，然后套用下面的 .fu-* 结构类。
+   只负责「长什么样」，布局与业务状态仍归各页面所有。 */
+:root[data-ui="fancyu"]{
+  color-scheme:light;
+  --fu-paper:#faf9f5;      /* 页面底色：暖白 */
+  --fu-paper-2:#f4f6ef;    /* 次一级底色 */
+  --fu-ink:#073b32;        /* 主文字：深绿 */
+  --fu-ink-2:#173d2c;
+  --fu-muted:#55726a;      /* 次要文字 */
+  --fu-muted-2:#84968c;
+  --fu-line:#dedfd6;       /* 发丝分隔线 */
+  --fu-line-2:#cad8c8;     /* 卡片描边 */
+  --fu-card:#f4f6ef;
+  --fu-card-grad:linear-gradient(120deg,#f6f8f1,#f8f7f0);
+  --fu-pill:#e5ebdf;
+  --fu-block:#e4ebe0;      /* 浅色色块（状态条/提示） */
+  --fu-green:#265a48;
+  --fu-green-deep:#00362f;
+  --fu-green-grad:linear-gradient(130deg,#265a48,#00362f);
+  --fu-danger:#a6372d;
+  --fu-danger-soft:#fbefec;
+  --fu-serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --fu-sans:Inter,"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --fu-radius:20px;
+  --fu-radius-sm:14px;
+  --fu-radius-pill:999px;
+  --fu-wrap:min(1468px,calc(100% - 12%));
+}
+[data-ui="fancyu"]{font-family:var(--fu-sans);background:var(--fu-paper);color:var(--fu-ink);line-height:1.7;-webkit-font-smoothing:antialiased}
+[data-ui="fancyu"] body{margin:0;background:radial-gradient(ellipse at 5% 30%,#e8dfcc66,transparent 26%),var(--fu-paper);color:var(--fu-ink);min-height:100vh;overflow-x:clip}
+[data-ui="fancyu"] *{box-sizing:border-box}
+[data-ui="fancyu"] a{color:inherit;text-decoration:none}
+[data-ui="fancyu"] img{max-width:100%}
+[data-ui="fancyu"] [hidden]{display:none!important}
+[data-ui="fancyu"] :is(a,button,input,select,summary):focus-visible{outline:3px solid #28865c;outline-offset:3px}
+
+/* ---------- 骨架 ---------- */
+.fu-wrap{width:var(--fu-wrap);margin-inline:auto}
+.fu-header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;z-index:2}
+.fu-header:after{content:"";position:absolute;bottom:0;height:1px;background:var(--fu-line);left:calc((100vw - 100%)/-2);width:100vw}
+.fu-brand{display:flex;align-items:center;gap:10px;font-weight:750;font-size:29px;letter-spacing:-.5px;white-space:nowrap}
+.fu-brand svg{width:40px;height:43px;color:var(--fu-ink)}
+.fu-nav{display:flex;align-items:center;gap:22px;font-size:15px}
+.fu-nav a{color:var(--fu-muted)}
+.fu-nav a:hover{color:var(--fu-ink)}
+.fu-nav .fu-back{border:1px solid var(--fu-line-2);border-radius:var(--fu-radius-pill);padding:10px 18px;color:var(--fu-ink)}
+.fu-nav .fu-back:hover{background:var(--fu-pill)}
+.fu-main{width:var(--fu-wrap);margin-inline:auto;padding:40px 0 64px}
+.fu-footer{width:var(--fu-wrap);margin-inline:auto;border-top:1px solid var(--fu-line);padding:24px 0 34px;display:flex;justify-content:space-between;align-items:center;gap:20px;color:var(--fu-muted);font-size:14px}
+.fu-footer nav{display:flex}
+.fu-footer nav a,.fu-footer nav button{padding:0 18px;color:var(--fu-muted);border:0;background:none;font:inherit;cursor:pointer}
+.fu-footer nav a+*{border-left:1px solid #cbd5cc}
+.fu-footer a:hover,.fu-footer button:hover{text-decoration:underline;color:var(--fu-ink)}
+
+/* ---------- 标题区 ---------- */
+.fu-eyebrow{margin:0;font-size:22px;letter-spacing:1px;color:var(--fu-muted)}
+.fu-eyebrow:after{content:"";display:inline-block;width:48px;height:1px;background:var(--fu-muted-2);vertical-align:middle;margin-left:18px}
+.fu-title{font-family:var(--fu-serif);font-weight:900;font-size:clamp(34px,3.4vw,52px);line-height:1.25;letter-spacing:1px;margin:14px 0 10px;color:var(--fu-ink)}
+.fu-sub{margin:0 0 26px;font-size:19px;color:var(--fu-muted)}
+
+/* ---------- 卡片 ---------- */
+.fu-card{background:var(--fu-card-grad);border:1px solid var(--fu-line-2);border-radius:var(--fu-radius);padding:28px 30px;margin-bottom:22px;position:relative}
+.fu-card>.fu-card-title,.fu-card>h2{font-family:var(--fu-serif);font-weight:900;font-size:26px;letter-spacing:.5px;margin:0 0 18px;color:var(--fu-ink)}
+.fu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+
+/* 列表行（商品 / 订单） */
+.fu-list{display:flex;flex-direction:column}
+.fu-list>.item{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 0;border-bottom:1px solid #dde5da}
+.fu-list>.item:first-child{padding-top:4px}
+.fu-list>.item:last-child{border-bottom:0;padding-bottom:2px}
+.item .t{font-weight:700;font-size:19px;color:var(--fu-ink)}
+.item .d{font-size:14px;color:var(--fu-muted);margin-top:4px}
+.item>div:last-child{display:flex;align-items:center;gap:14px;flex:none}
+.price{font-family:var(--fu-serif);font-weight:900;font-size:22px;color:var(--fu-ink)}
+
+/* ---------- 按钮 ---------- */
+.fu-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--fu-ink);background:#fafcf9;color:var(--fu-ink);border-radius:12px;padding:12px 22px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
+.fu-btn:hover{background:var(--fu-ink);color:#fff}
+.fu-btn.primary,button.primary{background:var(--fu-green-grad);color:#fff;border:0;border-radius:var(--fu-radius-pill);padding:12px 26px;font-weight:600}
+.fu-btn.primary:hover,button.primary:hover{background:#3d7156}
+.fu-btn[disabled],button[disabled]{opacity:.55;cursor:default}
+.fu-btn-round{width:47px;height:47px;padding:0;border:0;border-radius:50%;background:var(--fu-green-grad);color:#fff;font-size:22px;display:grid;place-items:center}
+
+/* ---------- 标签 / 徽章 / 状态 ---------- */
+.pill,.fu-pill{display:inline-block;background:var(--fu-pill);color:#435f4d;border-radius:var(--fu-radius-pill);padding:8px 17px;font-size:15px;line-height:1.35}
+.badge,.fu-badge{display:inline-block;background:var(--fu-pill);color:var(--fu-ink-2);border-radius:var(--fu-radius-pill);padding:7px 15px;font-size:14px;margin:0 8px 8px 0}
+.badge.expired{background:var(--fu-danger-soft);color:var(--fu-danger)}
+.muted{color:var(--fu-muted)!important;font-size:14px}
+.ok,.fu-ok{color:var(--fu-green);font-family:var(--fu-serif);font-weight:900;font-size:20px}
+.err,.fu-err{color:var(--fu-danger);font-weight:600}
+.fu-empty{color:var(--fu-muted);font-size:15px;padding:6px 0}
+
+/* ---------- 提示块 / 支付区 ---------- */
+.fu-note{background:var(--fu-block);border:1px solid var(--fu-line-2);border-radius:var(--fu-radius-sm);padding:16px 20px;color:#435f4d;font-size:15px}
+.fu-paybox{text-align:center;padding:26px 20px;background:var(--fu-paper-2);border:1px solid var(--fu-line-2);border-radius:var(--fu-radius-sm)}
+.fu-paybox .t{font-weight:700;font-size:19px;color:var(--fu-ink);margin-bottom:6px}
+.fu-paybox .t .price{font-size:22px;color:var(--fu-ink)}
+.fu-paybox .muted{margin:6px 0}
+.fu-paybox a{display:inline-block;margin:14px 0;padding:14px 30px;border-radius:var(--fu-radius-pill);background:var(--fu-green-grad);color:#fff;font-weight:600}
+.fu-paybox a:hover{background:#3d7156}
+
+/* ---------- 表单 ---------- */
+.fu-field{display:block;margin-bottom:18px}
+.fu-field>span,.fu-field>label{display:block;font-size:15px;font-weight:600;color:var(--fu-ink);margin-bottom:8px}
+.fu-field input:not([type=hidden]):not([type=checkbox]):not([type=radio]),
+.fu-field select,
+[data-ui="fancyu"] input:not([type=hidden]):not([type=checkbox]):not([type=radio]),
+[data-ui="fancyu"] select,
+[data-ui="fancyu"] textarea{
+  width:100%;padding:13px 16px;font:inherit;font-size:16px;color:var(--fu-ink);
+  background:#fcfdf9;border:1px solid #b7ccb9;border-radius:12px;
+}
+[data-ui="fancyu"] :is(input,select,textarea):disabled{background:#eef2ea;color:var(--fu-muted)}
+[data-ui="fancyu"] ::placeholder{color:#8ba397}
+
+/* ---------- 弹窗 ---------- */
+[data-ui="fancyu"] dialog{background:var(--fu-paper);color:var(--fu-ink);border:1px solid var(--fu-line-2);border-radius:var(--fu-radius);padding:28px;width:min(520px,calc(100% - 32px));max-height:85dvh;overflow:auto}
+[data-ui="fancyu"] dialog::backdrop{background:#102c2370}
+[data-ui="fancyu"] dialog::backdrop{backdrop-filter:blur(2px)}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:760px){
+  :root[data-ui="fancyu"]{--fu-wrap:calc(100% - 32px)}
+  .fu-header{height:70px;gap:12px}
+  .fu-brand{font-size:18px;gap:6px}
+  .fu-brand svg{width:27px;height:32px}
+  .fu-nav{gap:10px;font-size:13px}
+  .fu-nav .fu-back{padding:8px 12px}
+  .fu-main{padding:26px 0 44px}
+  .fu-eyebrow{font-size:15px}
+  .fu-title{font-size:30px;letter-spacing:0}
+  .fu-sub{font-size:15px;margin-bottom:20px}
+  .fu-card{padding:22px 18px;border-radius:17px;margin-bottom:16px}
+  .fu-card>.fu-card-title,.fu-card>h2{font-size:22px;margin-bottom:14px}
+  .fu-list>.item{padding:15px 0;gap:12px;align-items:flex-start}
+  .item .t{font-size:17px}
+  .price{font-size:19px}
+  .item>div:last-child{flex-direction:column;align-items:flex-end;gap:8px}
+  .fu-footer{flex-direction:column;align-items:flex-start;gap:14px}
+  .fu-footer nav a,.fu-footer nav button{padding:0 14px}
+  .fu-footer nav a:first-child,.fu-footer nav button:first-child{padding-left:0}
+  /* 手机端触控目标不小于 44px */
+  [data-ui="fancyu"] button,.fu-btn{min-height:44px}
+}

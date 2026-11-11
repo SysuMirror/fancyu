@@ -14,4 +14,4 @@
     };
 })();
 
-(()=>{const s=document.createElement('script');s.src='/school-email.js?v=1';document.head.appendChild(s);})();
+(()=>{const s=document.createElement('script');s.src='/school-email.js?v=2';document.head.appendChild(s);})();

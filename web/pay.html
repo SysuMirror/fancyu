@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-ui="fancyu">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#faf9f5">
+<title>FancyU · 中意你 · 支付中心</title>
+<link rel="stylesheet" href="fancyu.css?v=1">
+<style>
+  /* 页面私有：只放首页不提供的排版细节，颜色/字号全部沿用 fancyu.css */
+  .pay-lead{margin:0 0 26px;font-size:19px;color:var(--fu-muted)}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .card-head h2{font-family:var(--fu-serif);font-weight:900;font-size:26px;letter-spacing:.5px;margin:0}
+  .card-head .muted{margin:0}
+  #paycard{margin-bottom:22px}
+  #ents .badge{white-space:nowrap}
+</style>
+</head>
+<body>
+<svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="leaf" viewBox="0 0 32 32"><path d="M15 28C16 18 10 10 3 6c-1 11 3 16 12 15" fill="currentColor"/><path d="M16 24C15 11 21 5 29 3c1 12-4 19-13 21" fill="#78977D"/><path d="M16 30V20" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="cap" viewBox="0 0 32 32"><path d="m2 11 14-7 14 7-14 7L2 11Zm5 3v9c6 4 12 4 18 0v-9M29 13v11"/></symbol>
+  <symbol id="gift" viewBox="0 0 32 32"><path d="M5 14h22v14H5zM3 9h26v6H3zM16 9v19"/><path d="M16 9C5 10 6 1 10 2c4 0 6 7 6 7Zm0 0C27 10 26 1 22 2c-4 0-6 7-6 7Z"/></symbol>
+</svg>
+
+<header class="fu-header fu-wrap">
+  <a href="index.html" class="fu-brand" aria-label="FancyU 中意你首页"><svg><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
+  <nav class="fu-nav" aria-label="页面导航">
+    <a href="index.html">首页</a>
+    <a href="dashboard.html">我的配对</a>
+    <a class="fu-back" href="dashboard.html">← 返回用户中心</a>
+  </nav>
+</header>
+
+<main class="fu-main">
+  <p class="fu-eyebrow">账户</p>
+  <h1 class="fu-title">支付中心</h1>
+  <p class="pay-lead">配对功能全部免费。这里只列出平台公开的增值服务，自愿购买，随时可查订单与权益。</p>
+
+  <section class="fu-card" aria-labelledby="itemsTitle">
+    <div class="card-head"><h2 id="itemsTitle">选择商品</h2><span class="muted">微信小程序内完成付款</span></div>
+    <div id="items" class="fu-list"><span class="fu-empty">正在读取…</span></div>
+  </section>
+
+  <section class="fu-card" id="paycard" hidden aria-live="polite"></section>
+
+  <div class="fu-grid">
+    <section class="fu-card" aria-labelledby="entsTitle">
+      <div class="card-head"><h2 id="entsTitle">我的权益</h2></div>
+      <div id="ents"><span class="fu-empty">正在读取…</span></div>
+    </section>
+    <section class="fu-card" aria-labelledby="ordersTitle">
+      <div class="card-head"><h2 id="ordersTitle">我的订单</h2><span class="muted">最近 20 条</span></div>
+      <div id="orders" class="fu-list"><span class="fu-empty">正在读取…</span></div>
+    </section>
+  </div>
+</main>
+
+<footer class="fu-footer">
+  <a href="index.html" class="fu-brand" style="font-size:17px"><svg style="width:25px;height:28px"><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
+  <nav aria-label="网站说明">
+    <a href="index.html">关于我们</a>
+    <a href="terms.html">用户条款</a>
+    <a href="dashboard.html">用户中心</a>
+  </nav>
+</footer>
+
+<script src="auth-session.js"></script>
+<script src="pay.js?v=2"></script>
+</body>
+</html>

@@ -42,12 +42,12 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
  else if(d.toggle){const p=state.cards.find(p=>p.id==d.toggle);await mutate('/cards/'+p.id+'/toggle','POST',{enabled:!p.on});}
  else if(d.del){await mutate('/cards/'+d.del,'DELETE');pendingDelete=null;}
  else if(d.sendLike){const j=await api('/pairs/'+d.sendLike+'/respond','POST',{choice:'like'});closeSheet();await reload();toast(j.msg);}
- else if(d.skip){if(confirm('跳过这位搭子？你的账号本周不会再推荐其他人。'))await mutate('/pairs/'+d.skip+'/respond','POST',{choice:'skip'});}
- else if(d.closePair){if(confirm('结束连接后平台停止展示双方微信号，无法收回对方已保存的信息。'))await mutate('/pairs/'+d.closePair+'/close','POST');}
+ else if(d.skip){if(await uiConfirm({title:'跳过这位搭子？',body:'你的账号本周不会再推荐其他人。'}))await mutate('/pairs/'+d.skip+'/respond','POST',{choice:'skip'});}
+ else if(d.closePair){if(await uiConfirm({title:'结束连接',body:'结束连接后平台停止展示双方微信号，无法收回对方已保存的信息。',okText:'结束连接',danger:true}))await mutate('/pairs/'+d.closePair+'/close','POST');}
  else if(d.fb)await mutate('/pairs/'+d.fb+'/feedback','POST',{answer:d.answer});
- else if(d.block){if(confirm('屏蔽后，双方将无法继续访问资料和联系方式。'))await mutate('/pairs/'+d.block+'/block','POST');}
+ else if(d.block){if(await uiConfirm({title:'屏蔽对方',body:'屏蔽后，双方将无法继续访问资料和联系方式。',okText:'屏蔽',danger:true}))await mutate('/pairs/'+d.block+'/block','POST');}
  else if(d.unblock)await mutate('/blocks/'+d.unblock,'DELETE');
- else if(d.report){const reason=prompt('请填写举报说明（2–500 字）');if(reason!==null)await mutate('/pairs/'+d.report+'/report','POST',{reason});}
+ else if(d.report){const reason=await uiPrompt({title:'举报',body:'请填写举报说明（2–500 字）',placeholder:'举报说明',validate:s=>{const n=(s||'').trim().length;return n<2||n>500?'说明需 2–500 字':null;}});if(reason!==null)await mutate('/pairs/'+d.report+'/report','POST',{reason});}
  else if(d.deepToggle){const r=await fetch('/api/account/toggle-friend-matching',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({join_friend_matching:d.deepToggle==='true'})});const j=await r.json();if(j.code!==200)throw Error(j.msg||'操作失败');await loadDeep();toast('参与状态已更新');}
  }catch(err){toast(err.message);}finally{busy=false;b.disabled=false;}
 });

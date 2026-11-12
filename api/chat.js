@@ -30,8 +30,8 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
   for(const [mode,table]of Object.entries(TABLES)){const [rows]=await c.execute(`SELECT id FROM ${table} WHERE (a_id=? OR b_id=?) AND status='connected' ORDER BY id DESC LIMIT 100`,[id,id]);
    for(const row of rows){let a;try{a=await access(c,id,mode,row.id);}catch(e){if(e.status)continue;throw e;}
     const [[counts]]=await c.execute('SELECT COUNT(*) unread,MAX(id) last_id FROM user_chat_messages WHERE mode=? AND pair_id=? AND sender_id<>? AND id>COALESCE((SELECT last_read FROM user_chat_reads WHERE mode=? AND pair_id=? AND account_id=?),0)',[mode,row.id,id,mode,row.id,id]);
-    const [last]=await c.execute('SELECT id,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ORDER BY id DESC LIMIT 1',[mode,row.id]);
-    rooms.push({mode,pair_id:row.id,name:a.name,unread:Number(counts.unread),last_id:last[0]?.id||0,updated_at:last[0]?.created_at||null});
+    const [last]=await c.execute('SELECT id,body,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ORDER BY id DESC LIMIT 1',[mode,row.id]);
+    rooms.push({mode,pair_id:row.id,name:a.name,unread:Number(counts.unread),last_id:last[0]?.id||0,last_preview:last[0]?String(last[0].body).slice(0,60):'',updated_at:last[0]?.created_at||null});
    }
   }rooms.sort((a,b)=>b.last_id-a.last_id);return {rooms,unread:rooms.reduce((n,r)=>n+r.unread,0)};
  }));
@@ -40,7 +40,9 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
   const after=req.query.after===undefined?null:Math.max(0,Number(req.query.after)),before=req.query.before===undefined?null:positive(req.query.before);
   if(after!==null&&!Number.isSafeInteger(after)||after!==null&&before!==null)fail(400,'分页参数无效');
   const [rows]=await c.execute(`SELECT id,sender_id,client_id,body,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ${after!==null?'AND id>?':before!==null?'AND id<?':''} ORDER BY id ${after!==null?'ASC':'DESC'} LIMIT 51`,[mode,pairId,...(after!==null?[after]:before!==null?[before]:[])]);
-  const more=rows.length>50,messages=rows.slice(0,50);if(after===null)messages.reverse();return {name:a.name,messages:messages.map(m=>({...m,mine:m.sender_id===id,sender_id:undefined})),more,exchange:await exchange(c,id,mode,pairId,a.p)};
+  const [reads]=await c.execute('SELECT last_read FROM user_chat_reads WHERE mode=? AND pair_id=? AND account_id=?',[mode,pairId,a.other]);
+  const otherLastRead=reads.length?Number(reads[0].last_read):0;
+  const more=rows.length>50,messages=rows.slice(0,50);if(after===null)messages.reverse();return {name:a.name,messages:messages.map(m=>({...m,mine:m.sender_id===id,sender_id:undefined})),more,other_last_read:otherLastRead,exchange:await exchange(c,id,mode,pairId,a.p)};
  }));
  app.post('/account/chat/:mode/:id/messages',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),{body,client_id}=req.body||{};
@@ -54,7 +56,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
  app.post('/account/chat/:mode/:id/read',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id);await access(c,id,mode,pairId);const last=positive(req.body?.last_id);
   const [m]=await c.execute('SELECT id FROM user_chat_messages WHERE mode=? AND pair_id=? AND id=?',[mode,pairId,last]);if(!m.length)fail(400,'已读位置无效');
-  await c.execute('INSERT INTO user_chat_reads(mode,pair_id,account_id,last_read) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE last_read=GREATEST(last_read,VALUES(last_read))',[mode,pairId,id,last]);return {notify:[id]};
+  await c.execute('INSERT INTO user_chat_reads(mode,pair_id,account_id,last_read) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE last_read=GREATEST(last_read,VALUES(last_read))',[mode,pairId,id,last]);return {notify:[id,a.other]};
  }));
  app.post('/account/chat/:mode/:id/exchange',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),{wechat,consent}=req.body||{};

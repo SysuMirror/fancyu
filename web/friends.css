@@ -6,10 +6,7 @@
   --warn:#a5492f; --warn-soft:#f6e6e0; --shadow:0 6px 24px rgba(36,80,47,.10);
   --font:-apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#151815; --card:#1e221e; --soft:#262b26; --line:#333a33;
-  --fg:#e9ebe4; --muted:#9aa095; --green:#7fb98c; --green-soft:#24362a; --on-green:#10170f;
-  --warn:#e39a82; --warn-soft:#3a2722; --shadow:0 6px 24px rgba(0,0,0,.35); color-scheme:dark}}
+/* 暗色跟随系统已移除：campus-ui 声明 color-scheme:light，系统深色下会与浅色覆盖混排。仅保留显式 data-theme 开关。 */
 :root[data-theme="dark"]{
   --bg:#151815; --card:#1e221e; --soft:#262b26; --line:#333a33;
   --fg:#e9ebe4; --muted:#9aa095; --green:#7fb98c; --green-soft:#24362a; --on-green:#10170f;
@@ -18,7 +15,7 @@
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 120px}
-.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 

@@ -1,0 +1,281 @@
+/* dashboard.css —— 从 dashboard.html 内嵌样式抽出，重写为 campus-ui 视觉语言。
+   依赖 campus-ui.css 的 :root[data-ui="campus"] token（--green/--card-grad/--radius 等）。
+   仅样式层：布局结构与 dashboard.html 的接口/功能一一对应。 */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--font);
+    background: radial-gradient(ellipse at 5% 30%, #e8dfcc66, transparent 26%), #faf9f5;
+    color: var(--ink);
+    min-height: 100vh;
+}
+
+/* 顶部栏：暖白纸底 + 细分割线，替代旧亮绿渐变横幅 */
+.header {
+    background: #faf9f5;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line-hair);
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.header h1 {
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: 24px;
+    color: var(--ink);
+    letter-spacing: .5px;
+}
+.header .user-info { display: flex; align-items: center; gap: 15px; }
+.header .username { font-size: 14px; color: var(--muted); }
+.btn-logout {
+    padding: 8px 16px;
+    background: #fafcf9;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background .18s, color .18s;
+}
+.btn-logout:hover { background: var(--green-deep); color: #fff; }
+
+/* 合并提示横幅 */
+.merge-banner {
+    max-width: 800px;
+    margin: 18px auto 0;
+    padding: 12px 16px;
+    background: var(--green-soft);
+    color: #435f4d;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+}
+.merge-banner a { color: var(--green); font-weight: 600; text-decoration: none; }
+.merge-banner a:hover { color: var(--green-deep); }
+
+.container { max-width: 800px; margin: 18px auto 30px; padding: 0 20px; }
+
+/* 卡片底色/圆角/描边由 campus-ui .card 规则接管（card-grad + 扁平无投影），这里只补布局 */
+.card { padding: 24px; margin-bottom: 20px; }
+.card h2 {
+    font-family: var(--serif);
+    font-weight: 900;
+    color: var(--ink);
+    font-size: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line-hair);
+}
+
+.serial-list { list-style: none; }
+.serial-list li {
+    padding: 12px;
+    background: #e4ebe0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.serial-list li code { font-family: monospace; font-size: 14px; color: var(--ink); }
+.serial-list li .actions { display: flex; gap: 8px; }
+.serial-list li .actions a {
+    padding: 6px 12px;
+    background: linear-gradient(130deg, var(--green), var(--green-deep));
+    color: #fff;
+    text-decoration: none;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+}
+.serial-list li .actions a:hover { background: var(--green-hover); }
+.empty-state { text-align: center; padding: 40px; color: var(--muted); }
+.empty-state a { color: var(--green); text-decoration: none; }
+
+.account-info { display: grid; grid-template-columns: 120px 1fr; gap: 12px; font-size: 14px; }
+.account-info dt { color: var(--muted); }
+.account-info dd { color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.btn-edit {
+    padding: 2px 8px;
+    background: #fafcf9;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+}
+.btn-edit:hover { background: var(--green-soft); color: var(--green); border-color: #91b49b; }
+
+.nav-links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.nav-links a {
+    padding: 10px 20px;
+    background: linear-gradient(130deg, var(--green), var(--green-deep));
+    color: #fff;
+    text-decoration: none;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-weight: 600;
+}
+.nav-links a:hover { background: var(--green-hover); }
+.nav-links a.secondary { background: #fafcf9; color: var(--ink); border: 1px solid var(--line); }
+.nav-links a.secondary:hover { background: var(--green-soft); color: var(--green-deep); }
+
+.loading { text-align: center; padding: 40px; color: var(--muted); }
+
+.settings-list { list-style: none; }
+.settings-list li {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line-hair);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.settings-list li:last-child { border-bottom: none; }
+.settings-list li .label { font-size: 14px; color: var(--ink); }
+.settings-list li .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.btn-action {
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    background: #fafcf9;
+    color: var(--ink);
+}
+.btn-action:hover { background: var(--green-soft); border-color: #91b49b; }
+.btn-danger { color: var(--sysu-red); border-color: #dcb1aa; }
+.btn-danger:hover { background: var(--sysu-red-subtle); color: var(--sysu-red); }
+
+/* 弹窗：底色/圆角/遮罩由 campus-ui 接管，这里补表单细节 */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+.modal-overlay.active { display: flex; }
+.modal { width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; padding: 24px; }
+.modal h3 {
+    font-family: var(--serif);
+    font-weight: 900;
+    color: var(--ink);
+    margin-bottom: 16px;
+    font-size: 18px;
+}
+.modal .form-group { margin-bottom: 14px; }
+.modal label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.modal input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #b7ccb9;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #fcfdf9;
+    color: var(--ink);
+}
+.modal input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px #265a4814; }
+.modal .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+.modal .btn-primary {
+    flex: 1; padding: 10px; border: none; cursor: pointer; font-size: 14px;
+    background: linear-gradient(130deg, var(--green), var(--green-deep));
+    color: #fff; border-radius: var(--radius-pill); font-weight: 600;
+}
+.modal .btn-primary:hover:not(:disabled) { background: var(--green-hover); }
+.modal .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.modal .btn-cancel {
+    flex: 1; padding: 10px; border: none; cursor: pointer; font-size: 14px;
+    background: #fafcf9; color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-pill);
+}
+.modal .btn-cancel:hover { background: var(--green-soft); }
+.modal .msg { margin-top: 10px; font-size: 13px; text-align: center; }
+.modal .msg.success { color: var(--green); }
+.modal .msg.error { color: var(--sysu-red); }
+
+/* 开关：底色/选中色由 campus-ui .toggle-slider 规则接管 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px; height: 28px;
+    flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    border-radius: 28px;
+    transition: .3s;
+}
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px; width: 22px;
+    left: 3px; bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .3s;
+}
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(24px); }
+.toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+
+/* ========== 平板适配 ========== */
+@media (max-width: 768px) {
+    .container { padding: 16px; margin: 14px auto 20px; }
+    .card { padding: 20px; }
+    .merge-banner { margin-top: 14px; }
+    .nav-links { gap: 10px; }
+    .nav-links a { padding: 10px 16px; font-size: 13px; }
+    .modal { max-width: 380px; }
+}
+
+/* ========== 小屏手机 ========== */
+@media (max-width: 480px) {
+    .header { flex-direction: column; gap: 10px; padding: 14px 16px; }
+    .header h1 { font-size: 20px; }
+    .header .user-info { gap: 10px; }
+    .header .username { font-size: 13px; }
+    .btn-logout { padding: 6px 12px; font-size: 13px; }
+    .container { padding: 12px; margin: 12px auto; }
+    .merge-banner { margin: 12px 12px 0; }
+    .card { padding: 16px; margin-bottom: 12px; }
+    .card h2 { font-size: 16px; padding-bottom: 10px; }
+    .account-info { grid-template-columns: 1fr; gap: 6px; font-size: 13px; }
+    .account-info dt { font-weight: 600; }
+    .account-info dd { gap: 6px; }
+    .btn-edit { padding: 2px 6px; font-size: 11px; }
+    .nav-links { flex-direction: column; gap: 8px; }
+    .nav-links a { text-align: center; padding: 12px; font-size: 14px; min-height: 48px; }
+    .serial-list li { flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px; }
+    .serial-list li code { font-size: 12px; word-break: break-all; }
+    .serial-list li .actions { width: 100%; justify-content: flex-end; }
+    .serial-list li .actions a { padding: 8px 14px; font-size: 13px; }
+    .settings-list li { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 0; }
+    .settings-list li .label { font-size: 13px; }
+    .settings-list li .desc { font-size: 11px; }
+    .btn-action { padding: 8px 14px; font-size: 12px; }
+    .modal { width: 92%; padding: 20px; }
+    .modal h3 { font-size: 16px; }
+    .modal input { padding: 10px 12px; font-size: 16px; min-height: 48px; }
+    .modal .btn-primary, .modal .btn-cancel { padding: 12px; font-size: 14px; min-height: 48px; }
+    .empty-state { padding: 28px; font-size: 13px; }
+    .loading { padding: 28px; font-size: 13px; }
+}
+
+/* ========== 超小屏 ========== */
+@media (max-width: 360px) {
+    .header h1 { font-size: 18px; }
+    .card { padding: 14px; }
+    .card h2 { font-size: 15px; }
+    .nav-links a { font-size: 13px; padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}

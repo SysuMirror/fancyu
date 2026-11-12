@@ -64,7 +64,9 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
         const pool=await getPool();const [old]=await pool.execute('SELECT id FROM accounts WHERE email=? OR username=?',[email,username]);
         if(old.length) return res.status(409).json({code:409,msg:'邮箱或用户名已被使用'});
         if(!await check(email,'register',b.code))return res.status(400).json({code:400,msg:'验证码错误、过期或尝试次数过多'});
-        const [r]=await pool.execute('INSERT INTO accounts(email,username,password_hash,email_verified) VALUES (?,?,?,TRUE)',[email,username,await bcrypt.hash(b.password,10)]);
+        let r;
+        try { r=await pool.execute('INSERT INTO accounts(email,username,password_hash,email_verified) VALUES (?,?,?,TRUE)',[email,username,await bcrypt.hash(b.password,10)]); }
+        catch(e){ if(e.code==='ER_DUP_ENTRY') return res.status(409).json({code:409,msg:'邮箱或用户名已被使用'}); throw e; }
         await markVerified(r.insertId,email);const a={id:r.insertId,email,username};res.json({code:200,token:generateToken(a),user:{account_id:a.id,email,username},msg:'注册成功'});
     }));
     app.post('/account/reset-password',limit,wrap(async(req,res)=>{

@@ -1,9 +1,10 @@
 'use strict';
-const {TYPES,COMMON,MAX}=require('../web/friends-schema');
+const store=require('./survey-schema');const sch=()=>store.current('buddy');
 function weekKey(date=new Date()) {
  const d=new Date(date.getTime()+8*3600000);d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return d.toISOString().slice(0,10);
 }
 function validateCard(input){
+ const {TYPES,COMMON}=sch();
  if(!input||!Object.hasOwn(TYPES,input.type))throw Error('请选择有效搭子类别');
  const t=TYPES[input.type],v={};
  for(const f of [t.main,...t.extra,...COMMON.filter(f=>!t.online||!['campus','cross'].includes(f.key))]){
@@ -16,6 +17,7 @@ function validateCard(input){
 }
 function overlap(a,b){return a.some(x=>b.includes(x));}
 function compatible(a,b){
+ const {TYPES}=sch();
  if(a.account_id===b.account_id||a.type!==b.type)return false;
  const x=a.v,y=b.v,t=TYPES[a.type];
  if(!overlap(x.time,y.time))return false;
@@ -26,6 +28,7 @@ function compatible(a,b){
  return true;
 }
 function score(a,b){
+ const {TYPES}=sch();
  const x=a.v,y=b.v,t=TYPES[a.type];
  const similarity=(a,b)=>{if(a==='都行'||b==='都行'||a==='不限'||b==='不限')return .7;if(Array.isArray(a)&&Array.isArray(b)){if(a.includes('都行')||b.includes('都行'))return .7;return a.filter(v=>b.includes(v)).length/new Set([...a,...b]).size;}return a===b?1:0;};
  const times=x.time.filter(v=>y.time.includes(v)).length/new Set([...x.time,...y.time]).size;
@@ -36,4 +39,4 @@ function score(a,b){
  const main=x.item==='都行'||y.item==='都行'?.7:item(x.item)===item(y.item)?1:0;
  return Math.round(20*main+30*times+15*similarity(x.freq,y.freq)+25*extra+(t.online?10:10*(x.campus===y.campus?1:.5)));
 }
-module.exports={weekKey,validateCard,compatible,score,MAX};
+module.exports={weekKey,validateCard,compatible,score,get MAX(){return sch().MAX;}};

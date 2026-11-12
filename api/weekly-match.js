@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
-const rules=require('./weekly-match-rules'),solve=require('./weekly-solver'),{validate}=require('./weekly-validation');
+const rules=require('./weekly-match-rules'),solve=require('./weekly-solver');
 const json=x=>typeof x==='string'?JSON.parse(x):x;
 const stamp=d=>d.toISOString().slice(0,19).replace('T',' ');
 const pairKey=(a,b)=>[Math.min(a,b),Math.max(a,b)].join(':');
@@ -15,7 +15,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
  async function tx(fn){await ensureSchema();return daily.transaction(async c=>{const time=now();await housekeeping(c,time);return fn(c,time);});}
  const route=fn=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{res.json({code:200,...await tx((c,t)=>fn(req,c,t))});}catch(e){console.error('Weekly match:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'每周配对暂不可用，请稍后重试'});}};
  async function eligible(c,id){const [r]=await c.execute('SELECT a.id,a.username FROM accounts a JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings s ON s.account_id=a.id LEFT JOIN weekly_match_bans ban ON ban.account_id=a.id WHERE a.id=? AND COALESCE(s.banned,0)=0 AND ban.account_id IS NULL',[id]);return r[0]||null;}
- async function ensureBatch(c,b){await c.execute('INSERT IGNORE INTO weekly_match_batches(batch_key,cutoff_at,release_at,expires_at,algorithm,config,seed) VALUES (?,?,?,?,?,?,?)',[b.key,stamp(b.cutoff),stamp(b.release),stamp(b.expires),rules.VERSION,JSON.stringify({weights:rules.WEIGHTS,preferredDirectional:60,preferredMean:65,supplement:true,maxParticipants:500}),crypto.randomBytes(16).toString('hex')]);}
+ async function ensureBatch(c,b){await c.execute('INSERT IGNORE INTO weekly_match_batches(batch_key,cutoff_at,release_at,expires_at,algorithm,config,seed) VALUES (?,?,?,?,?,?,?)',[b.key,stamp(b.cutoff),stamp(b.release),stamp(b.expires),rules.VERSION,JSON.stringify({weights:rules.WEIGHTS(),preferredDirectional:60,preferredMean:65,supplement:true,maxParticipants:500}),crypto.randomBytes(16).toString('hex')]);}
  async function batch(c,key){let times;try{times=rules.batchTimes(key);}catch(e){fail(400,e.message);}const [r]=await c.execute('SELECT * FROM weekly_match_batches WHERE batch_key=?',[key]);if(!r.length)fail(404,'批次不存在');return {...r[0],times};}
  async function conflicts(c,time){const set=new Set();for(const p of await require('./deep-conflicts').pairs(c,time))set.add(pairKey(p.a,p.b));
   for(const [sql,args]of [
@@ -26,7 +26,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
   ]){const [rows]=await c.execute(sql,args);for(const r of rows)set.add(pairKey(r.a,r.b));}const [friendTables]=await c.query("SHOW TABLES LIKE 'friend_card_pairs'");if(friendTables.length){const [rows]=await c.execute("SELECT a_id a,b_id b FROM friend_card_pairs WHERE (status='pending' AND week_key=?) OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?",[require('./friends-rules').weekKey(time),stamp(new Date(+time-30*86400000))]);for(const r of rows)set.add(pairKey(r.a,r.b));}return set;
  }
  async function candidates(c,key,time){const [rows]=await c.execute(`SELECT e.account_id,e.snapshot FROM weekly_match_enrollments e JOIN accounts a ON a.id=e.account_id JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings d ON d.account_id=a.id LEFT JOIN weekly_match_bans ban ON ban.account_id=a.id WHERE e.batch_key=? AND e.active=1 AND COALESCE(d.banned,0)=0 AND ban.account_id IS NULL ORDER BY e.account_id`,[key]);
-  const result=[];for(const r of rows){try{const snapshot=validate(json(r.snapshot),time);result.push({id:r.account_id,snapshot});}catch(e){/* Invalid or obsolete questionnaires are not eligible. */}}
+  const result=[];for(const r of rows){try{const snapshot=rules.validateSurvey(json(r.snapshot),time);result.push({id:r.account_id,snapshot});}catch(e){/* Invalid or obsolete questionnaires are not eligible. */}}
   if(result.length>500)fail(409,'本批超过 500 人，需先扩容并验证求解性能，未生成近似结果');return result;
  }
  function fingerprint(people,blocked){const ids=new Set(people.map(p=>p.id));const relevant=[...blocked].filter(k=>k.split(':').every(x=>ids.has(Number(x)))).sort();return crypto.createHash('sha256').update(JSON.stringify({ids:[...ids].sort((a,b)=>a-b),blocked:relevant})).digest('hex');}
@@ -69,7 +69,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
  }));
  app.post('/account/weekly-match/enroll',authMiddleware,route(async(req,c,time)=>{
   const id=req.account.account_id;if(!await eligible(c,id))fail(403,'请先验证学生邮箱；受限制账号暂不能报名');const b=rules.openBatch(time);if(req.body?.batch!==b.key)fail(409,'报名批次已切换，请刷新后确认');
-  const [rows]=await c.execute('SELECT answers,important FROM weekly_questionnaires WHERE account_id=?',[id]);if(!rows.length)fail(400,'请先完成每周配对问卷');let snapshot;try{snapshot=validate({answers:json(rows[0].answers),important:json(rows[0].important)},time);}catch(e){fail(400,'问卷需要完善：'+e.message);}
+  const [rows]=await c.execute('SELECT answers,important FROM weekly_questionnaires WHERE account_id=?',[id]);if(!rows.length)fail(400,'请先完成每周配对问卷');let snapshot;try{snapshot=rules.validateSurvey({answers:json(rows[0].answers),important:json(rows[0].important)},time);}catch(e){fail(400,'问卷需要完善：'+e.message);}
   await ensureBatch(c,b);await c.execute("INSERT INTO weekly_match_enrollments(batch_key,account_id,snapshot,consent_version,enrolled_at) VALUES (?,?,?,'weekly-enroll-direct-v2',?) ON DUPLICATE KEY UPDATE active=1,snapshot=VALUES(snapshot),consent_version=VALUES(consent_version),enrolled_at=VALUES(enrolled_at)",[b.key,id,JSON.stringify(snapshot),stamp(time)]);return {msg:'已报名本批，每周需要主动报名；截止前保存问卷会同步更新本批资料'};
  }));
  async function withdraw(c,id,key){if(key){rules.batchTimes(key);await c.execute('UPDATE weekly_match_enrollments SET active=0 WHERE account_id=? AND batch_key=?',[id,key]);await c.execute("UPDATE weekly_match_pairs SET status='cancelled',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? OR b_id=?) AND batch_key=? AND status='pending'",[id,id,key]);}else{await c.execute('UPDATE weekly_match_enrollments SET active=0 WHERE account_id=?',[id]);await c.execute("UPDATE weekly_match_pairs SET status='cancelled',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? OR b_id=?) AND status='pending'",[id,id]);}}

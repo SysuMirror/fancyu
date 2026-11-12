@@ -1,5 +1,5 @@
 'use strict';
-const schema=WeeklySchema,$=id=>document.getElementById(id),token=localStorage.getItem('token');
+let schema=window.WeeklySchema;const $=id=>document.getElementById(id),token=localStorage.getItem('token');
 let answers={},important=[],section=0,dirty=false,saving=false;
 const surveyMetrics=window.createSurveyMetrics('love',()=>token);
 for(const event of ['input','change'])$('surveyForm').addEventListener(event,()=>surveyMetrics.start());
@@ -54,11 +54,12 @@ if(!active)important=important.filter(x=>!['13','15','16','18'].includes(x));
 const unlimited=$('surveyForm').elements.age_unlimited.checked;for(const name of ['age_older','age_younger']){const i=$('surveyForm').elements.namedItem(name);i.disabled=unlimited;if(unlimited)i.value='';}
 const diet=[...document.querySelectorAll('input[name="26"]:checked')].some(i=>i.value==='其他');const extra=$('surveyForm').elements.diet_other;extra.parentElement.hidden=!diet;extra.disabled=!diet;if(!diet)extra.value='';
 document.querySelectorAll('.star').forEach(b=>{const yes=important.includes(b.dataset.group);b.setAttribute('aria-pressed',String(yes));b.textContent=yes?'★ 已设重要':'☆ 设为重要';});$('stars').textContent='重要 '+important.length+' / 5';}
-function show(n){section=n;sync();[...$('sections').children].forEach((b,i)=>b.setAttribute('aria-current',String(i===n)));$('previous').hidden=n===0;$('next').hidden=n===4;$('save').hidden=n!==4;$('step').textContent=(n+1)+' / 5 · '+schema.sections[n];}
+function show(n){section=n;sync();[...$('sections').children].forEach((b,i)=>b.setAttribute('aria-current',String(i===n)));const last=schema.sections.length-1;$('previous').hidden=n===0;$('next').hidden=n===last;$('save').hidden=n!==last;$('step').textContent=(n+1)+' / 5 · '+schema.sections[n];}
 async function load(){try{const r=await fetch('/api/account/weekly-survey',{headers:{Authorization:'Bearer '+token}});const d=await r.json();if(d.code!==200)throw Error(d.msg||'加载失败');answers=d.survey?.answers||d.prefill||{};important=(d.survey?.important||[]).filter(x=>!['15','16'].includes(x));delete answers['15'];delete answers['16'];fill();show(0);$('surveyForm').hidden=false;$('retry').hidden=true;$('message').textContent=d.survey?'已载入保存的问卷，可以继续修改。':(Object.keys(d.prefill||{}).length?'已带入你在其他配对中填写的基本资料，可直接修改。':'请按真实想法填写。');dirty=false;}catch(e){$('message').textContent=e.message;$('retry').hidden=false;}}
 $('previous').onclick=()=>{show(section-1);window.scrollTo(0,0);};$('next').onclick=()=>{show(section+1);window.scrollTo(0,0);};$('retry').onclick=load;
 $('surveyForm').onsubmit=async e=>{e.preventDefault();if(saving)return;let clean;try{sync();clean=WeeklyValidation.validate({answers:read(),important});}catch(e){$('message').textContent=e.message;const id=e.message.match(/第 (\d+[ab]?)/)?.[1],q=schema.questions.find(q=>q.id===id);if(q){show(q.section);$('q'+id).scrollIntoView({behavior:'smooth',block:'center'});}return;}
 if(clean.uniform&&!confirm('你在 90% 以上的 1–7 分题中选择了同一个数字。请确认答案是否反映真实想法，点击确定继续保存。'))return;
 saving=true;$('save').disabled=true;try{await surveyMetrics.start();const r=await fetch('/api/account/weekly-survey',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(clean)});const d=await r.json();if(d.code!==200)throw Error(d.msg||'保存失败');answers=clean.answers;important=clean.important;dirty=false;$('message').textContent='问卷已保存，之后可从每周配对入口继续修改。';window.scrollTo(0,0);}catch(e){$('message').textContent=e.message;}finally{saving=false;$('save').disabled=false;}};
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-render();if(token)load();
+(async()=>{try{const r=await fetch('/api/survey-schema/weekly');const d=await r.json();if(d.code===200&&d.schema&&Array.isArray(d.schema.questions)&&d.schema.questions.length){schema=d.schema;window.WeeklySchema=d.schema;}}catch(e){}
+render();if(token)load();})();

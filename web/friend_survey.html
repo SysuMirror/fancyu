@@ -1003,10 +1003,10 @@ function requireLogin() {
     let authToken = null;
 
     // 学校-校区映射
-    const SCHOOL_CAMPUSES = {"中山大学": ["广州南校园", "广州北校园", "广州东校园", "珠海校区", "深圳校区"]};
+    let SCHOOL_CAMPUSES = {"中山大学": ["广州南校园", "广州北校园", "广州东校园", "珠海校区", "深圳校区"]};
 
     // 兴趣大类列表
-    const INTEREST_CATEGORIES = [
+    let INTEREST_CATEGORIES = [
         "球类运动", "田径类运动", "其他运动", "棋类", "健身健美", "音乐", "乐器", "书法", "绘画", "阅读",
         "摄影", "电影", "纪录片", "电视剧", "娱乐圈", "舞蹈", "美食(吃）", "烹饪", "手游",
         "端游", "主机", "桌游", "旅游", "小动物", "美妆时装", "ACG", "体育赛事", "手工", "博客", "娱乐活动", "其他爱好"
@@ -1048,8 +1048,8 @@ function requireLogin() {
     };
 
     // 熟练程度选项
-    const SKILL_LEVELS = ["完全小白", "云玩家", "入门", "一般般", "精通"];
-    const SKILL_LEVELS_WITH_NA = ["完全小白", "云玩家", "入门", "一般般", "精通", "没要求"];
+    let SKILL_LEVELS = ["完全小白", "云玩家", "入门", "一般般", "精通"];
+    let SKILL_LEVELS_WITH_NA = ["完全小白", "云玩家", "入门", "一般般", "精通", "没要求"];
     // 期望交流频次选项
     const FREQ_OPTIONS = ["每日", "每周", "每月", "每学期"];
     const FREQ_OPTIONS_WITH_NA = ["每日", "每周", "每月", "每学期", "没要求"];
@@ -1994,7 +1994,7 @@ function requireLogin() {
         if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    async function boot(){if(!checkAuth())return;try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
+    async function boot(){if(!checkAuth())return;try{const so=await fetch(API_URL+'/survey-schema/deep-options').then(r=>r.json());if(so.code===200&&so.schema){if(so.schema.schools&&Object.keys(so.schema.schools).length)SCHOOL_CAMPUSES=so.schema.schools;if(Array.isArray(so.schema.categories)&&so.schema.categories.length)INTEREST_CATEGORIES=so.schema.categories;}}catch(e){}try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
     boot();
 </script>
 </body>

@@ -711,6 +711,7 @@ const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMid
 const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken});
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
 const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
+require('./survey-admin')(app, {getPool, adminAuthMiddleware});
 deepMatch.start();
 analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
@@ -1998,7 +1999,8 @@ app.use((req, res, next) => {
         'admin/weekly': 'admin-weekly.html',
         'admin/deep': 'admin-deep.html',
         'admin/buddy': 'admin-buddy.html',
-        'admin/reports': 'admin-chat-reports.html'
+        'admin/reports': 'admin-chat-reports.html',
+            'admin/survey': 'admin-survey.html'
     };
     const FLAT2HIER = {                       // 旧一级地址 → 新二级地址
         'admin-pay': 'admin/pay', 'admin-weekly': 'admin/weekly', 'admin-deep': 'admin/deep',

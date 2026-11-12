@@ -1,5 +1,5 @@
 'use strict';
-const {schools,categories}=require('./deep-options.json');
+const store=require('./survey-schema');
 const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};
 const academic=require('../web/academic-fields');
 const GRADES=['大一','大二','大三','大四','大五（医学）','研0','研一','研二','研三','博士'];
@@ -8,7 +8,7 @@ const GOALS=['学习搭子','饭搭子','运动搭子','游戏搭子','聊天搭
 const LEVELS=['完全小白','云玩家','入门','一般般','精通'],FREQ=['每日','每周','每月','每学期','没要求'];
 const DISPLAY=['基础背景','个人特质','兴趣爱好','自我介绍','照片'];
 function validate(d){
- if(!d||typeof d!=='object'||Array.isArray(d))throw Error('问卷格式无效');d={...d,own_campus:campusAliases[d.own_campus]||d.own_campus,expect_school_campuses:Object.fromEntries(Object.entries(d.expect_school_campuses||{}).map(([k,v])=>[k,Array.isArray(v)?v.map(x=>campusAliases[x]||x):v]))};const out={};
+ if(!d||typeof d!=='object'||Array.isArray(d))throw Error('问卷格式无效');const {schools,categories}=store.current('deep-options');d={...d,own_campus:campusAliases[d.own_campus]||d.own_campus,expect_school_campuses:Object.fromEntries(Object.entries(d.expect_school_campuses||{}).map(([k,v])=>[k,Array.isArray(v)?v.map(x=>campusAliases[x]||x):v]))};const out={};
  const select=(k,opts,required=false)=>{const v=d[k];if(v==null||v===''){if(required)throw Error('请填写 '+k);return;}if(!opts.includes(v))throw Error('请检查 '+k);out[k]=v;};
  const list=(k,opts,defaults=[])=>{const v=d[k]??defaults;if(!Array.isArray(v)||v.length>opts.length||new Set(v).size!==v.length||v.some(x=>!opts.includes(x)))throw Error('请检查 '+k);out[k]=v.includes('不限')?['不限']:v;};
  const text=(k,max)=>{if(d[k]==null)return;if(typeof d[k]!=='string'||d[k].length>max)throw Error('请检查 '+k);out[k]=d[k].trim();};

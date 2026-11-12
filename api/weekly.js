@@ -15,7 +15,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,transact
   if(!old.major_detail||(!old.major_category&&old.major_detail===suggested.major_detail))answers['9']=prefill['9'];
  }
  res.json({code:200,prefill,survey:rows.length?{...rows[0],answers,important:json(rows[0].important)}:null});}));
- app.put('/account/weekly-survey',authMiddleware,handle(async(req,res,p)=>{let clean;try{clean=validate(req.body);}catch(e){return res.status(400).json({code:400,msg:e.message});}
+ app.put('/account/weekly-survey',authMiddleware,handle(async(req,res,p)=>{let clean;try{clean=validate(req.body,undefined,require('./survey-schema').current('weekly'));}catch(e){return res.status(400).json({code:400,msg:e.message});}
  const save=async(c,time)=>{ await c.execute('INSERT INTO weekly_questionnaires(account_id,version,answers,important) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE version=VALUES(version),answers=VALUES(answers),important=VALUES(important),updated_at=CURRENT_TIMESTAMP',[req.account.account_id,clean.version,JSON.stringify(clean.answers),JSON.stringify(clean.important)]); await onSave(c,req.account.account_id,clean,time); await require('./core-metrics').completeSurvey(c,'love',req.account.account_id); };
  if(transaction)await transaction(save);else await save(p,new Date());
  res.json({code:200,msg:'每周配对问卷已保存',uniform:clean.uniform});}));

@@ -1,5 +1,5 @@
 'use strict';
-const {TYPES,COMMON,MAX}=FriendsSchema;
+let {TYPES,COMMON,MAX}=window.FriendsSchema;
 const app=document.getElementById('app');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state=null,view=location.hash==='#deep'?'deep':'quick',draft=null,pendingDelete=null,busy=false,previousFocus=null;
@@ -54,4 +54,5 @@ document.addEventListener('input',e=>{if(e.target.dataset.text&&draft)draft.v[e.
 document.addEventListener('change',async e=>{if(e.target.dataset.select&&draft)draft.v[e.target.dataset.select]=e.target.value;if(e.target.id==='myGender'){if(busy){e.target.value=state.gender;return;}busy=true;try{await mutate('/settings','PUT',{gender:e.target.value});}catch(err){toast(err.message);e.target.value=state.gender;}finally{busy=false;}}});
 document.addEventListener('keydown',e=>{const m=document.querySelector('.mask');if(!m)return;if(e.key==='Escape'&&!busy)closeSheet();if(e.key==='Tab'){const els=[...m.querySelectorAll('button,input,select')].filter(x=>!x.disabled);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 window.addEventListener('hashchange',()=>{view=['quick','deep'].includes(location.hash.slice(1))?location.hash.slice(1):'quick';render();});
-if(token)reload().catch(e=>{app.innerHTML='<p class="err">'+esc(e.message)+'</p><button onclick="location.reload()">重新加载</button>';});
+(async()=>{try{const r=await fetch('/api/survey-schema/buddy');const d=await r.json();if(d.code===200&&d.schema&&d.schema.TYPES){({TYPES,COMMON,MAX}=d.schema);window.FriendsSchema=d.schema;}}catch(e){}
+if(token)reload().catch(e=>{app.innerHTML='<p class="err">'+esc(e.message)+'</p><button onclick="location.reload()">重新加载</button>';});})();

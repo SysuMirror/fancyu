@@ -195,6 +195,23 @@
             cursor: pointer;
         }
 
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: -6px 0 22px;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 88, 38, 0.12);
+        }
+
         /* ========== 邮箱组合 ========== */
         .email-group {
             display: flex;
@@ -566,6 +583,8 @@
                     </select>
                 </div>
             </div>
+            <div class="or-divider"><span>或</span></div>
+
             <div class="form-group">
                 <label for="loginUsername">用户名</label>
                 <input type="text" id="loginUsername" placeholder="输入用户名登录" autocomplete="off">

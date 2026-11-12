@@ -18,3 +18,8 @@ CREATE TABLE IF NOT EXISTS core_metric_participants (
 CREATE TABLE IF NOT EXISTS core_metric_exclusions (
  account_id INT PRIMARY KEY,FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS core_survey_steps (
+ mode VARCHAR(12) NOT NULL,account_id INT NOT NULL,step VARCHAR(8) NOT NULL,first_at DATETIME(3) NOT NULL,
+ PRIMARY KEY(mode,account_id,step),INDEX step_time(first_at),
+ FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

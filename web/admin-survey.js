@@ -11,6 +11,7 @@ const W_TYPE_NAMES={radio:'单选',multi:'多选',scale:'量表 1–7',month:'�
 const D_TYPES=['options','tags','select','text','textarea','major','campus','expect-campus','personality','interests','photos','contacts'];
 const D_TYPE_NAMES={'options':'单选按钮','tags':'多选标签','select':'下拉选择','text':'单行文本','textarea':'多行文本','major':'专业选择','campus':'校区联动','expect-campus':'期望校区多选','personality':'性格滑块','interests':'兴趣选择','photos':'照片上传','contacts':'联系方式'};
 let kind='weekly',data=null,orig=null,locked=new Set(),dirty=false,sel=null,searchQ='';
+let distCache={}; // kind -> 填写分布统计（保存/切换后清空）
 const expanded=new Set(),treeDom=new Map(); // nodeId -> li（徽标就地更新，不整树重画）
 
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -403,6 +404,38 @@ function refreshTreeSoon(){clearTimeout(treeTimer);treeTimer=setTimeout(renderTr
 let pvTimer=null;
 function schedulePreview(){clearTimeout(pvTimer);pvTimer=setTimeout(renderPreview,150);}
 
+// ===== 填写分布（真实答案聚合，按 kind 缓存一次）=====
+async function distFor(k){
+ if(distCache[k]!==undefined)return distCache[k];
+ try{const j=await api('/api/admin/survey-stats/'+k);distCache[k]=j.code===200?j:null;}
+ catch(e){distCache[k]=null;}
+ return distCache[k];
+}
+function distKey(n){
+ if(n.t==='wq')return String(n.q.id);
+ if(n.t==='bcommon'||n.t==='bfield')return n.f.key;
+ if(n.t==='ditem')return n.it.key;
+ return null;
+}
+async function renderDist(n){
+ const host=$('dist');host.textContent='';
+ const key=distKey(n);
+ if(!key){host.append(el('p','hint','选中带选项的题目后，这里显示真实填写分布。'));return;}
+ const s=await distFor(kind);
+ if(!s){host.append(el('p','hint','填写分布暂不可用，可稍后重试。'));return;}
+ const q=s.questions.find(x=>x.id===key);
+ if(!q){host.append(el('p','hint','该题暂无统计数据。'));return;}
+ host.append(el('h2',null,'填写分布 · 共 '+s.total+' 份答卷'));
+ if(!q.counts){host.append(el('p','hint','填写型题目：'+q.answered+' 人已填写。'));return;}
+ const entries=Object.entries(q.counts),max=Math.max(1,...entries.map(e=>e[1]));
+ for(const [opt,cnt] of entries){
+  const row=el('div','sv-dist-row'+(cnt?'':' zero'));
+  const bar=el('div','sv-dist-bar');bar.style.width=(cnt?Math.max(2,cnt/max*100):0)+'%';
+  row.append(el('span','sv-dist-lb',opt),bar,el('span','sv-dist-n',cnt?cnt+' 人':'0 人选择'));
+  host.append(row);
+ }
+}
+
 // ===== 用户端预览（轻量独立渲染器，pv-* 自带样式）=====
 function pvOpt(text,cls){return el('button','pv-opt'+(cls?' '+cls:''),text);}
 function renderPreview(){
@@ -486,6 +519,7 @@ function renderPreview(){
   wrap.append(el('p','hint','该节点是设置项，无用户端组件。'));
  }
  box.append(wrap);
+ renderDist(n);
 }
 
 // ===== 载入 / 保存 =====
@@ -498,7 +532,7 @@ async function load(){
  $('app').textContent='正在读取…';$('work').hidden=true;
  const j=await api('/api/admin/survey-schema/'+kind);
  if(j.code!==200){$('app').textContent=j.msg||'读取失败';return;}
- data=j;locked=new Set(j.locked||[]);orig=clone(j.schema);dirty=false;$('dirty').hidden=true;
+ data=j;locked=new Set(j.locked||[]);orig=clone(j.schema);dirty=false;$('dirty').hidden=true;distCache={};
  expanded.clear();if(kind==='weekly')expanded.add('wsec:0');else if(kind==='deep'){expanded.add('dstep:0');expanded.add('dschools');}else expanded.add('bcommon');
  sel=null;$('app').textContent='';$('work').hidden=false;
  $('ver').textContent='当前版本 v'+data.version;

@@ -712,6 +712,7 @@ const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
 const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
 require('./survey-admin')(app, {getPool, adminAuthMiddleware});
+require('./survey-stats')(app, {getPool, adminAuthMiddleware});
 deepMatch.start();
 analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 

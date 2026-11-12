@@ -26,13 +26,17 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
   ]){const [rows]=await c.execute(sql,args);for(const r of rows)set.add(pairKey(r.a,r.b));}const [friendTables]=await c.query("SHOW TABLES LIKE 'friend_card_pairs'");if(friendTables.length){const [rows]=await c.execute("SELECT a_id a,b_id b FROM friend_card_pairs WHERE (status='pending' AND week_key=?) OR status='connected' OR (a_agreed=1 AND b_agreed=1) OR created_at>?",[require('./friends-rules').weekKey(time),stamp(new Date(+time-30*86400000))]);for(const r of rows)set.add(pairKey(r.a,r.b));}return set;
  }
  async function candidates(c,key,time){const [rows]=await c.execute(`SELECT e.account_id,e.snapshot FROM weekly_match_enrollments e JOIN accounts a ON a.id=e.account_id JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings d ON d.account_id=a.id LEFT JOIN weekly_match_bans ban ON ban.account_id=a.id WHERE e.batch_key=? AND e.active=1 AND COALESCE(d.banned,0)=0 AND ban.account_id IS NULL ORDER BY e.account_id`,[key]);
-  const result=[];for(const r of rows){try{const snapshot=rules.validateSurvey(json(r.snapshot),time);result.push({id:r.account_id,snapshot});}catch(e){/* Invalid or obsolete questionnaires are not eligible. */}}
-  if(result.length>500)fail(409,'本批超过 500 人，需先扩容并验证求解性能，未生成近似结果');return result;
+  const result=[],reasons={version_expired:0,invalid:0};let excluded=0;
+  const currentVersion=String(require('./survey-schema').snapshot('weekly').version);
+  for(const r of rows){try{const snapshot=rules.validateSurvey(json(r.snapshot),time);result.push({id:r.account_id,snapshot});}
+   catch(e){/* Invalid or obsolete questionnaires are not eligible. */excluded++;const v=String(json(r.snapshot)?.version||'');reasons[v&&v!==currentVersion?'version_expired':'invalid']++;}}
+  if(result.length>500)fail(409,'本批超过 500 人，需先扩容并验证求解性能，未生成近似结果');
+  return {people:result,excluded:{count:excluded,reasons}};
  }
  function fingerprint(people,blocked){const ids=new Set(people.map(p=>p.id));const relevant=[...blocked].filter(k=>k.split(':').every(x=>ids.has(Number(x)))).sort();return crypto.createHash('sha256').update(JSON.stringify({ids:[...ids].sort((a,b)=>a-b),blocked:relevant})).digest('hex');}
  async function build(c,b,time){
   if(b.algorithm!==rules.VERSION)fail(409,'批次算法版本与当前服务不一致，请先处理版本迁移');if(b.status==='published')fail(409,'已发布批次不能重算');if(time<b.times.cutoff)fail(409,'报名尚未截止，不能生成正式预览');if(time>=b.times.expires)fail(409,'本批回应期已结束');
-  const people=await candidates(c,b.batch_key,time),blocked=await conflicts(c,time);
+  const {people,excluded}=await candidates(c,b.batch_key,time),blocked=await conflicts(c,time);
   const [previous]=await c.execute("SELECT e.account_id,e.batch_key,e.assigned,e.active,e.eligible_at_run FROM weekly_match_enrollments e JOIN weekly_match_batches b ON b.batch_key=e.batch_key WHERE b.status='published' AND e.batch_key<? ORDER BY e.batch_key DESC",[b.batch_key]);
   const streak=new Map();for(const person of people){let n=0;let expected=new Date(b.batch_key+'T00:00:00Z');expected.setUTCDate(expected.getUTCDate()-7);for(const e of previous.filter(e=>e.account_id===person.id)){if(e.batch_key!==expected.toISOString().slice(0,10)||!e.active||!e.eligible_at_run||e.assigned)break;n++;expected.setUTCDate(expected.getUTCDate()-7);}streak.set(person.id,Math.min(52,n));}
   const edges=[],metadata=new Map(),degree=new Array(people.length).fill(0);
@@ -42,15 +46,15 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,we
   }
   const chosen=await solver({n:people.length,edges,seed:b.seed});const used=new Set();const plan=chosen.map(([a,b])=>{const m=metadata.get(Math.min(a,b)+':'+Math.max(a,b));if(!m||used.has(a)||used.has(b))throw Error('invalid_solver_matching');used.add(a);used.add(b);return {a:people[a].id,b:people[b].id,...m};});
   const [[{enrolled}]]=await c.execute('SELECT COUNT(*) enrolled FROM weekly_match_enrollments WHERE batch_key=? AND active=1',[b.batch_key]);
-  const stats={pool_fingerprint:fingerprint(people,blocked),enrolled:Number(enrolled),eligible:people.length,with_candidates:degree.filter(x=>x>0).length,edges:edges.length,pairs:plan.length,preferred:plan.filter(x=>x.preferred).length,supplement:plan.filter(x=>!x.preferred).length,unmatched:people.length-plan.length*2,mean_score:plan.length?Math.round(plan.reduce((n,x)=>n+x.score,0)/plan.length*100)/100:null};
+  const stats={pool_fingerprint:fingerprint(people,blocked),enrolled:Number(enrolled),eligible:people.length,with_candidates:degree.filter(x=>x>0).length,edges:edges.length,pairs:plan.length,preferred:plan.filter(x=>x.preferred).length,supplement:plan.filter(x=>!x.preferred).length,unmatched:people.length-plan.length*2,mean_score:plan.length?Math.round(plan.reduce((n,x)=>n+x.score,0)/plan.length*100)/100:null,excluded};
   await c.execute('UPDATE weekly_match_enrollments SET eligible_at_run=0 WHERE batch_key=?',[b.batch_key]);for(const person of people)await c.execute('UPDATE weekly_match_enrollments SET eligible_at_run=1 WHERE batch_key=? AND account_id=?',[b.batch_key,person.id]);
-  await c.execute("UPDATE weekly_match_batches SET status='preview',plan=?,stats=?,revision=revision+1,approved_revision=NULL,approved_by=NULL,approved_at=NULL,last_error=NULL WHERE batch_key=?",[JSON.stringify(plan),JSON.stringify(stats),b.batch_key]);return {stats,msg:'预览已生成；需管理员确认后才会发布'};
+  await c.execute("UPDATE weekly_match_batches SET status='preview',plan=?,stats=?,revision=revision+1,approved_revision=NULL,approved_by=NULL,approved_at=NULL,last_error=NULL WHERE batch_key=?",[JSON.stringify(plan),JSON.stringify(stats),b.batch_key]);return {stats,msg:'预览已生成；需管理员确认后才会发布',excluded};
  }
  async function publish(c,b,time){
   if(b.status==='published')return {msg:'本批已经发布，无需重复操作'};
   if(time<b.times.release)fail(409,'尚未到周四 20:00 发布时间');if(time>=b.times.expires)fail(409,'本批已过期，不能补发旧批次');
   if(b.status!=='preview'||b.approved_revision!==b.revision)fail(409,'请先生成并确认当前预览');
-  const people=await candidates(c,b.batch_key,time),ids=new Set(people.map(p=>p.id)),blocked=await conflicts(c,time),plan=json(b.plan)||[];
+  const {people}=await candidates(c,b.batch_key,time),ids=new Set(people.map(p=>p.id)),blocked=await conflicts(c,time),plan=json(b.plan)||[];
   if(json(b.stats)?.pool_fingerprint!==fingerprint(people,blocked)||plan.some(p=>!ids.has(p.a)||!ids.has(p.b)||blocked.has(pairKey(p.a,p.b)))){await build(c,b,time);return {needs_review:true,msg:'候选资格或关系已改变，已重新生成预览，请再次确认'};}
   for(const p of plan){const [r]=await c.execute('INSERT INTO weekly_match_pairs(batch_key,a_id,b_id,reasons,score_data,created_at,expires_at) VALUES (?,?,?,?,?,?,?)',[b.batch_key,p.a,p.b,JSON.stringify(p.reasons),JSON.stringify({ab:p.ab,ba:p.ba,mean:p.score,preferred:p.preferred,coverage:p.coverage}),stamp(time),stamp(new Date(+time+72*3600000))]);
    await c.execute('INSERT INTO weekly_match_slots(batch_key,account_id,pair_id) VALUES (?,?,?),(?,?,?)',[b.batch_key,p.a,r.insertId,b.batch_key,p.b,r.insertId]);

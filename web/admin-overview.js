@@ -3,6 +3,7 @@
  const pct=x=>x===null||x===undefined?'—':x+'%';
  const names={weekly:'每周恋爱配对',deep:'深度交友',quick:'快速交友',sport:'运动',study:'自习',meal:'饭搭子',movie:'电影',game:'游戏',trip:'逛街/旅游',show:'演出/展览',pending:'待确认',connected:'已连接',expired:'已过期',cancelled:'已撤回',skipped:'已跳过',closed:'已结束',blocked:'已屏蔽',processing:'处理中',resolved:'已处理',dismissed:'已驳回'};
  let latest=null,request=0;
+ let weeklySections=null;fetch('/api/survey-schema/weekly').then(r=>r.json()).then(j=>{if(j.code===200)weeklySections=j.schema.sections;}).catch(()=>{});
  const today=()=>new Date(Date.now()+8*3600000).toISOString().slice(0,10);
  function range(days){const end=today();return {end,start:new Date(Date.parse(end+'T00:00:00Z')-(days-1)*86400000).toISOString().slice(0,10)};}
  let selected=range(30);
@@ -13,6 +14,12 @@
  function render(d){const t=d.totals,p=d.period;let h=`<section class="ov-box"><h3>当前平台概况</h3><p>以下为当前仍保留的数据，不随日期筛选变化。</p><div class="ov-metrics">${metric('注册账号',t.accounts)+metric('已验证学生',t.verified)+metric('邮箱验证覆盖率',pct(t.verification_rate))+metric('新版恋爱问卷人数',t.weekly_surveys)+metric('深度交友问卷人数',t.friend_surveys)+metric('有效搭子卡（未删除）',t.cards)+metric('待处理 / 处理中举报',t.pending_reports)}</div></section>`;
  h+=`<section class="ov-box"><h3>所选日期内的新增记录</h3><div class="ov-metrics">${metric('新增账号',p.registrations)+metric('验证记录',p.verifications)+metric('举报记录',p.reports)+metric('仍保留的屏蔽记录',p.blocks)}</div><p>验证记录不等于本期注册用户的验证转化；解除屏蔽、注销及删除会影响保留数据统计。</p></section>`;
  h+=`<section class="ov-box"><h3>三种配对方式</h3>${table(['方式','当前有效参与人数','本期生成配对数','其中已交换联系方式','交换率','已跳过','运行方式'],d.modes.map(m=>[m.name,m.active,m.pairs,m.connected,pct(m.exchange_rate),m.skipped===null?'未记录':m.skipped,m.algorithm]))}<p>有效参与：当前已验证、已填写所需资料并开启的用户；快速交友有 ${d.active.quick_cards} 张开启且符合验证要求的卡。配对按“对”计数，每周导入的双向记录去重。交换率＝本期生成配对中，截至现在已交换联系方式的对数 ÷ 本期生成配对数；不能视为恋爱成功率。</p><p>当前暂停：搭子卡 ${d.pause.quick_cards} 张。尚未统计暂停操作次数或暂停率。</p></section>`;
+ const f=d.funnels&&d.funnels.love;
+ if(f){
+  const stepName=i=>(weeklySections&&weeklySections[Number(i)])||('分区 '+(Number(i)+1));
+  const rate=n=>f.started?Math.round(n/f.started*1000)/10:null;
+  h+=`<section class="ov-box"><h3>每周恋爱问卷漏斗（所选日期）</h3><div class="ov-metrics">${metric('进入问卷',f.started)+metric('完成提交',f.completed)}</div>${table(['步骤','到达人数','占进入比'],[['进入问卷',f.started,'100%'],...f.steps.map(r=>[stepName(r.step),r.count,pct(rate(r.count))]),['完成提交',f.completed,pct(rate(f.completed))]])}<p>按账号去重统计所选日期内首次到达各步骤的人数；「进入问卷」以首次交互计，「完成提交」以成功保存问卷计。步骤为问卷分区编号。历史数据未采集分区事件，早期批次会显示为空。</p></section>`;
+ }
  const max=Math.max(1,...d.trend.map(x=>x.registrations));h+=`<section class="ov-box"><h3>每日注册趋势</h3><div class="ov-bars" role="img" aria-label="所选日期每日新增注册人数，下方可展开数据表">${d.trend.map(r=>`<div class="ov-bar" style="height:${r.registrations/max*100}%" title="${r.day}：${r.registrations} 人"></div>`).join('')}</div><div class="ov-axis"><span>${d.range.start}</span><span>单日最高 ${max===1&&!d.trend.some(x=>x.registrations)?0:max} 人</span><span>${d.range.end}</span></div><details><summary>展开每日注册、验证和配对数据</summary>${table(['日期','注册','验证','生成配对（对）'],d.trend.map(r=>[r.day,r.registrations,r.verifications,r.pairs]))}</details></section>`;
  h+=`<section class="ov-box"><h3>推荐覆盖与算法版本</h3><p>开始记录时间：${esc(new Date(d.observation_started_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}))}。此前没有推荐尝试记录，不能推算历史无合适人选比例。</p>${table(['方式','算法版本','尝试单元数','已获得推荐','仍无合适人选','无候选占比','关联配对已交换率'],d.observations.map(r=>[names[r.mode],r.algorithm_version,r.units,r.recommended_units,r.empty_units,pct(r.empty_rate),pct(r.exchange_rate)]))}<p>快速交友按“发起用户＋卡片＋周”去重，并按首次尝试日期归入筛选范围。重复刷新不增加样本，后来匹配成功会更新原记录；被动收到搭子推荐者不算发起尝试。</p></section>`;
  h+=`<div class="ov-split"><section class="ov-box"><h3>当前搭子卡类别</h3>${table(['类别','未删除卡片','已开启开关'],d.card_types.map(r=>[names[r.type]||r.type,r.cards,r.enabled]))}</section><section class="ov-box"><h3>所选日期内的举报状态</h3>${table(['状态','数量'],d.reports.map(r=>[r.status==='pending'?'待处理':names[r.status]||r.status,r.count]))}<p>这里显示汇总数量，不包含举报内容和联系方式。</p></section></div>`;

@@ -23,7 +23,15 @@ function registerSurveyRoutes(app,{getPool,authMiddleware}){
  app.post('/account/metrics/survey-start',authMiddleware,async(req,res)=>{
   res.setHeader('Cache-Control','no-store');const mode=req.body?.mode;
   if(!['love','deep'].includes(mode))return res.status(400).json({code:400,msg:'问卷类型无效'});
-  try{const p=await getPool();await ensureSchema(p);const table=mode==='love'?'weekly_questionnaires':'deep_surveys';
+  try{const p=await getPool();await ensureSchema(p);
+   // 带 step 的是「进入分区」漏斗事件：只记 core_survey_steps，不碰 started/completed 语义。
+   if(req.body?.step!==undefined){
+    const step=String(req.body.step);
+    if(!/^\d{1,2}$/.test(step))return res.status(400).json({code:400,msg:'问卷进度无效'});
+    await p.execute('INSERT IGNORE INTO core_survey_steps(mode,account_id,step,first_at) VALUES (?,?,?,UTC_TIMESTAMP(3))',[mode,req.account.account_id,step]);
+    return res.json({code:200});
+   }
+   const table=mode==='love'?'weekly_questionnaires':'deep_surveys';
    await p.execute(`INSERT IGNORE INTO core_survey_funnels(mode,account_id,started_at,is_revision) SELECT ?,?,UTC_TIMESTAMP(3),EXISTS(SELECT 1 FROM ${table} WHERE account_id=?)`,[mode,req.account.account_id,req.account.account_id]);
    res.json({code:200});
   }catch(e){console.error('Metrics start:',e.code||e.name);res.status(503).json({code:503,msg:'统计暂不可用'});}
@@ -67,6 +75,16 @@ function calculate({surveys,batches,participants,pairs,days,excluded=[],started_
  const total={};for(const k of ['survey','coverage','agreement','chat','continuation','retention']){const rs=rows.map(r=>r[k]).filter(Boolean);total[k]=ratio(rs.reduce((n,r)=>n+r.numerator,0),rs.reduce((n,r)=>n+r.denominator,0),rs.reduce((n,r)=>n+r.waiting,0));}
  return {started_at,rows,total,definition_version:'core-v1',excluded_accounts:exclude.size};
 }
+// 漏斗：按 step 的到达人数（进入问卷 → 各分区 → 完成），随日期范围统计。
+async function funnel(c,range){
+ const q=async(sql,args=[])=>{const [r]=await c.execute(sql,args);return r;};
+ const steps=await q('SELECT mode,step,COUNT(DISTINCT account_id) n FROM core_survey_steps WHERE first_at>=? AND first_at<? GROUP BY mode,step',[range.from,range.until]);
+ const base=await q('SELECT mode,COUNT(*) started,COALESCE(SUM(completed_at IS NOT NULL),0) completed FROM core_survey_funnels WHERE started_at>=? AND started_at<? GROUP BY mode',[range.from,range.until]);
+ const out={};for(const b of base)out[b.mode]={started:Number(b.started),completed:Number(b.completed),steps:[]};
+ for(const s of steps){(out[s.mode]||(out[s.mode]={started:0,completed:0,steps:[]})).steps.push({step:s.step,count:Number(s.n)});}
+ for(const m of Object.values(out))m.steps.sort((a,b)=>Number(a.step)-Number(b.step));
+ return out;
+}
 async function summary(c,range){
  const q=async(sql,args=[])=>{const [r]=await c.execute(sql,args);return r;};
  const [meta]=await q("SELECT DATE_FORMAT(started_at,'%Y-%m-%dT%H:%i:%sZ') started_at FROM analytics_metadata WHERE name='core_metrics_v1'");
@@ -95,4 +113,4 @@ async function summary(c,range){
  const excluded=(await q('SELECT account_id FROM core_metric_exclusions')).map(r=>r.account_id);
  return calculate({surveys,batches,participants,pairs,days,excluded,started_at:meta?.started_at||null},range);
 }
-module.exports={ensureSchema,completeSurvey,registerSurveyRoutes,publication,summary,calculate};
+module.exports={ensureSchema,completeSurvey,registerSurveyRoutes,publication,summary,funnel,calculate};

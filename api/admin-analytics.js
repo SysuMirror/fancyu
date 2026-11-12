@@ -68,7 +68,8 @@ module.exports=function({getPool}){
    const survey_versions=await q('SELECT version,COUNT(*) count FROM weekly_questionnaires GROUP BY version');
    const [meta]=await q("SELECT DATE_FORMAT(started_at,'%Y-%m-%dT%H:%i:%sZ') started_at FROM analytics_metadata WHERE name='recommendations'");
    const core_metrics=await require('./core-metrics').summary(c,range);
-   await c.commit();return {core_metrics,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at};
+   const funnels=await require('./core-metrics').funnel(c,range);
+   await c.commit();return {core_metrics,funnels,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at};
   }catch(e){await c.rollback();throw e;}finally{c.release();}
  }
  function register(app,{adminAuthMiddleware,prepare}){

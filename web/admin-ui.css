@@ -279,3 +279,14 @@ body[data-page="admin"] .sv-errli{color:#a03}
  body[data-page="admin"] .sv-tree{position:static;max-height:260px}
  body[data-page="admin"] .sv-prev{position:static;max-height:none}
 }
+
+/* ===== 填写分布（admin-survey 预览栏下方）===== */
+body[data-page="admin"] .sv-dist{margin-top:14px}
+body[data-page="admin"] .sv-dist h2{margin:0 0 8px;font-size:15px;color:var(--muted,#5a6b60)}
+body[data-page="admin"] .sv-dist-row{display:grid;grid-template-columns:minmax(96px,40%) 1fr auto;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+body[data-page="admin"] .sv-dist-lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink,#073b32)}
+body[data-page="admin"] .sv-dist-bar{height:12px;border-radius:999px;background:linear-gradient(90deg,#3d7156,#265a48);min-width:2px;transition:width .3s}
+body[data-page="admin"] .sv-dist-row.zero .sv-dist-bar{background:#d8ded2;min-width:0}
+body[data-page="admin"] .sv-dist-row.zero .sv-dist-lb,body[data-page="admin"] .sv-dist-row.zero .sv-dist-n{color:var(--muted,#7a8a80)}
+body[data-page="admin"] .sv-dist-n{flex:none;color:#435f4d;font-variant-numeric:tabular-nums}
+body[data-page="admin"] .sv-dist-row.zero .sv-dist-n{font-size:12px}

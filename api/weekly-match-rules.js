@@ -25,7 +25,7 @@ function hard(a,b,now){
   if(x['29a']==='是'&&y['29b']===OPTIONS()['29b'][0])return false;
   return true;
  };
- const goals=[OPTIONS['12'].indexOf(a['12']),OPTIONS['12'].indexOf(b['12'])];
+ const goals=[OPTIONS()['12'].indexOf(a['12']),OPTIONS()['12'].indexOf(b['12'])];
  return !(goals.includes(0)&&goals.includes(2))&&accepts(a,b)&&accepts(b,a);
 }
 function directional(a,b,stars){const values={};

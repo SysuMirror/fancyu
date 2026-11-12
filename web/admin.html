@@ -29,6 +29,20 @@
         .login-box p { text-align: center; color: var(--text-muted); margin-bottom: 28px; font-size: 14px; }
         .login-box input { width: 100%; padding: 13px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; transition: border-color 0.2s; }
         .login-box input:focus { outline: none; border-color: var(--primary); }
+        .login-box .field-label { display: block; margin-bottom: 8px; color: var(--text); font-weight: 500; font-size: 14px; }
+        .login-box .email-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 16px; }
+        .login-box .email-row input { flex: 1 1 auto; min-width: 0; width: auto; }
+        .login-box .email-row .email-at { display: flex; align-items: center; flex: 0 0 auto; color: var(--text-muted); font-size: 15px; font-weight: 500; }
+        .login-box .email-row select { width: auto; flex: 0 0 auto; padding: 13px 10px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: white; cursor: pointer; }
+        .login-box .email-row select:focus { outline: none; border-color: var(--primary); }
+        .login-box .or-divider { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; color: var(--text-muted); font-size: 13px; line-height: 1; }
+        .login-box .or-divider::before, .login-box .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+        .login-box .username-row { margin-bottom: 16px; }
+        @media (max-width: 420px) {
+            .login-box { width: auto; margin: 0 12px; padding: 32px 24px; }
+            .login-box .email-row { gap: 6px; }
+            .login-box .email-row select { flex: 0 1 auto; min-width: 0; max-width: 50%; font-size: 12px; padding: 13px 8px; }
+        }
         .login-box button { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: var(--radius-sm); font-size: 16px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
         .login-box button:hover { opacity: 0.9; }
         .login-box button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -250,7 +264,21 @@
         <h1>FancyU</h1>
         <p>管理后台</p>
         <div class="msg" id="loginMsg"></div>
-        <input type="text" id="adminUser" placeholder="管理员用户名或邮箱" autocomplete="off">
+        <label class="field-label" for="adminPrefix">管理员邮箱</label>
+        <div class="email-row">
+            <input type="text" id="adminPrefix" placeholder="邮箱前缀" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <span class="email-at" aria-hidden="true">@</span>
+            <select id="adminSuffix" aria-label="选择邮箱后缀">
+                <option value="mail.sysu.edu.cn">mail.sysu.edu.cn</option>
+                <option value="mail2.sysu.edu.cn" selected>mail2.sysu.edu.cn</option>
+                <option value="mail3.sysu.edu.cn">mail3.sysu.edu.cn</option>
+            </select>
+        </div>
+        <div class="or-divider"><span>或</span></div>
+        <div class="username-row">
+            <label class="field-label" for="adminUsername">用户名</label>
+            <input type="text" id="adminUsername" placeholder="管理员用户名" autocomplete="off">
+        </div>
         <input type="password" id="adminPass" placeholder="密码">
         <button id="loginBtn" onclick="adminLogin()">登录</button>
     </div>
@@ -375,7 +403,9 @@ function getAdminHeaders() {
 }
 
 async function adminLogin() {
-    const username = document.getElementById('adminUser').value.trim();
+    const prefix = document.getElementById('adminPrefix').value.trim();
+    const suffix = document.getElementById('adminSuffix').value;
+    const username = prefix ? prefix + '@' + suffix : document.getElementById('adminUsername').value.trim();
     const password = document.getElementById('adminPass').value;
     const btn = document.getElementById('loginBtn');
     const msg = document.getElementById('loginMsg');

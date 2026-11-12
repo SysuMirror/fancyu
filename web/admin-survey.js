@@ -10,6 +10,9 @@ const W_TYPES=['radio','multi','scale','month','age','education','college','numb
 const W_TYPE_NAMES={radio:'单选',multi:'多选',scale:'量表 1–7',month:'出生年月',age:'年龄差',education:'身份年级',college:'学校专业',number:'数字',height:'身高范围',hometown:'家乡',text:'文本'};
 const D_TYPES=['options','tags','select','text','textarea','major','campus','expect-campus','personality','interests','photos','contacts'];
 const D_TYPE_NAMES={'options':'单选按钮','tags':'多选标签','select':'下拉选择','text':'单行文本','textarea':'多行文本','major':'专业选择','campus':'校区联动','expect-campus':'期望校区多选','personality':'性格滑块','interests':'兴趣选择','photos':'照片上传','contacts':'联系方式'};
+// deep 匹配六维权重（与 api/deep-rules.js DEFAULT_WEIGHTS 一致；schema.weights 可覆盖）
+const D_WEIGHTS={interests:35,personality:25,friend_goal:10,online_offline:10,grade_prefer:10,major_prefer:10};
+const D_WEIGHT_NAMES={interests:'兴趣爱好',personality:'性格',friend_goal:'交友目标',online_offline:'线上 / 线下',grade_prefer:'年级偏好',major_prefer:'专业偏好'};
 let kind='weekly',data=null,orig=null,locked=new Set(),dirty=false,sel=null,searchQ='';
 let distCache={}; // kind -> 填写分布统计（保存/切换后清空）
 const expanded=new Set(),treeDom=new Map(); // nodeId -> li（徽标就地更新，不整树重画）
@@ -144,6 +147,7 @@ function buildTree(){
   root.push({id:'dpersonality',label:'性格滑块维度',icon:'🎚',t:'dpersonality'});
   root.push({id:'dinterests',label:'兴趣模块',icon:'🎯',t:'dinterests',ref:data.schema.interests});
   root.push({id:'dmisc',label:'照片与联系方式',icon:'📷',t:'dmisc',ref:data.schema.contacts});
+  root.push({id:'dweights',label:'匹配权重',icon:'⚖',t:'dweights'});
  }
  return root;
 }
@@ -397,6 +401,17 @@ function renderEdit(){
   const pm=numIn(s.photos.max,1,6);pm.oninput=()=>{s.photos.max=Number(pm.value)||3;markDirty();schedulePreview();};
   box.append(frow('照片上限（1–6）',pm));
   box.append(frow('联系方式类型（改/删需确认）',chips(s.contacts.methods)));
+ }else if(n.t==='dweights'){
+  head('匹配权重（六维 · 0–100）');
+  box.append(el('p','hint','权重只影响之后的配对打分，不影响已有答案，保存无需风险确认；留空沿用默认值。'));
+  for(const dim of Object.keys(D_WEIGHTS)){
+   const cur=s.weights?.[dim];
+   const w=numIn(cur??'',0,100);w.style.width='90px';
+   const curLbl=el('span','hint','当前生效 '+(cur??D_WEIGHTS[dim]));
+   w.oninput=()=>{s.weights=s.weights||{};if(w.value==='')delete s.weights[dim];else s.weights[dim]=Number(w.value);curLbl.textContent='当前生效 '+(s.weights[dim]??D_WEIGHTS[dim]);markDirty();schedulePreview();};
+   const r=el('div','sv-frow');r.append(el('label',null,D_WEIGHT_NAMES[dim]+' '),w,curLbl);
+   box.append(r);
+  }
  }
 }
 let treeTimer=null;
@@ -515,6 +530,17 @@ function renderPreview(){
   for(let i=0;i<s.photos.max;i++)wrap.append(el('div','pv-upload','＋ 上传照片'));
   wrap.append(el('div','pv-title','联系方式'));
   const d=el('select','pv-select');d.append(new Option('选择方式',''));s.contacts.methods.forEach(m=>d.append(new Option(m,m)));wrap.append(d);
+ }else if(n.t==='dweights'){
+  wrap.append(el('div','pv-title','匹配权重（0–100）'));
+  const w=s.weights||{},d=el('div','sv-dist');
+  for(const dim of Object.keys(D_WEIGHTS)){
+   const v=w[dim]??D_WEIGHTS[dim];
+   const row=el('div','sv-dist-row');
+   const bar=el('div','sv-dist-bar');bar.style.width=Math.max(2,v)+'%';
+   row.append(el('span','sv-dist-lb',D_WEIGHT_NAMES[dim]),bar,el('span','sv-dist-n',v+(w[dim]!==undefined?'':'（默认）')));
+   d.append(row);
+  }
+  wrap.append(d);
  }else if(n.t==='wglobal'||n.t==='bglobal'||n.t==='bcommongrp'||n.t==='dschoolgrp'){
   wrap.append(el('p','hint','该节点是设置项，无用户端组件。'));
  }

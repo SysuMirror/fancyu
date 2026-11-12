@@ -526,6 +526,7 @@ function requireLogin() {
     let TOTAL_STEPS = SCHEMA.steps.length;
     let currentStep = 1;
     let draftKey='friendSurveyData:unavailable';let formData = {};
+    let draftSyncTimer=null, draftSyncBusy=false;
     let userAccount = null;
     let authToken = null;
 
@@ -1533,6 +1534,18 @@ function requireLogin() {
     function saveData() {
         formData.interests = interestsData.filter(i => i.category);
         localStorage.setItem(draftKey, JSON.stringify(formData));
+        if (!draftKey.includes('unavailable')) { try { localStorage.setItem(draftKey + ':ts', String(Date.now())); } catch (e) {} }
+        scheduleDraftSync();
+    }
+    // 草稿多设备同步：防抖 2s 推到服务端，失败静默（localStorage 兜底仍在）
+    function scheduleDraftSync() { clearTimeout(draftSyncTimer); draftSyncTimer = setTimeout(syncDraftServer, 2000); }
+    async function syncDraftServer() {
+        if (draftKey.includes('unavailable') || !authToken || draftSyncBusy) return;
+        draftSyncBusy = true;
+        try {
+            await fetch(API_URL + '/account/deep-draft', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ data: formData }) });
+        } catch (e) {}
+        draftSyncBusy = false;
     }
 
     function restoreDraft() {
@@ -1643,6 +1656,9 @@ function requireLogin() {
                 if (handleApiResponse(result)) return;
                 if (result.code === 200) {
                     localStorage.removeItem(draftKey);
+                    try { localStorage.removeItem(draftKey + ':ts'); } catch (e) {}
+                    clearTimeout(draftSyncTimer);
+                    try { await fetch(API_URL + '/account/deep-draft', { method: 'DELETE', headers: getAuthHeaders() }); } catch (e) {}
                     document.getElementById('successModal').classList.add('show');
                 } else {
                     showToast(result.msg || '提交失败，请重试', true);
@@ -1665,7 +1681,13 @@ function requireLogin() {
         if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    async function boot(){if(!checkAuth())return;try{const so=await fetch(API_URL+'/survey-schema/deep').then(r=>r.json());if(so.code===200&&so.schema&&Array.isArray(so.schema.steps)&&so.schema.steps.length)applySchema(so.schema);}catch(e){}buildRequiredFields();try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
+    async function boot(){if(!checkAuth())return;try{const so=await fetch(API_URL+'/survey-schema/deep').then(r=>r.json());if(so.code===200&&so.schema&&Array.isArray(so.schema.steps)&&so.schema.steps.length)applySchema(so.schema);}catch(e){}buildRequiredFields();try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};
+let draftData=null,draftTs=0;const draft=localStorage.getItem(draftKey);
+if(draft){try{draftData=JSON.parse(draft);draftTs=Number(localStorage.getItem(draftKey+':ts'))||0;}catch(e){draftData=null;}}
+try{const dr=await fetch(API_URL+'/account/deep-draft',{headers:getAuthHeaders()}).then(r=>r.json());
+ if(dr.code===200&&dr.draft&&dr.draft.data&&typeof dr.draft.data==='object'){const st=dr.draft.updated_at?new Date(dr.draft.updated_at).getTime():0;
+  if(st>=draftTs){draftData=dr.draft.data;try{localStorage.setItem(draftKey,JSON.stringify(draftData));localStorage.setItem(draftKey+':ts',String(st));}catch(e){}}}}catch(e){}
+if(draftData)formData={...formData,...draftData};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
     boot();
 
 </script>

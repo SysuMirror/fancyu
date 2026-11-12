@@ -171,6 +171,30 @@
             color: var(--text-muted);
         }
 
+        .email-row {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .email-row input {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: auto;
+        }
+        .email-row .email-at {
+            display: flex;
+            align-items: center;
+            flex: 0 0 auto;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .email-row select {
+            width: auto;
+            flex: 0 0 auto;
+            cursor: pointer;
+        }
+
         /* ========== 邮箱组合 ========== */
         .email-group {
             display: flex;
@@ -423,6 +447,10 @@
             .form-group { margin-bottom: 18px; }
             .form-group label { font-size: 13px; margin-bottom: 6px; }
             .form-group input, .form-group select { padding: 12px 14px; font-size: 16px; min-height: 48px; }
+            .email-row { gap: 6px; }
+            .email-row input { flex: 1 1 auto; min-width: 0; width: auto; }
+            .email-row select { flex: 0 1 auto; min-width: 0; width: auto; max-width: 50%; padding: 12px 10px; font-size: 13px; }
+            .email-row .email-at { font-size: 14px; }
             .btn { padding: 14px; font-size: 16px; min-height: 52px; }
             .email-group { flex-direction: column; gap: 6px; }
             .email-group .at-sign { display: none; }
@@ -527,8 +555,20 @@
 
         <form id="loginForm">
             <div class="form-group">
-                <label for="login">邮箱 / 用户名</label>
-                <input type="text" id="login" placeholder="输入邮箱或用户名" required>
+                <label for="loginPrefix">学校邮箱</label>
+                <div class="email-row">
+                    <input type="text" id="loginPrefix" placeholder="邮箱前缀" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <span class="email-at" aria-hidden="true">@</span>
+                    <select id="loginSuffix" aria-label="选择邮箱后缀">
+                        <option value="mail.sysu.edu.cn">mail.sysu.edu.cn</option>
+                        <option value="mail2.sysu.edu.cn" selected>mail2.sysu.edu.cn</option>
+                        <option value="mail3.sysu.edu.cn">mail3.sysu.edu.cn</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="loginUsername">用户名</label>
+                <input type="text" id="loginUsername" placeholder="输入用户名登录" autocomplete="off">
             </div>
             <div class="form-group">
                 <label for="password">密码</label>
@@ -812,11 +852,14 @@
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const login = document.getElementById('login').value.trim();
+            const prefix = document.getElementById('loginPrefix').value.trim();
+            const suffix = document.getElementById('loginSuffix').value;
+            const username = document.getElementById('loginUsername').value.trim();
+            const login = prefix ? prefix + '@' + suffix : username;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('submitBtn');
             if (!login || !password) {
-                showMsg('请填写完整信息', 'error');
+                showMsg('请填写邮箱前缀或用户名', 'error');
                 return;
             }
             btn.disabled = true;
@@ -950,7 +993,13 @@
                     showMsg('密码重置成功！请登录', 'success', 'forgotMsg');
                     setTimeout(() => {
                         closeAllModals();
-                        document.getElementById('login').value = email;
+                        const at = email.indexOf('@');
+                        if (at > 0) {
+                            document.getElementById('loginPrefix').value = email.substring(0, at);
+                            const sel = document.getElementById('loginSuffix');
+                            const opt = [...sel.options].find(o => o.value === email.substring(at + 1));
+                            if (opt) sel.value = opt.value;
+                        }
                     }, 1200);
                 } else {
                     showMsg(data.msg, 'error', 'forgotMsg');

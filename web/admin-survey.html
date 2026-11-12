@@ -1,9 +1,19 @@
-<!doctype html><html lang="zh-CN" data-ui="campus"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>问卷管理 · FancyU 管理后台</title><link rel="stylesheet" href="/campus-ui.css?v=20261112a"><link rel="stylesheet" href="/admin-ui.css?v=20261112a"><script defer src="/admin-survey.js?v=20261112a"></script></head>
-<body data-ui="campus" data-page="admin"><main>
-<header><a href="/admin">← 管理后台</a><button id="reload">重新载入</button></header>
-<h1>问卷管理</h1>
-<p class="notice">修改会立即影响用户端问卷与匹配校验。选项文案按原文存储在用户答案里：改动已有选项或删题后，尚未重新保存问卷的用户会暂时退出匹配，直到重新填写。被匹配逻辑依赖的题目（标记 🔒）不能删除或改类型，改选项需勾选「我已了解影响」。</p>
-<nav id="kinds" class="stats" aria-label="问卷类型"></nav>
+<!doctype html><html lang="zh-CN" data-ui="campus"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>问卷管理 · FancyU 管理后台</title><link rel="stylesheet" href="/campus-ui.css?v=20261112a"><link rel="stylesheet" href="/admin-ui.css?v=20261113a"><script defer src="/admin-survey.js?v=20261113a"></script></head>
+<body data-ui="campus" data-page="admin">
+<main class="sv-main">
+<header class="sv-top"><a href="/admin">← 后台</a>
+<nav id="kinds" class="sv-kinds" aria-label="问卷类型"></nav>
+<span id="ver" class="sv-ver"></span><span id="dirty" class="sv-dirty" hidden>● 未保存</span>
+<span class="sv-spacer"></span>
+<button id="reload">重新载入</button><button class="primary" id="save">保存并发布新版本</button>
+</header>
+<p class="notice">改动即时影响用户端问卷与匹配校验。选项按文案存在用户答案里：改动/删除已有选项或删题，会让尚未重新填写的用户暂时退出匹配。<b>🔒 题被匹配逻辑依赖</b>，不能删或改类型。带 <b class="sv-risktag">⚠</b> 的改动保存时需逐条确认。</p>
+<div id="work" class="sv-work" hidden>
+<aside class="sv-tree"><input type="search" id="search" placeholder="搜索题号 / 题干 / 字段…" aria-label="搜索"><div id="tree" role="tree"></div></aside>
+<section class="sv-edit" id="edit" aria-live="polite"></section>
+<section class="sv-prev"><h2>用户端预览</h2><div id="preview"></div></section>
+</div>
 <div id="app" aria-live="polite">正在读取…</div>
-<div class="card save-bar"><label class="inline"><input type="checkbox" id="force"> 我已了解影响（改已有选项 / 删题 / 删类型时勾选）</label><button class="primary" id="save">保存并发布新版本</button><span id="ver"></span></div>
-</main><div class="toast" id="toast" role="status" hidden></div></body></html>
+</main>
+<div class="sv-dlg" id="dlg" hidden role="dialog" aria-modal="true"><div class="sv-dlg-box"><h3 id="dlgTitle"></h3><div id="dlgBody"></div><div class="sv-dlg-actions"><button id="dlgCancel">取消</button><button class="primary" id="dlgOk">确认</button></div></div></div>
+<div class="toast" id="toast" role="status" hidden></div></body></html>

@@ -4,7 +4,7 @@
 const SEEDS = {
   weekly: () => require('../web/weekly-schema'),
   buddy: () => require('../web/friends-schema'),
-  'deep-options': () => require('./deep-options.json')
+  deep: () => require('../web/deep-schema')
 };
 const mem = {};
 for (const kind of Object.keys(SEEDS)) {
@@ -28,8 +28,14 @@ async function init(getPool) {
   return boot;
 }
 
-function current(kind) { if (!mem[kind]) throw Error('未知问卷类型 ' + kind); return mem[kind].schema; }
-function snapshot(kind) { if (!mem[kind]) throw Error('未知问卷类型 ' + kind); const m = mem[kind]; return { kind, version: m.version, schema: m.schema }; }
+function current(kind) {
+  if (kind === 'deep-options') { const d = current('deep'); return { schools: d.schools, categories: d.interests.categories }; } // 兼容旧引用：由 deep 派生
+  if (!mem[kind]) throw Error('未知问卷类型 ' + kind); return mem[kind].schema;
+}
+function snapshot(kind) {
+  if (kind === 'deep-options') { const d = snapshot('deep'); return { kind, version: d.version, schema: current('deep-options') }; }
+  if (!mem[kind]) throw Error('未知问卷类型 ' + kind); const m = mem[kind]; return { kind, version: m.version, schema: m.schema };
+}
 function bump(v) { const m = /^(\d+)\.(\d+)$/.exec(String(v)); return m ? m[1] + '.' + (Number(m[2]) + 1) : String(v) + '.' + Date.now().toString(36); }
 
 // ===== 结构校验 =====
@@ -109,19 +115,84 @@ function checkBuddy(next, prev, force) {
   return problems;
 }
 
+// ===== 深度交友问卷（全量 schema）=====
+// deep-rules 的校验/匹配依赖这些字段 key：不可删除；选项改动需 force。题干/提示文案可自由改。
+const DEEP_TYPES = ['options', 'tags', 'select', 'text', 'textarea', 'major', 'campus', 'expect-campus', 'personality', 'interests', 'photos', 'contacts'];
+const DEEP_LOCKED = new Set(['sex', 'sex_prefer', 'grade', 'grade_prefer', 'major_category', 'major_detail', 'major_prefer', 'hometown', 'school', 'own_campus', 'expect_quick', 'expect_schools', 'expect_school_campuses', 'online_offline', 'mbti', 'personality', 'friend_goal', 'interests', 'self_description', 'ideal_friend', 'special_request', 'photos', 'display_self', 'contact_entries']);
+const optValues = a => (a || []).map(v => (typeof v === 'object' && v !== null ? v.value : v));
+
 function checkDeep(next, prev, force) {
   const problems = [];
+  if (!Array.isArray(next.steps) || !next.steps.length || next.steps.length > 12 || next.steps.some(s => typeof s !== 'string' || !s.trim())) problems.push('steps 需为 1–12 个非空步骤名');
   if (!next.schools || typeof next.schools !== 'object' || Array.isArray(next.schools)) problems.push('schools 需为「学校 → 校区数组」对象');
-  if (!Array.isArray(next.categories) || !next.categories.length) problems.push('categories 需为非空数组');
   for (const [school, campuses] of Object.entries(next.schools || {})) {
-    if (!Array.isArray(campuses) || !campuses.length) problems.push('学校「' + school + '」校区列表为空');
+    if (!Array.isArray(campuses) || !campuses.length || campuses.some(c => typeof c !== 'string' || !c.trim())) problems.push('学校「' + school + '」校区列表需为非空字符串数组');
+  }
+  if (!Array.isArray(next.cards) || next.cards.length !== (next.steps || []).length) problems.push('cards 需与 steps 一一对应（每步一个卡片数组）');
+  const seen = {};
+  (next.cards || []).forEach((cards, si) => {
+    if (!Array.isArray(cards)) return problems.push('第 ' + (si + 1) + ' 步的 cards 需为数组');
+    cards.forEach((c, ci) => {
+      const where = '第 ' + (si + 1) + ' 步卡片 ' + (ci + 1);
+      if (!c || typeof c !== 'object' || typeof c.label !== 'string' || !c.label.trim()) return problems.push(where + ' 缺少 label');
+      if (!Array.isArray(c.items)) return problems.push(where + ' items 需为数组');
+      c.items.forEach(it => {
+        if (!it || typeof it.key !== 'string' || !it.key.trim()) return problems.push(where + ' 有字段缺少 key');
+        if (seen[it.key]) return problems.push('字段 key 重复：' + it.key);
+        seen[it.key] = it;
+        if (!DEEP_TYPES.includes(it.type)) return problems.push('字段 ' + it.key + ' 类型不合法：' + it.type);
+        if (['options', 'tags', 'select'].includes(it.type)) {
+          const list = it.groups ? Object.values(it.groups).flat() : it.options;
+          if (it.type === 'select' && it.fromSchools) { if (it.options || it.groups) problems.push('字段 ' + it.key + ' fromSchools 与 options/groups 互斥'); return; }
+          if (!Array.isArray(list) || !list.length) return problems.push('字段 ' + it.key + ' 缺少选项列表');
+          const vals = optValues(list);
+          if (vals.some(v => typeof v !== 'string' || !v.trim()) || new Set(vals).size !== vals.length) problems.push('字段 ' + it.key + ' 选项需为非空且不重复');
+        }
+        if (it.max != null && !Number.isInteger(it.max)) problems.push('字段 ' + it.key + ' max 需为整数');
+      });
+    });
+  });
+  if (!Array.isArray(next.personality) || !next.personality.length || next.personality.length > 12) problems.push('personality 需为 1–12 个滑块维度');
+  next.personality?.forEach((p, i) => {
+    for (const k of ['title', 'self', 'left', 'right']) if (typeof p?.[k] !== 'string' || !p[k].trim()) problems.push('性格维度 ' + (i + 1) + ' 缺少 ' + k);
+  });
+  const itc = next.interests;
+  if (!itc || typeof itc !== 'object') problems.push('interests 配置缺失');
+  else {
+    if (!Array.isArray(itc.categories) || !itc.categories.length || new Set(itc.categories).size !== itc.categories.length) problems.push('兴趣大类需为非空且不重复的数组');
+    if (itc.subcategories && (typeof itc.subcategories !== 'object' || Array.isArray(itc.subcategories) || Object.values(itc.subcategories).some(a => !Array.isArray(a)))) problems.push('subcategories 需为「大类 → 数组」对象');
+    for (const k of ['skillLevels', 'freq']) {
+      if (!Array.isArray(itc[k]) || !itc[k].length || new Set(itc[k]).size !== itc[k].length) problems.push('interests.' + k + ' 需为非空且不重复的数组');
+    }
+    if (Array.isArray(itc.freq) && !itc.freq.includes('没要求')) problems.push('interests.freq 必须包含「没要求」（匹配逻辑依赖）');
+  }
+  if (!next.photos || !Number.isInteger(next.photos.max) || next.photos.max < 1 || next.photos.max > 6) problems.push('photos.max 需为 1–6 的整数');
+  if (!next.contacts || !Array.isArray(next.contacts.methods) || !next.contacts.methods.length || new Set(next.contacts.methods).size !== next.contacts.methods.length) problems.push('contacts.methods 需为非空且不重复的数组');
+
+  // ===== 变更语义（对照 prev）=====
+  const prevItems = {};
+  (prev.cards || []).forEach(cards => (cards || []).forEach(c => (c.items || []).forEach(it => { prevItems[it.key] = it; })));
+  for (const [key, after] of Object.entries(seen)) {
+    const before = prevItems[key];
+    if (!before) { if (!force) problems.push('新增字段「' + key + '」需勾选「我已了解影响」（确认匹配逻辑兼容）'); continue; }
+    if (DEEP_LOCKED.has(key) && after.type !== before.type) problems.push('字段「' + key + '」被匹配逻辑依赖，不能改类型');
+    const bo = before.groups ? Object.values(before.groups).flat() : before.options, ao = after.groups ? Object.values(after.groups).flat() : after.options;
+    if (optsChanged(optValues(bo), optValues(ao)) && !force) problems.push('字段「' + key + '」修改了已有选项，需勾选「我已了解影响」');
+  }
+  for (const key of Object.keys(prevItems)) {
+    if (DEEP_LOCKED.has(key)) { if (!seen[key]) problems.push('字段「' + key + '」被匹配逻辑依赖，不能删除'); continue; }
+    if (!seen[key] && !force) problems.push('删除字段「' + key + '」需勾选「我已了解影响」');
   }
   for (const [school, before] of Object.entries(prev.schools || {})) {
     const after = (next.schools || {})[school];
     if (!after && !force) problems.push('删除学校「' + school + '」需勾选「我已了解影响」');
     if (after && optsChanged(before, after) && !force) problems.push('学校「' + school + '」校区改动需勾选「我已了解影响」');
   }
-  if (optsChanged(prev.categories, next.categories) && !force) problems.push('兴趣大类改动需勾选「我已了解影响」');
+  const pic = prev.interests || {};
+  if (optsChanged(pic.categories, itc?.categories) && !force) problems.push('兴趣大类改动需勾选「我已了解影响」');
+  if (optsChanged(pic.skillLevels, itc?.skillLevels) && !force) problems.push('熟练度选项改动需勾选「我已了解影响」（匹配按文案计分）');
+  if (optsChanged(pic.freq, itc?.freq) && !force) problems.push('交流频次选项改动需勾选「我已了解影响」（匹配按顺序计分）');
+  if (optsChanged((prev.contacts || {}).methods, next.contacts?.methods) && !force) problems.push('联系方式类型改动需勾选「我已了解影响」');
   return problems;
 }
 
@@ -131,7 +202,7 @@ async function save(getPool, kind, next, force) {
   const prev = mem[kind].schema;
   const problems = kind === 'weekly' ? checkWeekly(next, prev, force)
     : kind === 'buddy' ? checkBuddy(next, prev, force)
-    : kind === 'deep-options' ? checkDeep(next, prev, force)
+    : kind === 'deep' ? checkDeep(next, prev, force)
     : ['未知问卷类型 ' + kind];
   if (problems.length) { const e = Error(problems.join('；')); e.problems = problems; throw e; }
   const version = bump(mem[kind].version);
@@ -141,4 +212,4 @@ async function save(getPool, kind, next, force) {
   return { version };
 }
 
-module.exports = { init, current, snapshot, save, kinds: Object.keys(SEEDS), WEEKLY_LOCKED };
+module.exports = { init, current, snapshot, save, kinds: Object.keys(SEEDS), WEEKLY_LOCKED, DEEP_LOCKED };

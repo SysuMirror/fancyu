@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const token=localStorage.getItem('adminToken');
 if(!token)location.replace('/admin');
-const KINDS={weekly:'每周恋爱问卷',buddy:'搭子卡片','deep-options':'深度交友选项'};
+const KINDS={weekly:'每周恋爱问卷',buddy:'搭子卡片',deep:'深度交友问卷'};
 let kind='weekly',data=null,locked=new Set();
 function toast(msg,bad){const t=$('toast');t.textContent=msg;t.hidden=false;t.classList.toggle('bad',!!bad);clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,6000);}
 async function api(path,method,body){const r=await fetch(path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json().catch(()=>({code:r.status,msg:'响应异常'}));if(r.status===401){localStorage.removeItem('adminToken');location.replace('/admin');throw Error('请重新登录');}return j;}
@@ -86,9 +86,10 @@ function renderBuddy(){
  box.append(add);
 }
 
-// ===== deep-options =====
+// ===== deep（全量 schema 编辑器）=====
 function renderDeep(){
  const s=data.schema,box=$('app');box.textContent='';
+ // 学校 → 校区
  const sc=card('学校 → 校区');
  for(const [school,campuses] of Object.entries(s.schools)){
   const row=el('div','row');const left=el('div');
@@ -99,7 +100,87 @@ function renderDeep(){
  }
  const add=el('button',null,'＋ 新增学校');add.onclick=()=>{const n=prompt('学校名');if(!n)return;s.schools[n]=['校区1'];renderDeep();};
  sc.append(add);box.append(sc);
- const cc=card('兴趣大类');const t=ta(s.categories);t.oninput=()=>s.categories=lines(t);cc.append(t);box.append(cc);
+ // 步骤与卡片
+ s.cards.forEach((cards,si)=>{
+  const stepC=card('第 '+(si+1)+' 步 · '+s.steps[si]);
+  const st=inp(s.steps[si],'步骤名');st.oninput=()=>s.steps[si]=st.value;stepC.append(st,el('br'));
+  cards.forEach(c=>{
+   const row=el('div','row');const left=el('div');
+   const li=inp(c.label,'卡片标题');li.oninput=()=>c.label=li.value;left.append(li,el('br'));
+   const hi=inp(c.hint,'卡片提示（可空）');hi.oninput=()=>c.hint=hi.value||undefined;left.append(hi,el('br'));
+   const rc=chk(c.required,'必填卡片');rc.querySelector('input').onchange=e=>c.required=e.target.checked;left.append(rc,el('br'));
+   c.items.forEach(it=>{
+    const lock=locked.has(it.key)?'🔒 ':'';
+    const irow=el('div','row');irow.style.cssText='border-left:3px solid var(--border,#ddd);padding-left:8px;margin:6px 0';
+    const il=el('div');
+    il.append(el('b',null,lock+it.key+' · '+it.type),el('br'));
+    if(it.label!==undefined){const x=inp(it.label,'字段文案');x.oninput=()=>it.label=x.value;il.append(x,el('br'));}
+    if(it.placeholder){const x=inp(it.placeholder,'占位提示');x.oninput=()=>it.placeholder=x.value;il.append(x,el('br'));}
+    if(it.hint){const x=inp(it.hint,'提示');x.oninput=()=>it.hint=x.value;il.append(x,el('br'));}
+    if(it.type==='options'||it.type==='tags'||(it.type==='select'&&!it.groups&&!it.fromSchools)){
+     const t=ta(it.options);t.oninput=()=>it.options=lines(t);il.append(t);
+    }
+    if(it.type==='select'&&it.groups){
+     for(const [g,arr] of Object.entries(it.groups)){
+      il.append(el('b',null,'分组：'+g),el('br'));
+      const t=ta(arr);t.oninput=()=>it.groups[g]=lines(t);il.append(t);
+     }
+    }
+    if(it.fromSchools)il.append(el('p','hint','选项来自上方「学校 → 校区」的学校列表'));
+    if(['campus','expect-campus'].includes(it.type))il.append(el('p','hint','校区联动组件（选项来自学校列表）'));
+    if(it.type==='personality')il.append(el('p','hint','滑块维度在下方「性格维度」编辑'));
+    if(it.type==='interests')il.append(el('p','hint','兴趣选项在下方「兴趣模块」编辑'));
+    if(it.type==='photos')il.append(el('p','hint','照片上传组件（上限在下方）'));
+    if(it.type==='contacts')il.append(el('p','hint','联系方式类型在下方编辑'));
+    irow.append(il);
+    const iact=el('div','actions');const idel=el('button',null,'删除字段');
+    if(locked.has(it.key)){idel.disabled=true;idel.title='匹配逻辑依赖，不能删除';}
+    idel.onclick=()=>{if(!confirm('删除字段 '+it.key+'？'))return;c.items=c.items.filter(x=>x!==it);renderDeep();};
+    iact.append(idel);irow.append(iact);
+    left.append(irow);
+   });
+   row.append(left);const act=el('div','actions');
+   const cdel=el('button',null,'删除卡片');cdel.onclick=()=>{if(!confirm('删除卡片「'+c.label+'」？'))return;s.cards[si]=cards.filter(x=>x!==c);renderDeep();};
+   act.append(cdel);row.append(act);stepC.append(row);
+  });
+  const cadd=el('button',null,'＋ 新增卡片');cadd.onclick=()=>{cards.push({label:'新卡片',items:[]});renderDeep();};
+  stepC.append(cadd);box.append(stepC);
+ });
+ // 性格维度
+ const pc=card('性格滑块维度（文案可自由改；数量即匹配维度）');
+ s.personality.forEach((p,i)=>{
+  const row=el('div','row');const left=el('div');
+  for(const k of ['title','self','left','right']){
+   const x=inp(p[k],{title:'维度名',self:'自评题干',left:'左端文案',right:'右端文案'}[k]);
+   x.oninput=()=>p[k]=x.value;x.style.width='120px';left.append(x);
+  }
+  const act=el('div','actions');const del=el('button',null,'删除维度');del.onclick=()=>{if(!confirm('删除性格维度「'+p.title+'」？'))return;s.personality.splice(i,1);renderDeep();};act.append(del);
+  row.append(left,act);pc.append(row);
+ });
+ const padd=el('button',null,'＋ 新增维度');padd.onclick=()=>{s.personality.push({title:'新维度',self:'自评题干',left:'左',right:'右'});renderDeep();};
+ pc.append(padd);box.append(pc);
+ // 兴趣模块
+ const ic=card('兴趣模块');
+ ic.append(el('b',null,'兴趣大类（顺序即优先级，改动需 force）'),el('br'));
+ const ct=ta(s.interests.categories);ct.oninput=()=>s.interests.categories=lines(ct);ic.append(ct);
+ for(const [cat,arr] of Object.entries(s.interests.subcategories)){
+  ic.append(el('b',null,cat),el('br'));
+  const t=ta(arr);t.oninput=()=>s.interests.subcategories[cat]=lines(t);ic.append(t);
+ }
+ const subadd=el('button',null,'＋ 为新大类添加细分');subadd.onclick=()=>{const n=prompt('大类名（须已在兴趣大类列表中）');if(!n)return;s.interests.subcategories[n]=['细分1'];renderDeep();};
+ ic.append(subadd,el('br'));
+ ic.append(el('b',null,'熟练度（改动需 force）'),el('br'));
+ const sl=ta(s.interests.skillLevels);sl.oninput=()=>s.interests.skillLevels=lines(sl);ic.append(sl);
+ ic.append(el('b',null,'交流频次（顺序参与匹配计分，改动需 force；必须含「没要求」）'),el('br'));
+ const fq=ta(s.interests.freq);fq.oninput=()=>s.interests.freq=lines(fq);ic.append(fq);
+ box.append(ic);
+ // 照片与联系方式
+ const misc=card('照片与联系方式');
+ misc.append(el('b',null,'照片上限（1–6）'));
+ const pm=inp(s.photos.max);pm.type='number';pm.min=1;pm.max=6;pm.oninput=()=>s.photos.max=Number(pm.value)||3;misc.append(pm,el('br'));
+ misc.append(el('b',null,'联系方式类型（改动需 force）'),el('br'));
+ const cm=ta(s.contacts.methods);cm.oninput=()=>s.contacts.methods=lines(cm);misc.append(cm);
+ box.append(misc);
 }
 
 function render(){renderKinds();if(kind==='weekly')renderWeekly();else if(kind==='buddy')renderBuddy();else renderDeep();$('ver').textContent='当前版本 '+data.version;}

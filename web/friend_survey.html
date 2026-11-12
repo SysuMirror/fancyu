@@ -460,7 +460,7 @@
         }
         select[data-field="grade"] { color-scheme: light; }
     </style>
-<script src="academic-fields.js"></script><script src="auth-session.js"></script>
+<script src="academic-fields.js"></script><script src="deep-schema.js?v=20261112a"></script><script src="auth-session.js"></script>
 <script src="survey-metrics.js?v=20261111"></script>
 <script src="matching-verification.js" defer></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
@@ -478,494 +478,19 @@
     </div>
     <a href="/deep" class="back-link">← 返回深度交友</a>
 
-    <!-- ========== STEP 01: 基础背景 ========== -->
-    <div class="step-content active" id="step1">
-        <h1 class="page-title">基础背景</h1>
-        <div class="card">
-            <div class="card-label">基本信息 <span class="required-mark">*必填</span></div>
-            <div class="sub-label">你的性别</div>
-            <div class="option-row" data-field="sex">
-                <button class="option-btn" data-value="男">男</button>
-                <button class="option-btn" data-value="女">女</button>
-            </div>
-            <div class="input-hint" style="margin-top: 12px;">期望交友对象性别</div>
-            <div class="tags-container" data-field="sex_prefer" data-multi="true">
-                <button class="tag-btn" data-value="男">男生</button>
-                <button class="tag-btn" data-value="女">女生</button>
-                <button class="tag-btn" data-value="不限">不限</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-label">年级与校区 <span class="required-mark">*必填</span></div>
-            <div class="sub-label">你的年级</div>
-            <div class="select-wrapper">
-                <select class="select-field" data-field="grade">
-                    <option value="">选择年级</option>
-                    <optgroup label="本科">
-                        <option value="大一">大一</option><option value="大二">大二</option>
-                        <option value="大三">大三</option><option value="大四">大四</option>
-                        <option value="大五（医学）">大五（医学）</option>
-                    </optgroup>
-                    <optgroup label="研究生">
-                        <option value="研0">研0</option><option value="研一">研一</option>
-                        <option value="研二">研二</option><option value="研三">研三</option>
-                        <option value="博士">博士</option>
-                    </optgroup>
-                </select>
-                <span class="select-arrow">▼</span>
-            </div>
-            <div class="input-hint" style="margin-top: 12px;">期望对方年级（可多选，仅影响评分）</div>
-            <div class="tags-container" data-field="grade_prefer" data-multi="true">
-                <button class="tag-btn" data-value="不限">不限</button>
-                <button class="tag-btn" data-value="大一">大一</button><button class="tag-btn" data-value="大二">大二</button>
-                <button class="tag-btn" data-value="大三">大三</button><button class="tag-btn" data-value="大四">大四</button>
-                <button class="tag-btn" data-value="研一">研一</button><button class="tag-btn" data-value="研二">研二</button>
-                <button class="tag-btn" data-value="研三">研三</button><button class="tag-btn" data-value="博士">博士</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-label">专业与家乡</div>
-            <label class="sub-label" for="majorCategory">专业大类</label>
-            <select class="select-field" id="majorCategory" data-field="major_category"><option value="">选择专业大类</option></select>
-            <label class="sub-label" for="majorDetail">细分专业</label>
-            <input class="input-field" id="majorDetail" data-field="major_detail" maxlength="60" placeholder="例如：计算机科学与技术">
-            <div class="input-hint" style="margin-top: 12px;">期望对方专业（可多选，仅影响评分）</div>
-            <div class="tags-container" data-field="major_prefer" data-multi="true">
-                <button class="tag-btn" data-value="不限">不限</button>
-                <button class="tag-btn" data-value="人文社科类">人文社科类</button><button class="tag-btn" data-value="经济管理类">经济管理类</button>
-                <button class="tag-btn" data-value="理学类">理学类</button><button class="tag-btn" data-value="工学类">工学类</button>
-                <button class="tag-btn" data-value="医学类">医学类</button><button class="tag-btn" data-value="艺术体育类">艺术体育类</button>
-                <button class="tag-btn" data-value="其他">其他</button>
-            </div>
-            <div class="sub-label" style="margin-top: 16px;">你的家乡</div>
-            <div class="select-wrapper">
-                <select class="select-field" data-field="hometown">
-                    <option value="">选择地区</option>
-                    <optgroup label="内地省份">
-                        <option value="广东">广东</option><option value="北京">北京</option><option value="上海">上海</option>
-                        <option value="浙江">浙江</option><option value="江苏">江苏</option><option value="四川">四川</option>
-                        <option value="湖北">湖北</option><option value="湖南">湖南</option><option value="福建">福建</option>
-                        <option value="山东">山东</option><option value="河南">河南</option><option value="安徽">安徽</option>
-                        <option value="江西">江西</option><option value="广西">广西</option><option value="海南">海南</option>
-                        <option value="云南">云南</option><option value="贵州">贵州</option><option value="陕西">陕西</option>
-                        <option value="甘肃">甘肃</option><option value="青海">青海</option><option value="内蒙古">内蒙古</option>
-                        <option value="新疆">新疆</option><option value="西藏">西藏</option><option value="宁夏">宁夏</option>
-                        <option value="天津">天津</option><option value="重庆">重庆</option><option value="辽宁">辽宁</option>
-                        <option value="吉林">吉林</option><option value="黑龙江">黑龙江</option><option value="河北">河北</option>
-                        <option value="山西">山西</option>
-                    </optgroup>
-                    <optgroup label="港澳台地区"><option value="香港">香港</option><option value="澳门">澳门</option><option value="台湾">台湾</option></optgroup>
-                    <optgroup label="其他"><option value="国外">国外</option></optgroup>
-                </select>
-                <span class="select-arrow">▼</span>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-label">学校 <span class="required-mark">*必填</span></div>
-            <div class="select-wrapper">
-                <select class="select-field" data-field="school" id="schoolSelect"><option value="中山大学">中山大学</option></select>
-                <span class="select-arrow">▼</span>
-            </div>
-            <div class="input-hint">目前仅开放中山大学，请选择你所在的校区。</div>
-        </div>
-        <div class="card" id="ownCampusCard" style="display: none;">
-            <div class="card-label">所在校区 <span class="required-mark">*必填</span></div>
-            <div class="sub-label">选择学校后，请选择你的校区（单选）</div>
-            <div class="select-wrapper">
-                <select class="select-field" id="ownCampus">
-                    <option value="">选择校区</option>
-                </select>
-                <span class="select-arrow">▼</span>
-            </div>
-        </div>
-        <div class="card" id="expectCampusCard">
-            <div class="card-label">期望对方的学校和校区（可多选）</div><p class="input-hint">此项与期望性别作为双方筛选条件；不填视为不限。年级、专业、性格和兴趣仅用于评分，不作为硬限制。</p>
-            <div class="sub-label">选择中山大学，并勾选愿意认识的校区；不填视为不限校区。</div>
-            <div class="tags-container" id="expectQuickTags" style="margin-bottom: 12px;">
-                <button class="tag-btn quick-btn" data-value="不限">不限</button>
-                <button class="tag-btn quick-btn" data-value="广州所有校区">广州所有校区</button>
-
-            </div>
-            <div class="select-wrapper">
-                <select class="select-field" id="expectSchool"><option value="">+ 添加中山大学校区偏好</option><option value="中山大学">中山大学</option></select>
-                <span class="select-arrow">▼</span>
-            </div>
-            <div id="expectSchoolsContainer"></div>
-        </div>
-        <div class="card">
-            <div class="card-label">交流方式偏好</div>
-            <div class="option-group" data-field="online_offline">
-                <button class="option-btn" data-value="线上为主">线上为主</button>
-                <button class="option-btn" data-value="线下为主">线下为主</button>
-                <button class="option-btn" data-value="都行">都行</button>
-            </div>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>填写越详细越真诚，匹配成功率越高哦～</div>
-    </div>
-
-    <!-- ========== STEP 02: 个人特质 ========== -->
-    <div class="step-content" id="step2">
-        <h1 class="page-title">个人特质</h1>
-        <div class="card">
-            <div class="card-label">MBTI</div>
-            <div class="select-wrapper">
-                <select class="select-field" data-field="mbti">
-                    <option value="">选择MBTI</option>
-                    <option value="INTJ">INTJ - 建筑师</option><option value="INTP">INTP - 逻辑学家</option>
-                    <option value="ENTJ">ENTJ - 指挥官</option><option value="ENTP">ENTP - 辩论家</option>
-                    <option value="INFJ">INFJ - 提倡者</option><option value="INFP">INFP - 调解员</option>
-                    <option value="ENFJ">ENFJ - 主人公</option><option value="ENFP">ENFP - 竞选者</option>
-                    <option value="ISTJ">ISTJ - 检查员</option><option value="ISTP">ISTP - 工匠</option>
-                    <option value="ESTJ">ESTJ - 执行官</option><option value="ESTP">ESTP - 企业家</option>
-                    <option value="ISFJ">ISFJ - 守卫者</option><option value="ISFP">ISFP - 探险家</option>
-                    <option value="ESFJ">ESFJ - 供给者</option><option value="ESFP">ESFP - 表演者</option>
-                    <option value="不确定">不确定</option>
-                </select>
-                <span class="select-arrow">▼</span>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-label">性格窥探</div>
-            <div class="personality-row" data-q="1">
-                <div class="personality-question">交流倾向</div>
-                <div class="personality-item">
-                    <div class="personality-label">你话多吗？</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">Speaker</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_1" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">Listener</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="1">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">Speaker</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_1" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">Listener</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-            <div class="personality-row" data-q="2">
-                <div class="personality-question">社交偏好</div>
-                <div class="personality-item">
-                    <div class="personality-label">你爱凑热闹吗？</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">燥起来！</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_2" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">我想静静</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="2">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">燥起来！</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_2" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">我想静静</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-            <div class="personality-row" data-q="3">
-                <div class="personality-question">决策方式</div>
-                <div class="personality-item">
-                    <div class="personality-label">你理性吗？</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">理性分析</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_3" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">直觉感受</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="3">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">理性分析</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_3" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">直觉感受</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-            <div class="personality-row" data-q="4">
-                <div class="personality-question">新事物态度</div>
-                <div class="personality-item">
-                    <div class="personality-label">你的性格</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">尝试新鲜</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_4" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">安于熟悉</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="4">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">尝试新鲜</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_4" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">安于熟悉</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-            <div class="personality-row" data-q="5">
-                <div class="personality-question">事后态度</div>
-                <div class="personality-item">
-                    <div class="personality-label">当活动结束……</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">习惯回味复盘</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_5" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">随它去吧</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="5">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">习惯回味复盘</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_5" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">随它去吧</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-            <div class="personality-row" data-q="6">
-                <div class="personality-question">生活方式</div>
-                <div class="personality-item">
-                    <div class="personality-label">你会计划吗</div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">事无巨细</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_self_6" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">随便好啦</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-                <div class="personality-item">
-                    <div class="personality-label">
-                        <span>希望对方</span>
-                        <button class="no-preference-btn" data-expect="6">无所谓</button>
-                    </div>
-                    <div class="slider-wrapper">
-                        <span class="slider-left">事无巨细</span>
-                        <div class="slider-track">
-                            <input type="range" class="slider-input" id="personality_expect_6" min="1" max="5" value="3">
-                        </div>
-                        <span class="slider-right">随便好啦</span>
-                    </div>
-                    <div class="slider-marks">
-                        <span class="slider-mark" data-val="1">1</span>
-                        <span class="slider-mark" data-val="2">2</span>
-                        <span class="slider-mark" data-val="3">3(中立)</span>
-                        <span class="slider-mark" data-val="4">4</span>
-                        <span class="slider-mark" data-val="5">5</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-label">交友目的 <span class="required-mark">*必填</span></div>
-            <div class="option-group" data-field="friend_goal">
-                <button class="option-btn" data-value="学习搭子">学习搭子</button>
-                <button class="option-btn" data-value="饭搭子">饭搭子</button>
-                <button class="option-btn" data-value="运动搭子">运动搭子</button>
-                <button class="option-btn" data-value="游戏搭子">游戏搭子</button>
-                <button class="option-btn" data-value="聊天搭子">聊天搭子</button>
-                <button class="option-btn" data-value="综合交友">综合交友</button>
-            </div>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>你的回答将帮助我们推荐性格相合的朋友～</div>
-    </div>
-
-    <!-- ========== STEP 03: 兴趣爱好 ========== -->
-    <div class="step-content" id="step3">
-        <h1 class="page-title">你的兴趣</h1>
-        <div class="card">
-            <div class="card-label">选择你的兴趣大类（按顺序来，优先考虑1哦）</div>
-            <div id="interestsContainer"></div>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>每个兴趣需要填写细分领域（最多3个）、熟练程度和期望交流频次～</div>
-    </div>
-
-    <!-- ========== STEP 04: 自我介绍 ========== -->
-    <div class="step-content" id="step4">
-        <h1 class="page-title">自我介绍</h1>
-        <div class="card">
-            <div class="card-label">关于我</div>
-            <div class="input-hint" style="margin-bottom: 12px;">简单介绍一下自己，让对方更好地了解你</div>
-            <textarea class="textarea-field" data-field="self_description" placeholder="例如：性格特点、生活习惯、日常作息等"></textarea>
-        </div>
-        <div class="card">
-            <div class="card-label">期望的朋友</div>
-            <textarea class="textarea-field" data-field="ideal_friend" placeholder="描述你期望交到什么样的朋友..."></textarea>
-        </div>
-        <div class="card">
-            <div class="card-label">特殊要求</div>
-            <textarea class="textarea-field" data-field="special_request" placeholder="如果有其他想说的，可以写在这里..."></textarea>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>真诚的介绍更容易吸引到合适的朋友</div>
-    </div>
-
-    <!-- ========== STEP 05: 上传照片 ========== -->
-    <div class="step-content" id="step5">
-        <h1 class="page-title">上传照片</h1>
-        <div class="card">
-            <div class="card-label">个人照片（可选）</div>
-            <div class="input-hint" style="margin-bottom: 12px;">上传照片可以让你的资料更真实可信</div>
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📷</div>
-                <div class="upload-text">点击上传1～3张照片</div>
-                <div class="upload-hint">支持 JPG、PNG 格式</div>
-                <input type="file" id="photoInput" accept="image/*" multiple style="display: none;">
-            </div>
-            <div class="upload-preview" id="photoPreview"></div>
-        </div>
-        <div class="card">
-            <div class="card-label">关于展示（不填默认全部）</div>
-            <div class="tags-container" data-field="display_self" data-multi="true">
-                <button class="tag-btn" data-value="基础背景">基础背景</button>
-                <button class="tag-btn" data-value="个人特质">个人特质</button>
-                <button class="tag-btn" data-value="兴趣爱好">兴趣爱好</button>
-                <button class="tag-btn" data-value="自我介绍">自我介绍</button>
-                <button class="tag-btn" data-value="照片">照片</button>
-            </div>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>照片能让对方更快记住你</div>
-    </div>
-
-    <!-- ========== STEP 06: 联系方式 ========== -->
-    <div class="step-content" id="step6">
-        <h1 class="page-title">联系方式</h1>
-        <div class="card">
-            <div class="card-label">添加联系方式 <span class="required-mark">*必填</span></div>
-            <div class="sub-label">至少填写一种联系方式</div>
-            <div class="contact-add-row">
-                <select class="contact-method-select" id="contactMethodAdd">
-                    <option value="">选择方式</option>
-                    <option value="微信">微信</option>
-                    <option value="QQ">QQ</option>
-                    <option value="小红书">小红书</option>
-                    <option value="邮箱">邮箱</option>
-                    <option value="其他">其他</option>
-                </select>
-                <input type="text" class="contact-value-input" id="contactValueAdd" placeholder="输入账号或邮箱">
-                <button type="button" class="contact-add-btn" id="contactAddBtn">添加</button>
-            </div>
-        </div>
-        <div id="contactEntries"></div>
-        <div class="card" style="background: linear-gradient(135deg, rgba(0,88,38,0.05) 0%, rgba(0,88,38,0.02) 100%); border: 1px solid rgba(0,88,38,0.1);">
-            <div style="text-align: center; padding: 20px 0;">
-                <div style="font-family: 'Noto Serif SC', serif; font-size: 20px; color: var(--sysu-green); margin-bottom: 12px;">🎉 即将完成</div>
-                <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">点击提交后，你的交友问卷将被加入匹配池<br>我们将在匹配后通知你结果</div>
-            </div>
-        </div>
-        <div class="page-hint"><span class="page-hint-icon">💡</span>联系方式仅在双方同意交换后才会展示给对方</div>
-    </div>
-</div>
+    <!-- 步骤容器由 deep schema 渲染（/api/survey-schema/deep），此处仅留骨架 -->
+    <div class="step-content active" id="step1"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step2"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step3"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step4"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step5"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step6"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step7"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step8"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step9"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step10"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step11"><h1 class="page-title"></h1><div class="cards"></div></div>
+    <div class="step-content" id="step12"><h1 class="page-title"></h1><div class="cards"></div></div>
 
 <div class="bottom-bar">
     <div class="bottom-btn-wrapper">
@@ -996,63 +521,23 @@ function requireLogin() {
     location.replace('/login?redirect='+encodeURIComponent(location.pathname.split('/').pop()||'/'));
 }
 
-    const TOTAL_STEPS = 6;
+    // ===== 全量 schema 驱动：结构/文案/选项全部来自后台（/admin/survey 深度交友问卷）=====
+    let SCHEMA = window.DeepSchema;
+    let TOTAL_STEPS = SCHEMA.steps.length;
     let currentStep = 1;
     let draftKey='friendSurveyData:unavailable';let formData = {};
     let userAccount = null;
     let authToken = null;
 
-    // 学校-校区映射
-    let SCHOOL_CAMPUSES = {"中山大学": ["广州南校园", "广州北校园", "广州东校园", "珠海校区", "深圳校区"]};
-
-    // 兴趣大类列表
-    let INTEREST_CATEGORIES = [
-        "球类运动", "田径类运动", "其他运动", "棋类", "健身健美", "音乐", "乐器", "书法", "绘画", "阅读",
-        "摄影", "电影", "纪录片", "电视剧", "娱乐圈", "舞蹈", "美食(吃）", "烹饪", "手游",
-        "端游", "主机", "桌游", "旅游", "小动物", "美妆时装", "ACG", "体育赛事", "手工", "博客", "娱乐活动", "其他爱好"
-    ];
-
-    // 兴趣细分选项映射
-    const INTEREST_SUBCATEGORIES = {
-        "球类运动": ["篮球", "足球", "羽毛球", "乒乓球", "网球", "排球", "匹克球", "高尔夫", "棒球"],
-        "田径类运动": ["短跑", "长跑", "竞走", "跳高", "跳远", "铅球", "铁饼", "标枪", "马拉松"],
-        "其他运动": ["游泳", "瑜伽", "普拉提", "搏击", "攀岩", "滑雪", "滑板", "骑行", "钓鱼", "冲浪", "飞盘"],
-        "健身健美": ["减脂", "增肌", "塑形", "运动表现"],
-        "棋类": ["围棋", "中国象棋", "国际象棋", "五子棋", "跳棋", "军棋", "将棋"],
-        "音乐": ["流行", "摇滚", "古典", "电子", "民谣", "爵士", "R&B", "说唱", "金属", "古风", "蓝调"],
-        "乐器": ["钢琴", "吉他", "小提琴", "古筝", "二胡", "架子鼓", "长笛", "口琴", "葫芦丝", "尤克里里", "贝斯", "萨克斯", "大提琴", "双簧管", "扬琴", "琵琶"],
-        "书法": ["楷书", "行书", "草书", "隶书", "篆书", "硬笔书法"],
-        "绘画": ["素描", "水彩", "油画", "国画", "漫画", "板绘", "彩铅", "丙烯"],
-        "阅读": ["网文", "小说", "Non-fiction", "散文", "随笔", "古典/经典", "热销/流行", "戏剧", "神话/史诗/传说"],
-        "摄影": ["人像", "风光", "鸟", "纪实", "扫街", "微距", "星空", "建筑", "气象"],
-        "电影": ["爱情", "喜剧", "动作", "科幻", "悬疑", "恐怖", "纪录", "动画", "文艺", "历史"],
-        "纪录片": ["自然", "历史", "科技", "社会", "美食", "人文", "探险"],
-        "电视剧": ["国产", "美剧", "日剧", "韩剧", "英剧", "港台剧", "短剧", "长剧", "悬疑/推理", "古装/仙侠", "爱情/偶像", "科幻/奇幻", "喜剧/搞笑", "家庭/伦理", "职场", "历史", "校园/青春"],
-        "娱乐圈": ["内娱", "韩娱", "欧美", "追线下", "物料党", "喜八卦"],
-        "舞蹈": ["街舞", "拉丁", "芭蕾", "民族舞", "现代舞", "爵士舞", "宅舞", "广场舞"],
-        "美食(吃）": ["中餐", "西餐", "日料", "韩餐", "甜品", "小吃", "火锅", "烧烤", "饮品"],
-        "烹饪": ["中餐", "西餐", "烘焙", "甜品", "日料", "减脂餐", "家常菜"],
-        "手游": ["Moba", "Fps", "单机", "开放世界", "卡牌", "建筑经营策略", "乙游", "跑酷", "休闲", "体育竞技", "解密", "王者", "吃鸡", "瓦", "洲", "第五人格", "原神", "崩坏", "部落冲突/皇室战争"],
-        "端游": ["3A", "Moba", "Fps", "沙盒"],
-        "主机": ["Steam", "任天堂", "Xbox", "索尼"],
-        "桌游": ["狼人杀", "剧本杀", "三国杀", "大富翁", "阿瓦隆", "UNO", "卡坦岛"],
-        "旅游": ["自然风光", "历史文化", "城市探索", "海岛度假", "自驾", "穷游", "热门打卡"],
-        "小动物": ["狗", "猫", "兔", "仓鼠", "鸟", "鱼", "爬宠", "昆虫"],
-        "美妆时装": ["美妆", "护肤", "穿搭", "球鞋", "配饰", "发型"],
-        "ACG": ["日漫", "国漫", "轻小说", "Cosplay", "手办", "声优", "二创"],
-        "体育赛事": ["世界杯", "斯诺克", "F1", "NBA", "欧冠", "温网", "环法", "UFC", "WRC", "MotoGP", "勒芒24时"],
-        "手工": ["拼豆", "插花", "黏土", "编织", "木工", "皮具", "滴胶", "折纸"],
-        "博客": ["技术博客", "生活博客", "美食博客", "旅游博客", "读书博客", "影评博客"],
-        "娱乐活动": ["麻将", "纸牌", "台球", "KTV", "喝酒", "散步", "咖啡"],
-        "其他爱好": ["学习", "咖啡", "植物", "气象", "剪辑", "相声", "脱口秀", "话剧", "音乐会"]
-    };
-
-    // 熟练程度选项
-    let SKILL_LEVELS = ["完全小白", "云玩家", "入门", "一般般", "精通"];
-    let SKILL_LEVELS_WITH_NA = ["完全小白", "云玩家", "入门", "一般般", "精通", "没要求"];
-    // 期望交流频次选项
-    const FREQ_OPTIONS = ["每日", "每周", "每月", "每学期"];
-    const FREQ_OPTIONS_WITH_NA = ["每日", "每周", "每月", "每学期", "没要求"];
+    let SCHOOL_CAMPUSES = SCHEMA.schools;
+    let INTEREST_CATEGORIES = SCHEMA.interests.categories;
+    let INTEREST_SUBCATEGORIES = SCHEMA.interests.subcategories;
+    let SKILL_LEVELS = SCHEMA.interests.skillLevels;
+    let SKILL_LEVELS_WITH_NA = [...SKILL_LEVELS, '没要求'];
+    let FREQ_OPTIONS_WITH_NA = SCHEMA.interests.freq;
+    let FREQ_OPTIONS = FREQ_OPTIONS_WITH_NA.filter(v => v !== '没要求');
+    let CONTACT_METHODS = SCHEMA.contacts.methods;
+    let PHOTO_MAX = SCHEMA.photos.max;
 
     // 存储三个兴趣的数据
     let interestsData = [
@@ -1062,7 +547,190 @@ function requireLogin() {
     ];
 
     // 存储性格"无所谓"状态
-    let personalityNoPreference = [false, false, false, false, false, false];
+    let personalityNoPreference = new Array(SCHEMA.personality.length).fill(false);
+
+    const optOf = o => (typeof o === 'object' && o !== null ? o : { value: o, label: o });
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+
+    function applySchema(s) {
+        SCHEMA = s; TOTAL_STEPS = s.steps.length;
+        SCHOOL_CAMPUSES = s.schools; INTEREST_CATEGORIES = s.interests.categories;
+        INTEREST_SUBCATEGORIES = s.interests.subcategories;
+        SKILL_LEVELS = s.interests.skillLevels; SKILL_LEVELS_WITH_NA = [...SKILL_LEVELS, '没要求'];
+        FREQ_OPTIONS_WITH_NA = s.interests.freq; FREQ_OPTIONS = FREQ_OPTIONS_WITH_NA.filter(v => v !== '没要求');
+        CONTACT_METHODS = s.contacts.methods; PHOTO_MAX = s.photos.max;
+        personalityNoPreference = new Array(s.personality.length).fill(false);
+        renderAll();
+    }
+
+    function renderAll() {
+        SCHEMA.cards.forEach((cards, i) => {
+            const step = document.getElementById('step' + (i + 1));
+            if (!step) return;
+            step.querySelector('.page-title').textContent = SCHEMA.steps[i];
+            const box = step.querySelector('.cards'); box.textContent = '';
+            cards.forEach(c => box.append(renderCard(c)));
+        });
+        for (let i = SCHEMA.cards.length + 1; i <= 12; i++) { const s = document.getElementById('step' + i); if (s) s.remove(); }
+    }
+
+    function renderCard(c) {
+        const card = el('div', 'card');
+        if (c.items.some(it => it.type === 'campus')) card.id = 'ownCampusCard';
+        if (c.id === 'expectCampusCard' || c.items.some(it => it.type === 'expect-campus')) card.id = 'expectCampusCard';
+        const label = el('div', 'card-label', c.label);
+        if (c.required) label.append(el('span', 'required-mark', '*必填'));
+        card.append(label);
+        if (c.hint) card.append(el('p', 'input-hint', c.hint));
+        c.items.forEach(it => {
+            const node = renderItem(it);
+            if (node) card.append(node);
+        });
+        if (c.items.some(it => it.type === 'campus')) card.style.display = 'none';
+        return card;
+    }
+
+    function renderItem(it) {
+        const type = it.type;
+        if (type === 'options' || type === 'tags') {
+            const wrap = el('div');
+            if (it.label) {
+                const lab = el('div', type === 'options' ? 'sub-label' : 'input-hint', it.label);
+                if (type === 'tags') lab.style.marginTop = '12px';
+                wrap.append(lab);
+            }
+            const box = el('div', type === 'options' ? 'option-group' : 'tags-container');
+            if (type === 'tags') { box.dataset.multi = 'true'; if (it.key === 'expect_quick') { box.id = 'expectQuickTags'; } }
+            else box.className = 'option-row';
+            box.dataset.field = it.key;
+            (it.options || []).forEach(o => {
+                const { value, label: text } = optOf(o);
+                const b = el('button', type === 'options' ? 'option-btn' : 'tag-btn', text);
+                b.dataset.value = value;
+                if (it.key === 'expect_quick') b.classList.add('quick-btn');
+                box.append(b);
+            });
+            wrap.append(box);
+            return wrap;
+        }
+        if (type === 'select' || type === 'major') {
+            const wrap = el('div');
+            if (it.label) wrap.append(el('label', 'sub-label', it.label));
+            const sw = el('div', 'select-wrapper');
+            const sel = el('select', 'select-field');
+            sel.dataset.field = it.key;
+            if (it.placeholder) sel.append(new Option(it.placeholder, ''));
+            if (type === 'major') { sel.id = 'majorCategory'; }
+            else if (it.key === 'school') sel.id = 'schoolSelect';
+            if (type === 'select') {
+                const list = it.fromSchools ? Object.keys(SCHOOL_CAMPUSES).map(v => ({ value: v, label: v }))
+                    : it.groups ? Object.entries(it.groups).flatMap(([g, arr]) => arr.map(v => ({ group: g, ...optOf(v) })))
+                    : (it.options || []).map(optOf);
+                let curGroup = null, og = null;
+                list.forEach(o => {
+                    if (o.group && o.group !== curGroup) { curGroup = o.group; og = el('optgroup'); og.label = curGroup; sel.append(og); }
+                    (og && o.group ? og : sel).append(new Option(o.label, o.value));
+                });
+            }
+            sw.append(sel, el('span', 'select-arrow', '▼'));
+            wrap.append(sw);
+            if (it.hint) wrap.append(el('p', 'input-hint', it.hint));
+            return wrap;
+        }
+        if (type === 'text') {
+            const wrap = el('div');
+            if (it.label) wrap.append(el('label', 'sub-label', it.label));
+            const input = el('input', 'input-field');
+            input.dataset.field = it.key;
+            if (it.placeholder) input.placeholder = it.placeholder;
+            if (it.max) input.maxLength = it.max;
+            wrap.append(input);
+            return wrap;
+        }
+        if (type === 'textarea') {
+            const t = el('textarea', 'textarea-field');
+            t.dataset.field = it.key;
+            if (it.placeholder) t.placeholder = it.placeholder;
+            return t;
+        }
+        if (type === 'campus') {
+            const wrap = el('div');
+            if (it.label) wrap.append(el('div', 'sub-label', it.label));
+            const sw = el('div', 'select-wrapper');
+            const sel = el('select', 'select-field'); sel.id = 'ownCampus';
+            sel.append(new Option('选择校区', ''));
+            sw.append(sel, el('span', 'select-arrow', '▼'));
+            wrap.append(sw);
+            return wrap;
+        }
+        if (type === 'expect-campus') {
+            const wrap = el('div');
+            const sw = el('div', 'select-wrapper');
+            const sel = el('select', 'select-field'); sel.id = 'expectSchool';
+            sel.append(new Option(it.label || '+ 添加校区偏好', ''));
+            Object.keys(SCHOOL_CAMPUSES).forEach(s => sel.append(new Option(s, s)));
+            sw.append(sel, el('span', 'select-arrow', '▼'));
+            const esc = el('div'); esc.id = 'expectSchoolsContainer';
+            wrap.append(sw, esc);
+            return wrap;
+        }
+        if (type === 'personality') {
+            const box = el('div');
+            SCHEMA.personality.forEach((p, idx) => {
+                const i = idx + 1;
+                const row = el('div', 'personality-row'); row.dataset.q = i;
+                row.append(el('div', 'personality-question', p.title));
+                for (const side of ['self', 'expect']) {
+                    const item = el('div', 'personality-item');
+                    const lab = el('div', 'personality-label');
+                    if (side === 'self') lab.textContent = p.self;
+                    else {
+                        lab.append(el('span', '', '希望对方'));
+                        const nb = el('button', 'no-preference-btn', '无所谓'); nb.dataset.expect = i;
+                        lab.append(nb);
+                    }
+                    const sw = el('div', 'slider-wrapper');
+                    sw.append(el('span', 'slider-left', p.left));
+                    const track = el('div', 'slider-track');
+                    const input = el('input', 'slider-input'); input.type = 'range'; input.min = 1; input.max = 5; input.value = 3;
+                    input.id = 'personality_' + side + '_' + i;
+                    track.append(input); sw.append(track, el('span', 'slider-right', p.right));
+                    const marks = el('div', 'slider-marks');
+                    for (let v = 1; v <= 5; v++) { const m = el('span', 'slider-mark', v === 3 ? '3(中立)' : String(v)); m.dataset.val = v; marks.append(m); }
+                    item.append(lab, sw, marks);
+                    row.append(item);
+                }
+                box.append(row);
+            });
+            return box;
+        }
+        if (type === 'interests') { const d = el('div'); d.id = 'interestsContainer'; return d; }
+        if (type === 'photos') {
+            const box = el('div');
+            const area = el('div', 'upload-area'); area.id = 'uploadArea';
+            area.append(el('div', 'upload-icon', '📷'), el('div', 'upload-text', '点击上传1～' + PHOTO_MAX + '张照片'), el('div', 'upload-hint', SCHEMA.photos.hint || '支持 JPG、PNG 格式'));
+            const file = el('input'); file.type = 'file'; file.id = 'photoInput'; file.accept = 'image/*'; file.multiple = true; file.style.display = 'none';
+            area.append(file);
+            const prev = el('div', 'upload-preview'); prev.id = 'photoPreview';
+            box.append(area, prev);
+            return box;
+        }
+        if (type === 'contacts') {
+            const box = el('div');
+            const row = el('div', 'contact-add-row');
+            const sel = el('select', 'contact-method-select'); sel.id = 'contactMethodAdd';
+            sel.append(new Option('选择方式', ''));
+            CONTACT_METHODS.forEach(m => sel.append(new Option(m, m)));
+            const input = el('input', 'contact-value-input'); input.id = 'contactValueAdd'; input.placeholder = '输入账号或邮箱';
+            const btn = el('button', 'contact-add-btn', '添加'); btn.id = 'contactAddBtn'; btn.type = 'button';
+            row.append(sel, input, btn);
+            box.append(row);
+            const entries = el('div'); entries.id = 'contactEntries';
+            box.append(entries);
+            return box;
+        }
+        return null;
+    }
 
     function checkAuth() {
         authToken = localStorage.getItem('token');
@@ -1107,14 +775,8 @@ function requireLogin() {
         return '';
     }
 
-    const stepRequiredFields = {
-        1: ['sex', 'grade', 'school'],
-        2: ['friend_goal'],
-        3: [],
-        4: [],
-        5: [],
-        6: ['contact_entries']
-    };
+    const stepRequiredFields = {};
+    function buildRequiredFields(){SCHEMA.cards.forEach((cards,i)=>{stepRequiredFields[i+1]=cards.flatMap(c=>c.items.filter(it=>it.required).map(it=>it.key));});}
 
     const surveyMetrics=window.createSurveyMetrics('deep',()=>authToken);
     function init() {
@@ -1223,7 +885,7 @@ function requireLogin() {
         photoInput?.addEventListener('change', () => handleFiles(photoInput.files));
 
         function handleFiles(files) {
-            const maxPhotos = 3;
+            const maxPhotos = PHOTO_MAX;
             const currentCount = formData['photos'].length;
             Array.from(files).slice(0, maxPhotos - currentCount).forEach(file => {
                 if (file.type.startsWith('image/')) {
@@ -1902,8 +1564,8 @@ function requireLogin() {
 
     function updateStepUI() {
         const displayStep = currentStep;
-        document.getElementById('stepText').textContent = `STEP ${String(displayStep).padStart(2, '0')} / 06`;
-        document.getElementById('progressFill').style.width = `${(currentStep / 6) * 100}%`;
+        document.getElementById('stepText').textContent = `STEP ${String(displayStep).padStart(2, '0')} / ${String(TOTAL_STEPS).padStart(2, '0')}`;
+        document.getElementById('progressFill').style.width = `${(currentStep / TOTAL_STEPS) * 100}%`;
         document.querySelectorAll('.step-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`step${currentStep}`).classList.add('active');
         const prevBtn = document.getElementById('prevBtn');
@@ -1927,7 +1589,7 @@ function requireLogin() {
                 return false;
             }
         }
-        if (currentStep === 6) {
+        if (currentStep === TOTAL_STEPS) {
             const entries = formData.contact_entries || [];
             if (entries.length === 0) {
                 showToast('请至少添加一种联系方式', true);
@@ -1961,7 +1623,7 @@ function requireLogin() {
                     formData['my_school'] = getSchoolFromEmail(userAccount.email);
                 }
 
-                for(let i=1;i<=6;i++){formData['personality_self_'+i]=Number(document.getElementById('personality_self_'+i).value);formData['personality_expect_'+i]=Number(document.getElementById('personality_expect_'+i).value);formData['personality_expect_'+i+'_no_pref']=personalityNoPreference[i-1];}
+                for(let i=1;i<=SCHEMA.personality.length;i++){formData['personality_self_'+i]=Number(document.getElementById('personality_self_'+i).value);formData['personality_expect_'+i]=Number(document.getElementById('personality_expect_'+i).value);formData['personality_expect_'+i+'_no_pref']=personalityNoPreference[i-1];}
                 await surveyMetrics.start();
                 const response = await fetch(API_URL+'/account/deep-survey', {
                     method: 'PUT',
@@ -1994,8 +1656,9 @@ function requireLogin() {
         if (Object.keys(formData).length > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    async function boot(){if(!checkAuth())return;try{const so=await fetch(API_URL+'/survey-schema/deep-options').then(r=>r.json());if(so.code===200&&so.schema){if(so.schema.schools&&Object.keys(so.schema.schools).length)SCHOOL_CAMPUSES=so.schema.schools;if(Array.isArray(so.schema.categories)&&so.schema.categories.length)INTEREST_CATEGORIES=so.schema.categories;}}catch(e){}try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
+    async function boot(){if(!checkAuth())return;try{const so=await fetch(API_URL+'/survey-schema/deep').then(r=>r.json());if(so.code===200&&so.schema&&Array.isArray(so.schema.steps)&&so.schema.steps.length)applySchema(so.schema);}catch(e){}buildRequiredFields();try{const me=await fetch(API_URL+'/account/me',{headers:getAuthHeaders()});const account=await me.json();if(handleApiResponse(account))return;if(account.code!==200)throw Error('登录信息读取失败');userAccount=account.user;const id=userAccount.id||userAccount.account_id;if(!id)throw Error('账号信息不完整');draftKey='friendSurveyData:'+id;const r=await fetch(API_URL+'/account/deep-survey',{headers:getAuthHeaders()});const saved=await r.json();if(handleApiResponse(saved))return;if(saved.code!==200)throw Error(saved.msg||'问卷读取失败');formData={...saved.prefill,...Object.fromEntries(Object.entries(saved.data||{}).filter(([,v])=>v!=null&&v!==''))};const draft=localStorage.getItem(draftKey);if(draft)formData={...formData,...JSON.parse(draft)};const campusAliases={"广州海珠南校": "广州南校园", "广州越秀北校": "广州北校园", "广州天河东校": "广州东校园"};formData.school=AcademicFields.school;formData.own_campus=campusAliases[formData.own_campus]||formData.own_campus;for(const name of Object.keys(formData.expect_school_campuses||{}))formData.expect_school_campuses[name]=formData.expect_school_campuses[name].map(x=>campusAliases[x]||x);init();if(formData.school){document.getElementById('ownCampusCard').style.display='block';const select=document.getElementById('ownCampus');if(select)select.innerHTML='<option value="">选择校区</option>'+(SCHOOL_CAMPUSES[formData.school]||[]).map(c=>'<option '+(c===formData.own_campus?'selected':'')+'>'+c+'</option>').join('');}if(saved.needs_resave)showToast('请确认并保存完整问卷后，再开启每周深度交友');}catch(e){showToast(e.message,true);}}
     boot();
+
 </script>
 </body>
 </html>

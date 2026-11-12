@@ -12,9 +12,9 @@ module.exports = function (app, { getPool, adminAuthMiddleware }) {
     catch (e) { res.status(404).json({ code: 404, msg: e.message }); }
   }));
   app.get('/admin/survey-schemas', adminAuthMiddleware, h(async (req, res) =>
-    res.json({ code: 200, kinds: store.kinds.map(k => ({ kind: k, name: ({ weekly: '每周恋爱问卷', buddy: '搭子卡片', 'deep-options': '深度交友选项' })[k], version: store.snapshot(k).version })) })));
+    res.json({ code: 200, kinds: store.kinds.map(k => ({ kind: k, name: ({ weekly: '每周恋爱问卷', buddy: '搭子卡片', deep: '深度交友问卷' })[k], version: store.snapshot(k).version })) })));
   app.get('/admin/survey-schema/:kind', adminAuthMiddleware, h(async (req, res) => {
-    try { res.json({ code: 200, ...store.snapshot(req.params.kind), locked: [...store.WEEKLY_LOCKED] }); }
+    try { res.json({ code: 200, ...store.snapshot(req.params.kind), locked: [...(req.params.kind === 'deep' ? store.DEEP_LOCKED : req.params.kind === 'weekly' ? store.WEEKLY_LOCKED : [])] }); }
     catch (e) { res.status(404).json({ code: 404, msg: e.message }); }
   }));
   app.put('/admin/survey-schema/:kind', adminAuthMiddleware, h(async (req, res) => {

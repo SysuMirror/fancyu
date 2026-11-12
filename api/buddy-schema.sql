@@ -12,3 +12,9 @@ CREATE TABLE IF NOT EXISTS buddy_entries (
  FOREIGN KEY(card_id) REFERENCES friend_cards(id) ON DELETE CASCADE,
  FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS buddy_match_feedback (
+ pair_id INT NOT NULL,account_id INT NOT NULL,answer VARCHAR(24) NOT NULL,updated_at DATETIME NOT NULL,
+ PRIMARY KEY(pair_id,account_id),FOREIGN KEY(pair_id) REFERENCES friend_card_pairs(id) ON DELETE CASCADE,
+ FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

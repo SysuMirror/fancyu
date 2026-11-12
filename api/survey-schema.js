@@ -193,6 +193,13 @@ function checkDeep(next, prev, force) {
   if (optsChanged(pic.skillLevels, itc?.skillLevels) && !force) problems.push('熟练度选项改动需勾选「我已了解影响」（匹配按文案计分）');
   if (optsChanged(pic.freq, itc?.freq) && !force) problems.push('交流频次选项改动需勾选「我已了解影响」（匹配按顺序计分）');
   if (optsChanged((prev.contacts || {}).methods, next.contacts?.methods) && !force) problems.push('联系方式类型改动需勾选「我已了解影响」');
+  // deep 匹配维度权重（deep-rules 计分用）：可选；缺省沿用代码内默认值。
+  if (next.weights != null) {
+    const DIMS = ['interests', 'personality', 'friend_goal', 'online_offline', 'grade_prefer', 'major_prefer'];
+    if (typeof next.weights !== 'object' || Array.isArray(next.weights) ||
+        Object.entries(next.weights).some(([k, v]) => !DIMS.includes(k) || typeof v !== 'number' || !(v >= 0 && v <= 100)))
+      problems.push('weights 需为「匹配维度（interests/personality/friend_goal/online_offline/grade_prefer/major_prefer）→ 0–100 数值」的对象');
+  }
   return problems;
 }
 

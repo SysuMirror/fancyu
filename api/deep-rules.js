@@ -39,14 +39,17 @@ function validate(d){
 }
 const permits=(arr,v)=>!arr.length||arr.includes('不限')||arr.includes(v);
 function locationAllows(a,b){if(a.expect_quick==='不限')return true;const explicit=a.expect_schools.includes(b.school)&&(!a.expect_school_campuses[b.school]?.length||a.expect_school_campuses[b.school].includes(b.own_campus));const quick=a.expect_quick==='广州所有校区'?b.own_campus?.startsWith('广州'):a.expect_quick==='大学城所有校区'?(b.own_campus?.includes('大学城')||(b.school==='中山大学'&&b.own_campus==='广州东校园')):false;return !a.expect_quick&&!a.expect_schools.length||!!explicit||!!quick;}
+// 维度权重后台化：schema.weights 可覆盖，缺省保持历史硬编码值（35/25/10/10/10/10）。
+const DEFAULT_WEIGHTS={interests:35,personality:25,friend_goal:10,online_offline:10,grade_prefer:10,major_prefer:10};
+const WEIGHTS=()=>{const w=S().weights;return {...DEFAULT_WEIGHTS,...(w&&typeof w==='object'&&!Array.isArray(w)?w:{})};};
 function directional(a,b){
- const FREQ=S().interests.freq;
+ const FREQ=S().interests.freq,W=WEIGHTS();
  let total=0,weight=0;const add=(v,w)=>{if(v!=null){total+=v*w;weight+=w;}};
- if(a.interests.length&&b.interests.length){let n=0,den=0;a.interests.forEach((x,i)=>{const rank=3-i,y=b.interests.find(z=>z.category===x.category);den+=rank;if(!y)return;let v=.5;if(x.subcategories.length&&y.subcategories.length)v+=.25*x.subcategories.filter(z=>y.subcategories.includes(z)).length/new Set([...x.subcategories,...y.subcategories]).size;else v+=.125;if(!x.skillLevelExpect.length||x.skillLevelExpect.includes('没要求'))v+=.125;else if(y.skillLevel&&x.skillLevelExpect.includes(y.skillLevel))v+=.125;if(x.frequency&&y.frequency){v+=.125*(x.frequency==='没要求'||y.frequency==='没要求'?1:1-Math.abs(FREQ.indexOf(x.frequency)-FREQ.indexOf(y.frequency))/3);}n+=rank*v;});add(n/den,35);}
- const traits=[];const dims=S().personality.length;for(let i=1;i<=dims;i++)if(!a[`personality_expect_${i}_no_pref`]&&a[`personality_expect_${i}`]!=null&&b[`personality_self_${i}`]!=null)traits.push(1-Math.abs(a[`personality_expect_${i}`]-b[`personality_self_${i}`])/4);if(traits.length)add(traits.reduce((x,y)=>x+y,0)/traits.length,25);
- add(a.friend_goal===b.friend_goal?1:a.friend_goal==='综合交友'||b.friend_goal==='综合交友'?.7:.2,10);
- if(a.online_offline&&b.online_offline)add(a.online_offline===b.online_offline?1:a.online_offline==='都行'||b.online_offline==='都行'?.8:0,10);
- for(const [pref,actual] of [['grade_prefer','grade'],['major_prefer','major']])if(a[pref].length&&!a[pref].includes('不限')&&b[actual])add(a[pref].includes(b[actual])?1:0,10);
+ if(a.interests.length&&b.interests.length){let n=0,den=0;a.interests.forEach((x,i)=>{const rank=3-i,y=b.interests.find(z=>z.category===x.category);den+=rank;if(!y)return;let v=.5;if(x.subcategories.length&&y.subcategories.length)v+=.25*x.subcategories.filter(z=>y.subcategories.includes(z)).length/new Set([...x.subcategories,...y.subcategories]).size;else v+=.125;if(!x.skillLevelExpect.length||x.skillLevelExpect.includes('没要求'))v+=.125;else if(y.skillLevel&&x.skillLevelExpect.includes(y.skillLevel))v+=.125;if(x.frequency&&y.frequency){v+=.125*(x.frequency==='没要求'||y.frequency==='没要求'?1:1-Math.abs(FREQ.indexOf(x.frequency)-FREQ.indexOf(y.frequency))/3);}n+=rank*v;});add(n/den,W.interests);}
+ const traits=[];const dims=S().personality.length;for(let i=1;i<=dims;i++)if(!a[`personality_expect_${i}_no_pref`]&&a[`personality_expect_${i}`]!=null&&b[`personality_self_${i}`]!=null)traits.push(1-Math.abs(a[`personality_expect_${i}`]-b[`personality_self_${i}`])/4);if(traits.length)add(traits.reduce((x,y)=>x+y,0)/traits.length,W.personality);
+ add(a.friend_goal===b.friend_goal?1:a.friend_goal==='综合交友'||b.friend_goal==='综合交友'?.7:.2,W.friend_goal);
+ if(a.online_offline&&b.online_offline)add(a.online_offline===b.online_offline?1:a.online_offline==='都行'||b.online_offline==='都行'?.8:0,W.online_offline);
+ for(const [pref,actual] of [['grade_prefer','grade'],['major_prefer','major']])if(a[pref].length&&!a[pref].includes('不限')&&b[actual])add(a[pref].includes(b[actual])?1:0,W[pref]);
  return {score:weight?100*total/weight:0,coverage:weight};
 }
 function evaluate(a,b){for(const [x,y] of [[a,b],[b,a]])if(!permits(x.sex_prefer,y.sex)||!locationAllows(x,y))return null;

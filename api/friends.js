@@ -18,7 +18,8 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   const [r]=await c.execute('SELECT a.username FROM accounts a WHERE a.id=?',[other]);
   const [cards]=await c.execute('SELECT type,data FROM friend_cards WHERE id=?',[mine?p.b_card:p.a_card]);
   const v=parse(cards[0].data);const {gender,...publicValues}=v;const a=r[0];
-  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:p.a_wechat&&p.b_wechat?(mine?p.b_wechat:p.a_wechat):null}:{})};
+  let feedback=null;if(p.status==='connected'){const [f]=await c.execute('SELECT answer FROM buddy_match_feedback WHERE pair_id=? AND account_id=?',[p.id,id]);feedback=f[0]?.answer||null;}
+  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:p.a_wechat&&p.b_wechat?(mine?p.b_wechat:p.a_wechat):null,feedback}:{})};
  }
  app.get('/account/friends',authMiddleware,route(async(req,c,week)=>{
   const id=req.account.account_id;const [rows]=await c.execute('SELECT * FROM friend_cards WHERE account_id=? AND deleted=0 ORDER BY slot',[id]);
@@ -69,5 +70,6 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
  }));
  app.delete('/account/friends/blocks/:id',authMiddleware,route(async(req,c)=>{const other=Number(req.params.id);if(!Number.isSafeInteger(other)||other<1)fail(400,'账号编号无效');await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE ((a_id=? AND b_id=?) OR (a_id=? AND b_id=?)) AND status IN ('pending','connected')",[req.account.account_id,other,other,req.account.account_id]);await invalidateWeekly(c,req.account.account_id,other);await c.execute('DELETE FROM daily_blocks WHERE owner_id=? AND target_id=?',[req.account.account_id,other]);return {msg:'已解除屏蔽，原配对不会恢复'};}));
  app.post('/account/friends/pairs/:id/report',authMiddleware,route(async(req,c)=>{const p=await pair(c,req.account.account_id,req.params.id),reason=req.body?.reason;if(typeof reason!=='string'||reason.trim().length<2||reason.length>500)fail(400,'请输入 2–500 字举报说明');await c.execute("INSERT INTO complaints(reporter_account_id,target_type,target_id,reason,description,status) VALUES (?,'user',?,?,?,'pending')",[req.account.account_id,String(p.a_id===req.account.account_id?p.b_id:p.a_id),'快速交友举报',reason.trim()]);return {msg:'举报已提交'};}));
+ app.post('/account/friends/pairs/:id/feedback',authMiddleware,route(async(req,c)=>{const p=await pair(c,req.account.account_id,req.params.id);if(p.status!=='connected')fail(400,'建立连接后可填写反馈');const answer=req.body?.answer;if(!['未联系','已联系','已见面','不愿回答'].includes(answer))fail(400,'请选择反馈');await c.execute('INSERT INTO buddy_match_feedback(pair_id,account_id,answer,updated_at) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE answer=VALUES(answer),updated_at=VALUES(updated_at)',[p.id,req.account.account_id,answer,new Date().toISOString().slice(0,19).replace('T',' ')]);return {msg:'感谢反馈，不会向对方展示'};}));
  return {ensureSchema};
 };

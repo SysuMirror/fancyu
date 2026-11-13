@@ -295,3 +295,30 @@ body[data-page="admin"] .sv-dist-row.zero .sv-dist-n{font-size:12px}
 body[data-page="admin"]>[data-admin-shell]{display:block}
 body[data-page="admin"] main>header{flex-wrap:wrap;align-items:center}
 body[data-page="admin"] main>header h1{font-family:var(--serif);font-weight:900;font-size:clamp(20px,2.4vw,28px);line-height:1.3;color:var(--ink,#073b32);margin:0;min-width:0}
+
+/* ===== 统一多设备栏宽：顶栏 / 导航 / 正文共用同一栏宽（顶部不再拉满，正文不再偏窄）===== */
+body[data-page="admin"]{--admin-w:1280px;--admin-pad:28px}
+body[data-page="admin"] .topbar,
+body[data-page="admin"] .tabs{
+  padding-left:max(var(--admin-pad),calc((100% - var(--admin-w)) / 2));
+  padding-right:max(var(--admin-pad),calc((100% - var(--admin-w)) / 2));
+}
+/* main（各子页）与 .content（/admin）左/右内边距与上面的顶栏一致，故三者左右边缘严格对齐 */
+body[data-page="admin"] main{
+  width:auto;max-width:none;box-sizing:border-box;margin:28px 0 72px;
+  padding:0 max(var(--admin-pad),calc((100% - var(--admin-w)) / 2));
+}
+body[data-page="admin"] .content{
+  width:auto;max-width:none;box-sizing:border-box;margin:0;
+  padding:28px max(var(--admin-pad),calc((100% - var(--admin-w)) / 2));
+}
+/* 问卷工作台原先自带 1400px 上限，去掉以随统一栏宽 */
+body[data-page="admin"] .sv-main{max-width:none}
+@media(max-width:768px){
+  body[data-page="admin"]{--admin-pad:16px}
+  body[data-page="admin"] main{margin-top:18px}
+  body[data-page="admin"] .content{padding:18px max(var(--admin-pad),calc((100% - var(--admin-w)) / 2))}
+}
+
+/* 顶栏/导航为全宽条，去掉 UA 默认 body 外边距，避免两侧 8px 白边 */
+body[data-page="admin"]{margin:0}

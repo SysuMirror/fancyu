@@ -59,7 +59,8 @@
     const key = btn.closest('.row').dataset.key; busy = true; btn.disabled = true;
     try {
       if (btn.dataset.act === 'off') {
-        if (!confirm('下架 ' + key + '？用户将无法再下单。')) return;
+        const _ok = window.uiConfirm ? await uiConfirm({ title: '下架商品', body: '下架 ' + key + '？用户将无法再下单。', okText: '下架', danger: true }) : confirm('下架 ' + key + '？用户将无法再下单。');
+        if (!_ok) return;
         message((await api('/items/' + encodeURIComponent(key) + '/delete', {})).msg);
         await load();
       } else {

@@ -290,3 +290,8 @@ body[data-page="admin"] .sv-dist-row.zero .sv-dist-bar{background:#d8ded2;min-wi
 body[data-page="admin"] .sv-dist-row.zero .sv-dist-lb,body[data-page="admin"] .sv-dist-row.zero .sv-dist-n{color:var(--muted,#7a8a80)}
 body[data-page="admin"] .sv-dist-n{flex:none;color:#435f4d;font-variant-numeric:tabular-nums}
 body[data-page="admin"] .sv-dist-row.zero .sv-dist-n{font-size:12px}
+
+/* —— 子页统一外壳（admin-shell.js 注入的 topbar/tabs 为 body 直接子元素，全宽显示） —— */
+body[data-page="admin"]>[data-admin-shell]{display:block}
+body[data-page="admin"] main>header{flex-wrap:wrap;align-items:center}
+body[data-page="admin"] main>header h1{font-family:var(--serif);font-weight:900;font-size:clamp(20px,2.4vw,28px);line-height:1.3;color:var(--ink,#073b32);margin:0;min-width:0}

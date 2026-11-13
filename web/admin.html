@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FancyU · 管理后台</title>
     
-<link rel="stylesheet" href="campus-ui.css?v=20261112a">
-<link rel="stylesheet" href="admin-overview.css?v=20261029tables">
-<link rel="stylesheet" href="admin-ui.css?v=20261112a">
+<link rel="stylesheet" href="/campus-ui.css?v=20261112a">
+<link rel="stylesheet" href="/admin-overview.css?v=20261113c">
+<link rel="stylesheet" href="/admin-ui.css?v=20261113c">
 </head>
 <body data-ui="campus" data-page="admin">
 
@@ -37,23 +37,8 @@
 </div>
 
 <div class="admin-page" id="adminPage">
-    <div class="topbar">
-        <h1>FancyU 管理后台</h1>
-        <div class="right">
-            <span id="adminName"></span>
-            <button onclick="adminLogout()">退出</button>
-        </div>
-    </div>
-    <div class="tabs">
-        <div class="tab active" data-tab="stats" onclick="switchTab('stats')">数据统计</div>
-        <a class="tab" href="/admin/deep" style="text-decoration:none">深度交友批次</a>
-        <a class="tab" href="/admin/buddy" style="text-decoration:none">搭子配对批次</a>
-        <a class="tab" href="/admin/weekly" style="text-decoration:none">每周配对批次</a>
-        <a class="tab" href="/admin/pay" style="text-decoration:none">支付定价</a>
-        <a class="tab" href="/admin/survey" style="text-decoration:none">问卷管理</a>
-        <div class="tab" data-tab="users" onclick="switchTab('users')">用户列表</div>
-        <a class="tab" href="/admin/reports">聊天举报</a><div class="tab" data-tab="assistant" onclick="switchTab('assistant')">AI助手</div>
-    </div>
+    <div data-admin-shell></div>
+    <script src="/admin-shell.js?v=20261113c"></script>
     <div class="content">
         <div class="panel active" id="panelStats">
             <div id="operationsDashboard"></div>
@@ -701,6 +686,8 @@ function hideTypingIndicator() {
         loadStats();
         loadUsers(1);
         initAssistant();
+        var _h = (location.hash || '').replace('#', '');
+        if (_h === 'users' || _h === 'assistant' || _h === 'stats') switchTab(_h);
     }
 })();
 </script>

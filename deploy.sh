@@ -66,6 +66,19 @@ if [ -z "${SMTP_PASSWORD:-}" ] && [ -f "$LIVE/.private/mail.env" ]; then
     . "$LIVE/.private/mail.env"
 fi
 
+# 3) 等端口让出来再起：supervisord restart 时旧 node 可能还在优雅退出，新进程会
+#    EADDRINUSE 秒退，supervisorctl 报 "ERROR (abnormal termination)"（平台旧逻辑会
+#    据此把一次**成功的**部署记成 failed）。这里最多等 20s，让重启变成干净的替换。
+for _ in $(seq 1 20); do
+    (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null || break
+    exec 3<&- 2>/dev/null || true
+    [ "${_}" = "1" ] && log "端口 $PORT 仍被占用，等待旧进程退出…"
+    sleep 1
+done
+if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
+    log "警告: 端口 $PORT 20s 后仍被占用（可能有游离进程），node 可能起不来"
+fi
+
 log "启动 node: PORT=$PORT WEB_DIR=$WEB_DIR 邮件=$([ -n "${SMTP_PASSWORD:-}" ] && echo 已配置 || echo 缺失)"
 cd "$APP_DIR/api"
 exec /usr/bin/node index.js

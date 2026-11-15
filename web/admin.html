@@ -88,10 +88,10 @@
                             <h2>👋 你好！我是 FancyU AI 助手</h2>
                             <p>我可只读查询用户、问卷、搭子卡、配对与举报等业务数据。认证信息不可读取，联系方式默认脱敏。查询完整联系方式请使用：查看用户「账号名」的联系方式。每次最多4项查询，每项50条，可指定偏移量继续查看。</p>
                             <div class="example-questions">
-                                <div class="example-item" onclick="askExample('查询最近7天注册的用户')">📊 查询最近7天注册的用户</div>
-                                <div class="example-item" onclick="askExample('比较三种配对方式的参与人数和交换率')">📈 比较三种配对方式的参与人数和交换率</div>
-                                <div class="example-item" onclick="askExample('统计当前开启的搭子卡类别')">🔍 统计当前开启的搭子卡类别</div>
-                                <div class="example-item" onclick="askExample('分析最近30天的注册趋势')">🧠 分析最近30天的注册趋势</div>
+                                <div class="example-item" role="button" tabindex="0" onclick="askExample('查询最近7天注册的用户')">📊 查询最近7天注册的用户</div>
+                                <div class="example-item" role="button" tabindex="0" onclick="askExample('比较三种配对方式的参与人数和交换率')">📈 比较三种配对方式的参与人数和交换率</div>
+                                <div class="example-item" role="button" tabindex="0" onclick="askExample('统计当前开启的搭子卡类别')">🔍 统计当前开启的搭子卡类别</div>
+                                <div class="example-item" role="button" tabindex="0" onclick="askExample('分析最近30天的注册趋势')">🧠 分析最近30天的注册趋势</div>
                             </div>
                         </div>
                     </div>
@@ -115,12 +115,19 @@
 </div>
 
 <div class="img-modal" id="imgModal" onclick="this.classList.remove('active')">
-    <img id="imgModalSrc" src="">
+    <img id="imgModalSrc" src="" alt="用户照片大图">
 </div>
 
 <script src="admin-overview.js"></script>
 <script src="/ui-dialog.js?v=20261114a"></script>
 <script>
+document.addEventListener('keydown', function (e) {
+  var t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute && t.getAttribute('role') === 'button') {
+    e.preventDefault();
+    t.click();
+  }
+});
 function toast(msg,bad){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true;},3000);}
 
 const API = '/api';
@@ -316,7 +323,7 @@ async function viewDetail(serial) {
         } else if (Array.isArray(rawPhotos)) {
             photos = rawPhotos.filter(function(p) { return p; });
         }
-        var photoHtml = photos.map(function(p) { return '<img src="' + escHtml(p) + '" onclick="showImage(this.src)">'; }).join('');
+        var photoHtml = photos.map(function(p) { return '<img src="' + escHtml(p) + '" alt="用户照片" onclick="showImage(this.src)">'; }).join('');
         var fields = [
             ['账号 ID', u.account_id], ['邮箱验证', u.email_verified == 1 ? '已验证' : '未验证'], ['序列号', u.serial_number], ['昵称', u.nickname], ['性别', u.sex], ['校区', u.campus],
             ['年级', u.grade], ['专业', u.major], ['身高', u.height ? u.height + ' cm' : '-'], ['体重', u.weight ? u.weight + ' kg' : '-'],
@@ -500,8 +507,8 @@ function renderChatList() {
     chatList.innerHTML = sortedChats.map(function(chat) {
         const isActive = chat.id === currentChatId;
         const time = new Date(chat.updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        return '<div class="chat-item ' + (isActive ? 'active' : '') + '" onclick="loadChat(\'' + chat.id + '\')">' +
-            '<span class="chat-item-delete" onclick="deleteChat(\'' + chat.id + '\', event)">×</span>' +
+        return '<div class="chat-item ' + (isActive ? 'active' : '') + '" role="button" tabindex="0" onclick="loadChat(\'' + chat.id + '\')">' +
+            '<span class="chat-item-delete" role="button" tabindex="0" aria-label="删除对话" onclick="deleteChat(\'' + chat.id + '\', event)">×</span>' +
             '<div class="chat-item-title">' + escHtml(chat.title) + '</div>' +
             '<div class="chat-item-time">' + time + '</div>' +
             '</div>';
@@ -517,10 +524,10 @@ function renderMessages(messages) {
             '<h2>👋 你好！我是 FancyU AI 助手</h2>' +
             '<p>我可以帮你查询数据库、分析数据、回答问题。你可以问我：</p>' +
             '<div class="example-questions">' +
-            '<div class="example-item" onclick="askExample(\'查询最近7天注册的用户\')">📊 查询最近7天注册的用户</div>' +
-            '<div class="example-item" onclick="askExample(\'比较三种配对方式的参与人数和交换率\')">📈 比较三种配对方式的参与人数和交换率</div>' +
-            '<div class="example-item" onclick="askExample(\'统计当前开启的搭子卡类别\')">🔍 统计当前开启的搭子卡类别</div>' +
-            '<div class="example-item" onclick="askExample(\'分析最近30天的注册趋势\')">🧠 分析最近30天的注册趋势</div>' +
+            '<div class="example-item" role="button" tabindex="0" onclick="askExample(\'查询最近7天注册的用户\')">📊 查询最近7天注册的用户</div>' +
+            '<div class="example-item" role="button" tabindex="0" onclick="askExample(\'比较三种配对方式的参与人数和交换率\')">📈 比较三种配对方式的参与人数和交换率</div>' +
+            '<div class="example-item" role="button" tabindex="0" onclick="askExample(\'统计当前开启的搭子卡类别\')">🔍 统计当前开启的搭子卡类别</div>' +
+            '<div class="example-item" role="button" tabindex="0" onclick="askExample(\'分析最近30天的注册趋势\')">🧠 分析最近30天的注册趋势</div>' +
             '</div></div>';
         return;
     }

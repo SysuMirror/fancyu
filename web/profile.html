@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>个人中心 · FancyU</title><link rel="stylesheet" href="profile-center.css?v=20261111a"><script src="auth-session.js"></script><script defer src="profile-actions.js?v=20261029a"></script><script defer src="profile-center.js?v=20261029a"></script><script src="chat-badge.js?v=1" defer></script></head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>个人中心 | FancyU · 中意你</title><link rel="stylesheet" href="profile-center.css?v=20261115a"><script src="auth-session.js"></script><script defer src="profile-actions.js?v=20261115a"></script><script defer src="profile-center.js?v=20261029a"></script><script src="chat-badge.js?v=1" defer></script><meta name="description" content="FancyU · 中意你 个人中心：修改昵称、密码与账号信息。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="个人中心 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 个人中心：修改昵称、密码与账号信息。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/profile"><meta name="twitter:card" content="summary_large_image"></head>
 <body><header class="site-header"><a class="brand" href="/">FancyU · 中意你</a><a href="/">返回首页 <span aria-hidden="true">↗</span></a><a href="/chat" data-chat-link hidden>消息<span data-chat-badge></span></a></header>
 <main><div class="page-heading"><h1>个人中心</h1><p>查看参与状态，管理你的资料。</p></div>
 <section class="identity" aria-label="我的账号"><div class="avatar" id="profileAvatar" aria-hidden="true">F</div><div class="identity-info"><div class="identity-title"><h2 id="profileName">正在读取账号</h2><a class="badge neutral" id="verificationBadge" href="/verify-student">认证状态读取中</a></div><p id="profileEmail">—</p><p id="accountError" class="error" hidden>账号读取失败，请刷新重试。</p></div><button class="edit-name" onclick="openNicknameModal()">修改昵称</button></section>
@@ -14,7 +14,7 @@
         <div class="form-group">
             <label class="form-label" for="nicknameInput">新昵称</label><input type="text" class="form-input" id="nicknameInput" placeholder="输入新昵称">
         </div>
-        <button class="modal-btn" onclick="saveNickname()">保存</button>
+        <button class="modal-btn" onclick="saveNickname(this)">保存</button>
         <button class="modal-btn secondary" onclick="closeModal('nicknameModal')" style="margin-top:8px;">取消</button>
     </div>
 </div>
@@ -32,7 +32,7 @@
         <div class="form-group">
             <label class="form-label" for="confirmPassword">确认新密码</label><input type="password" class="form-input" id="confirmPassword" placeholder="再次输入新密码">
         </div>
-        <button class="modal-btn" onclick="savePassword()">保存</button>
+        <button class="modal-btn" onclick="savePassword(this)">保存</button>
         <button class="modal-btn secondary" onclick="closeModal('passwordModal')" style="margin-top:8px;">取消</button>
     </div>
 </div>
@@ -45,7 +45,7 @@
         <div class="form-group">
             <label class="form-label" for="deletePassword">输入密码确认</label><input type="password" class="form-input" id="deletePassword" placeholder="输入当前密码">
         </div>
-        <button class="modal-btn danger" onclick="deleteAccount()">确认注销</button>
+        <button class="modal-btn danger" onclick="deleteAccount(this)">确认注销</button>
         <button class="modal-btn secondary" onclick="closeModal('deleteModal')" style="margin-top:8px;">取消</button>
     </div>
 </div>

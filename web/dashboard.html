@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FancyU · 用户中心</title>
+    <title>用户中心 | FancyU · 中意你</title>
 <script src="auth-session.js"></script>
 <script src="matching-verification.js" defer></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261114a">
 <link rel="stylesheet" href="dashboard.css?v=20261114a">
-</head>
+<meta name="description" content="FancyU · 中意你 用户中心：管理账号、密码与序列号。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="用户中心 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 用户中心：管理账号、密码与序列号。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/dashboard"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="account">
     <div class="merge-banner">此页面已合并到个人中心，建议使用 <a href="/profile">/profile</a>（功能更全，本页仅保留兼容入口）。</div>
     <div class="header">
@@ -93,15 +93,15 @@
         <div class="modal">
             <h3>修改密码</h3>
             <div class="form-group">
-                <label>旧密码</label>
+                <label for="oldPassword">旧密码</label>
                 <input type="password" id="oldPassword" placeholder="输入当前密码">
             </div>
             <div class="form-group">
-                <label>新密码</label>
-                <input type="password" id="newPassword" placeholder="至少6位">
+                <label for="newPassword">新密码</label>
+                <input type="password" id="newPassword" placeholder="至少 8 位">
             </div>
             <div class="form-group">
-                <label>确认新密码</label>
+                <label for="confirmPassword">确认新密码</label>
                 <input type="password" id="confirmPassword" placeholder="再次输入新密码">
             </div>
             <div class="msg" id="passwordMsg"></div>
@@ -116,7 +116,7 @@
         <div class="modal">
             <h3>修改用户名</h3>
             <div class="form-group">
-                <label>新用户名</label>
+                <label for="newUsername">新用户名</label>
                 <input type="text" id="newUsername" placeholder="字母、数字、下划线或中文" maxlength="20">
             </div>
             <div class="msg" id="usernameMsg"></div>
@@ -131,7 +131,7 @@
         <div class="modal">
             <h3>修改联系邮箱</h3>
             <div class="form-group">
-                <label>新联系邮箱</label>
+                <label for="newContactEmail">新联系邮箱</label>
                 <input type="email" id="newContactEmail" placeholder="用于接收匹配结果通知">
             </div>
             <div class="msg" id="contactEmailMsg"></div>
@@ -144,16 +144,16 @@
 
     <div class="modal-overlay" id="deleteModal">
         <div class="modal">
-            <h3 style="color:#dc3545">⚠️ 注销账号</h3>
-            <p style="font-size:14px;color:#666;margin-bottom:16px">此操作将永久删除你的账号及所有关联数据（问卷资料、序列号等），且不可恢复。</p>
+            <h3 style="color:var(--sysu-red)">⚠️ 注销账号</h3>
+            <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">此操作将永久删除你的账号及所有关联数据（问卷资料、序列号等），且不可恢复。</p>
             <div class="form-group">
-                <label>请输入密码确认</label>
-                <input type="password" id="deletePassword" placeholder="输入当前密码">
+                <label for="deletePassword">请输入密码确认</label>
+                <input type="password" id="deletePassword" placeholder="输入当前密码" autocomplete="current-password">
             </div>
             <div class="msg" id="deleteMsg"></div>
             <div class="btn-row">
                 <button class="btn-cancel" onclick="closeModal('deleteModal')">取消</button>
-                <button class="btn-primary" id="deleteBtn" style="background:#dc3545" onclick="deleteAccount()">确认注销</button>
+                <button class="btn-primary" id="deleteBtn" style="background:var(--sysu-red)" onclick="deleteAccount()">确认注销</button>
             </div>
         </div>
     </div>
@@ -213,8 +213,8 @@ function requireLogin() {
                 setMsg('passwordMsg', '两次输入的新密码不一致', 'error');
                 return;
             }
-            if (newPw.length < 6) {
-                setMsg('passwordMsg', '新密码长度不能少于6位', 'error');
+            if (newPw.length < 8) {
+                setMsg('passwordMsg', '新密码长度至少 8 位', 'error');
                 return;
             }
 

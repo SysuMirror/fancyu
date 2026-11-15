@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/campus-ui.css?v=20261112a">
 <link rel="stylesheet" href="/admin-overview.css?v=20261113c">
 <link rel="stylesheet" href="/admin-ui.css?v=20261113d">
-</head>
+<meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
 <body data-ui="campus" data-page="admin">
 
 <div class="login-page" id="loginPage">
@@ -119,7 +119,9 @@
 </div>
 
 <script src="admin-overview.js"></script>
+<script src="/ui-dialog.js?v=20261114a"></script>
 <script>
+function toast(msg,bad){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true;},3000);}
 
 const API = '/api';
 let adminToken = null;
@@ -296,7 +298,7 @@ async function viewMaterials(id,kind){
  else body=d.cards.map(c=>{const t=window.FriendsSchema.TYPES[c.type];if(t){labels[t.main.key]=t.main.label;for(const x of t.extra||[])labels[x.key]=x.label;}return '<section class="detail-section"><h3>'+escHtml(t?t.name:c.type)+' · '+(c.enabled?'已开启':'已暂停')+'</h3>'+fields(c.data)+'</section>';}).join('')||'暂无搭子卡';
  document.getElementById('detailBox').innerHTML='<button class="close-btn" onclick="closeDetail()">×</button><h2>'+title+'</h2>'+body;
  document.getElementById('detailOverlay').classList.add('active');
- }catch(e){alert(e.message||'读取失败');}
+ }catch(e){uiAlert({title:'读取失败',body:e.message||'请稍后重试'});}
 }
 
 async function viewDetail(serial) {
@@ -304,7 +306,7 @@ async function viewDetail(serial) {
         var res = await fetch(API + '/admin/user/' + serial, { headers: getAdminHeaders() });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var result = await res.json();
-        if (result.code !== 200) { alert(result.msg || '获取失败'); return; }
+        if (result.code !== 200) { uiAlert({title:'获取失败',body:result.msg||'请稍后重试'}); return; }
         var u = result.data;
         var rawPhotos = u.photos;
         var photos = [];
@@ -337,7 +339,7 @@ async function viewDetail(serial) {
         }
         document.getElementById('detailBox').innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button>' + infoHtml;
         document.getElementById('detailOverlay').classList.add('active');
-    } catch (e) { console.error('viewDetail error:', e); alert('网络错误，请重试'); }
+    } catch (e) { console.error('viewDetail error:', e); uiAlert({title:'网络错误',body:'请重试'}); }
 }
 
 function closeDetail() {
@@ -350,18 +352,18 @@ function showImage(src) {
 }
 
 async function deleteUser(serial) {
-    if (!confirm('确认删除用户 ' + serial + ' 的问卷？此操作不可恢复。')) return;
+    if (!await uiConfirm({title:'删除问卷',body:'确认删除用户 ' + serial + ' 的问卷？此操作不可恢复。',okText:'删除',danger:true})) return;
     try {
         var res = await fetch(API + '/admin/user/' + serial, { method: 'DELETE', headers: getAdminHeaders() });
         var result = await res.json();
         if (result.code === 200) {
-            alert('删除成功');
+            toast('删除成功');
             loadUsers(currentPage);
             closeDetail();
         } else {
-            alert(result.msg || '删除失败');
+            uiAlert({title:'删除失败',body:result.msg||'请稍后重试'});
         }
-    } catch (e) { alert('网络错误'); }
+    } catch (e) { uiAlert({title:'网络错误',body:'请重试'}); }
 }
 
 function escHtml(str) {
@@ -465,9 +467,9 @@ async function loadChat(chatId) {
     renderMessages(chat.messages);
 }
 
-function deleteChat(chatId, event) {
+async function deleteChat(chatId, event) {
     event.stopPropagation();
-    if (!confirm('确定要删除这个对话吗？')) return;
+    if (!await uiConfirm({title:'删除对话',body:'确定要删除这个对话吗？',okText:'删除',danger:true})) return;
 
     fetch(API + '/admin/chat/' + chatId, { method: 'DELETE', headers: getAdminHeaders() }).catch(function(e) { console.error('delete chat error:', e); });
 
@@ -692,5 +694,6 @@ function hideTypingIndicator() {
 })();
 </script>
 <script src="weekly-schema.js"></script><script src="friends-schema.js"></script>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

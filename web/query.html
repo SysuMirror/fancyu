@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>查询 · 中意你 | FancyU</title>
+    <title>配对结果查询 | FancyU · 中意你</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -222,10 +222,16 @@
         .photo-item {
             width: 80px;
             height: 80px;
+            padding: 0;
+            background: var(--bg-paper, #faf9f5);
             border-radius: 12px;
             overflow: hidden;
-            cursor: pointer;
+            cursor: zoom-in;
             border: 1px solid #d0e4da;
+        }
+        .photo-item:focus-visible {
+            outline: 2px solid #1e4a32;
+            outline-offset: 2px;
         }
         .photo-item img {
             width: 100%;
@@ -253,6 +259,35 @@
             max-height: 92%;
             border-radius: 24px;
         }
+        .modal-img .modal-close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            line-height: 1;
+            color: #f2f6f2;
+            background: rgba(255, 255, 255, 0.16);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .modal-img .modal-close:hover { background: rgba(255, 255, 255, 0.3); }
+        .back-row { margin-bottom: 20px; }
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+            color: #1e4a32;
+            font-size: 16px;
+            text-decoration: none;
+        }
+        .back-home:hover { text-decoration: underline; }
         .note {
             margin-top: 24px;
             padding: 14px 20px;
@@ -282,21 +317,6 @@
             .back-link { font-size: 14px; }
         }
 
-        /* ========== 暗色模式 ========== */
-        @media (prefers-color-scheme: dark) {
-            body { background: #0f1a14; }
-            .container { background: #1a2e24; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-            h1 { color: #4ade80; }
-            .field-label { color: #a8b8ae; }
-            .field-value { color: #e8f0eb; }
-            .card { background: #0f1a14; }
-            .card h2 { color: #4ade80; }
-            .photo-item { background: #0f1a14; }
-            .photo-item .placeholder { color: #6a7a70; }
-            .back-link { color: #4ade80; }
-            .back-link:hover { background: rgba(0, 133, 62, 0.1); }
-        }
-
         /* ========== 减少动画 ========== */
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; transition: none !important; }
@@ -304,13 +324,11 @@
     </style>
 <script src="auth-session.js"></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-</head>
+<meta name="description" content="查询你在 FancyU · 中意你 的配对结果。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="配对结果查询 | FancyU · 中意你"><meta property="og:description" content="查询你在 FancyU · 中意你 的配对结果。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/query"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="matching">
 <div class="container">
-    <div style="margin-bottom: 20px;">
-        <a href="/" style="text-decoration: none; color: #1e4a32; font-size: 16px; display: inline-flex; align-items: center; gap: 8px;">
-            ← 返回首页
-        </a>
+    <div class="back-row">
+        <a class="back-home" href="/">← 返回首页</a>
     </div>
     <h1>🔍 中意你 · 查询心意</h1>
     <div class="sub">查看对方的公开信息。<br>系统会根据对方填写的 “关于展示” 选项自动控制可见内容；若对方未设置，则默认全部公开。</div>
@@ -318,7 +336,8 @@
         <div class="empty-state">💡 正在加载对方信息...</div>
     </div>
 </div>
-<div class="modal-img" id="imageModal">
+<div class="modal-img" id="imageModal" role="dialog" aria-modal="true" aria-label="查看大图">
+    <button type="button" class="modal-close" id="modalClose" aria-label="关闭大图">&#215;</button>
     <img id="modalImage" src="" alt="查看大图">
 </div>
 <script>
@@ -506,7 +525,8 @@ function formatFieldValue(fieldConfig, rawValue) {
         }
         const validPhotos = photos.filter(p => p && typeof p === 'string' && (p.startsWith('data:image') || p.startsWith('/9j/')));
         if (validPhotos.length === 0) return '<span class="empty">未填写</span>';
-        return `<div class="photos-grid">${validPhotos.map(src => `<div class="photo-item" onclick="showFullImage('${encodeURIComponent(src)}')"><img src="${escapeHtml(src)}" alt="照片"></div>`).join('')}</div>`;
+        currentPhotos = validPhotos;
+        return `<div class="photos-grid">${validPhotos.map((src, i) => `<button type="button" class="photo-item" data-photo="${i}" aria-label="查看第 ${i + 1} 张照片大图"><img src="${escapeHtml(src)}" alt="照片 ${i + 1}"></button>`).join('')}</div>`;
     }
     // ========== 照片判断结束 ==========
     
@@ -607,15 +627,34 @@ function renderProfile(data) {
     `;
 }
 
-window.showFullImage = function(encodedSrc) {
-    const src = decodeURIComponent(encodedSrc);
+let currentPhotos = [];
+let lastFocused = null;
+
+window.showFullImage = function(src) {
+    if (!src) return;
+    lastFocused = document.activeElement;
     modalImage.src = src;
     imageModal.classList.add('show');
+    document.getElementById('modalClose').focus();
 };
 
-imageModal.addEventListener('click', () => {
+function closeImage() {
     imageModal.classList.remove('show');
     modalImage.src = '';
+    if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    lastFocused = null;
+}
+
+document.getElementById('resultArea').addEventListener('click', (e) => {
+    const btn = e.target.closest('.photo-item[data-photo]');
+    if (!btn) return;
+    showFullImage(currentPhotos[Number(btn.dataset.photo)]);
+});
+
+imageModal.addEventListener('click', closeImage);
+document.getElementById('modalClose').addEventListener('click', (e) => { e.stopPropagation(); closeImage(); });
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && imageModal.classList.contains('show')) closeImage();
 });
 
 function escapeHtml(str) {

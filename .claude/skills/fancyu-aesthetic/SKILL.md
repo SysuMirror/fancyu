@@ -155,3 +155,15 @@ for w in (1280, 390):
 - 同页混用两套绿色（`#00552E` 与 `#006b3c` 与 `#073b32`）。
 - 大标题用无衬线粗体、正文用衬线。
 - 用 `!important` 覆盖共享样式表，而不是把类换成 `.fu-*`。
+
+## 10. 问卷后台化（2026-11-12 起）
+
+- 三类问卷 schema 统一走 `api/survey-schema.js`：`survey_schemas` 表（kind 主键，`schema` 是 MySQL 保留字须反引号）+ 进程内存缓存；`web/weekly-schema.js`、`web/friends-schema.js`、`api/deep-options.json` 只是种子与兜底。
+- `current(kind)` 同步返回 schema 本体（匹配/校验逻辑全是同步的）；`save(getPool,kind,next,force)` 校验失败抛带 `.problems` 的 Error，成功 bump 版本并立即更新内存。
+- `WEEKLY_LOCKED`：45 道被匹配逻辑依赖的题不可删除/改类型，选项改动须 `force:true`；纯追加选项免 force。答案按选项**文案**存储，改选项文案会让旧答案失效（管理页有提示）。
+- 管理页 `/admin/survey`（admin-survey.html/js，三个 Tab：每周恋爱问卷/搭子卡片/深度交友问卷）；API：`GET/PUT /api/admin/survey-schema/:kind`（PUT body `{schema,force}`），公开只读 `GET /api/survey-schema/:kind`。admin-survey.js 读 `localStorage.adminToken`（不是 token）。
+- 深度交友问卷已**全量 schema 化**（2026-11-12，commit 2475788）：`web/deep-schema.js`（UMD 种子）定义 steps/cards/items/schools/personality/interests/photos/contacts；friend_survey.html 只留 12 个骨架步骤 div，renderAll() 按 schema 渲染；deep-rules.js 校验/匹配/publicData 全部 schema 驱动（S()=current('deep')，后台新增 options/tags/select 字段自动进通用校验）。
+- `DEEP_LOCKED`：24 个匹配依赖字段（sex/grade/school/interests/personality/photos/contact_entries 等）不可删除/改类型，选项改动须 force；freq 必须含「没要求」；题干/提示文案可自由改。`deep-options` kind 仍兼容（由 deep 派生 schools+categories）。
+- DOM 坑：`Element.append()` 返回 undefined 不能链式取 lastChild；select 的分组选项要 append 进 optgroup 而不是 select。
+- 前端各问卷页加载时 fetch 线上 schema 覆盖 bundled 文件版；改 `api/*.js` 后须 supervisorctl restart sysudate，改 `web/` 即时生效。
+- 生产密钥（JWT_SECRET/ADMIN_PASSWORD/MYSQL_*）在 `/home/cloud/sysudate/run.sh` 的 export 里，**不在容器 PID1 env**（`/proc/<pid>/environ` 读不到）；签 admin token 用 `{username:"mony",isAdmin:true,security_version:2}` + run.sh 里的 JWT_SECRET。

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FancyU · 绑定序列号</title>
+    <title>绑定序列号 | FancyU · 中意你</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
 
@@ -361,9 +361,40 @@
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; transition: none !important; }
         }
+        /* 「|」分隔符：纯装饰，读屏忽略 */
+        .sep-dot { color: var(--text-muted); margin: 0 2px; }
+
+        /* 分步导航：返回上一步 / 重新发送验证码（触控高度 ≥44px） */
+        .step-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 14px;
+        }
+
+        .link-btn {
+            background: none;
+            border: none;
+            padding: 8px 4px;
+            min-height: 44px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+
+        .link-btn:hover { color: var(--sysu-green); }
+
+        .link-btn:disabled {
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: default;
+        }
     </style>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-<script defer src=school-email.js?v=2></script></head>
+<script defer src=school-email.js?v=2></script><meta name="description" content="绑定序列号，开通 FancyU · 中意你 的配对权益。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="绑定序列号 | FancyU · 中意你"><meta property="og:description" content="绑定序列号，开通 FancyU · 中意你 的配对权益。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/bind"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="auth">
     <div class="bg-pattern"></div>
 
@@ -399,7 +430,7 @@
                 </div>
                 <div class="form-group">
                     <label for="email">联系邮箱</label>
-                    <input type="email" id="email" placeholder="填写问卷时的邮箱" required>
+                    <input type="email" id="email" placeholder="填写问卷时的邮箱" autocomplete="email" required>
                 </div>
                 <button type="submit" class="btn" id="verifyBtn">验证序列号</button>
             </form>
@@ -410,10 +441,13 @@
             <form id="emailForm">
                 <div class="form-group">
                     <label for="email2">中山大学邮箱</label>
-                    <input type="email" id="email2" placeholder="xxx@mail.sysu.edu.cn" required>
+                    <input type="email" id="email2" placeholder="xxx@mail.sysu.edu.cn" autocomplete="email" required>
                     <div class="hint">用于注册新账号，仅支持 @mail.sysu.edu.cn、@mail2.sysu.edu.cn 或 @mail3.sysu.edu.cn</div>
                 </div>
                 <button type="submit" class="btn" id="sendCodeBtn">发送验证码</button>
+                <div class="step-nav">
+                    <button type="button" class="link-btn" id="backToStep1">← 上一步</button>
+                </div>
             </form>
         </div>
 
@@ -422,7 +456,7 @@
             <form id="passwordForm">
                 <div class="form-group">
                     <label for="code">验证码</label>
-                    <input type="text" id="code" placeholder="输入6位验证码" maxlength="6" required>
+                    <input type="text" id="code" placeholder="输入6位验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required>
                 </div>
                 <div class="form-group">
                     <label for="username">用户名（可选）</label>
@@ -430,25 +464,29 @@
                 </div>
                 <div class="form-group">
                     <label for="password">密码</label>
-                    <input type="password" id="password" placeholder="至少6位" required minlength="6">
+                    <input type="password" id="password" placeholder="至少8位" required minlength="8" autocomplete="new-password">
                 </div>
                 <div class="form-group">
                     <label for="confirmPassword">确认密码</label>
-                    <input type="password" id="confirmPassword" placeholder="再次输入密码" required>
+                    <input type="password" id="confirmPassword" placeholder="再次输入密码" autocomplete="new-password" required>
                 </div>
                 <button type="submit" class="btn">完成绑定</button>
+                <div class="step-nav">
+                    <button type="button" class="link-btn" id="backToStep2">← 修改邮箱</button>
+                    <button type="button" class="link-btn" id="resendCode">重新发送验证码</button>
+                </div>
             </form>
         </div>
 
         <div class="links">
             <a href="/login">已有账号？登录</a>
-            <span style="color:var(--text-muted)">|</span>
+            <span class="sep-dot" aria-hidden="true">|</span>
             <a href="/register">注册新账号</a>
         </div>
 
         <div class="links" style="margin-top:12px">
             <a href="/">返回首页</a>
-            <span style="color:var(--text-muted)">|</span>
+            <span class="sep-dot" aria-hidden="true">|</span>
             <a href="/modify">用序列号修改资料</a>
         </div>
     </div>
@@ -499,30 +537,32 @@
             btn.textContent = '验证中...';
 
             try {
-                const res = await fetch(API_BASE + '/account/bind', {
+                const res = await fetch(API_BASE + '/account/bind/check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serial_number: serialNumber, email, code: '000000', password: 'temp' })
+                    body: JSON.stringify({ serial_number: serialNumber, email })
                 });
 
                 const data = await res.json();
 
-                if (data.code === 403) {
+                if (data.code === 200) {
+                    showMsg('序列号验证通过', 'success');
+                    goToStep(2);
+                    return; // 成功进入下一步，按钮保持禁用直到返回本步，避免重复提交
+                } else if (data.code === 403) {
                     showMsg('序列号与邮箱不匹配', 'error');
                 } else if (data.code === 404) {
                     showMsg('序列号不存在', 'error');
-                } else if (data.code === 400 && data.msg.includes('已绑定')) {
+                } else if (data.code === 400 && data.msg && data.msg.includes('已绑定')) {
                     showMsg('该序列号已绑定账号，请直接登录', 'error');
                 } else {
-                    showMsg('序列号验证通过', 'success');
-                    goToStep(2);
+                    showMsg(data.msg || '验证失败，请稍后重试', 'error');
                 }
             } catch (err) {
                 showMsg('网络错误，请稍后重试', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '验证序列号';
             }
+            btn.disabled = false;
+            btn.textContent = '验证序列号';
         });
 
         // 步骤2：发送验证码
@@ -553,6 +593,7 @@
                 if (data.code === 200) {
                     showMsg('验证码已发送，请查收邮件', 'success');
                     goToStep(3);
+                    startResendCountdown(60);
                 } else {
                     showMsg(data.msg, 'error');
                     btn.disabled = false;
@@ -562,6 +603,60 @@
                 showMsg('网络错误，请稍后重试', 'error');
                 btn.disabled = false;
                 btn.textContent = '发送验证码';
+            }
+        });
+
+        // 步骤2/3 之间的返回与「重新发送验证码」
+        document.getElementById('backToStep1').addEventListener('click', () => { showMsg('', ''); goToStep(1); });
+        document.getElementById('backToStep2').addEventListener('click', () => { showMsg('', ''); goToStep(2); });
+
+        const resendBtn = document.getElementById('resendCode');
+        let resendTimer = null;
+
+        function startResendCountdown(sec) {
+            let left = sec;
+            clearInterval(resendTimer);
+            resendBtn.disabled = true;
+            resendBtn.textContent = '重新发送（' + left + 's）';
+            resendTimer = setInterval(() => {
+                left -= 1;
+                if (left <= 0) {
+                    clearInterval(resendTimer);
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = '重新发送验证码';
+                    return;
+                }
+                resendBtn.textContent = '重新发送（' + left + 's）';
+            }, 1000);
+        }
+
+        resendBtn.addEventListener('click', async () => {
+            if (!email) { showMsg('请先填写邮箱', 'error'); goToStep(2); return; }
+
+            resendBtn.disabled = true;
+            resendBtn.textContent = '发送中...';
+
+            try {
+                const res = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sendCode', email, source: 'bind' })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    showMsg('验证码已重新发送，请查收邮件', 'success');
+                    startResendCountdown(60);
+                } else {
+                    showMsg(data.msg || '发送失败，请稍后重试', 'error');
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = '重新发送验证码';
+                }
+            } catch (err) {
+                showMsg('网络错误，请稍后重试', 'error');
+                resendBtn.disabled = false;
+                resendBtn.textContent = '重新发送验证码';
             }
         });
 
@@ -584,8 +679,8 @@
                 return;
             }
 
-            if (password.length < 6) {
-                showMsg('密码长度至少为6位', 'error');
+            if (password.length < 8) {
+                showMsg('密码长度至少为8位', 'error');
                 return;
             }
 

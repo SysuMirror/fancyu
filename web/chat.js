@@ -529,6 +529,14 @@ function connect() {
 }
 
 /* ---------- 生命周期 ---------- */
+function roomsFailed(msg) {
+  const box = $('rooms');
+  if (!box || box.querySelector('.room-entry, .room-empty')) return;
+  const p = document.createElement('p');
+  p.className = 'room-empty';
+  p.textContent = msg;
+  box.append(p);
+}
 $('backToList').onclick = () => setView('list');
 setInterval(() => {
   if (!document.hidden) {
@@ -542,6 +550,6 @@ $('messages').addEventListener('scroll', () => markRead().catch(() => {}));
 window.addEventListener('pagehide', () => { userClosed = true; ws?.close(); });
 
 setView('list');
-loadRooms().catch(e => { $('notice').textContent = e.message; toast(e.message); });
+loadRooms().catch(e => { $('notice').textContent = e.message; toast(e.message); roomsFailed('会话列表读取失败，请稍后重试。'); });
 connect();
 })();

@@ -66,7 +66,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
 .action{display:block;width:100%}
 .secondary-link{align-self:center;margin-top:14px;color:var(--muted);font-size:14px;text-underline-offset:4px}
 .secondary-link:hover{color:var(--ink)}
-.retry{align-self:center;border:0;background:transparent;color:var(--sysu-red);margin-top:10px;text-decoration:underline;min-height:36px}
+.retry{align-self:center;border:0;background:transparent;color:var(--sysu-red);margin-top:10px;text-decoration:underline;min-height:44px}
 .section-note{margin:18px 0 28px;background:var(--block);border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:14px 20px;color:var(--muted);font-size:14px}
 
 /* 账号与安全 */
@@ -128,3 +128,4 @@ body.modal-open{overflow:hidden}
   .section-note{font-size:13px}
   .modal-content{padding:24px}
 }
+@media (max-width:700px){.toast{bottom:calc(80px + env(safe-area-inset-bottom))}}

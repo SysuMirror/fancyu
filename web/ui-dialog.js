@@ -13,14 +13,14 @@ const CSS=`.uidlg-mask{position:fixed;inset:0;background:rgba(10,20,15,.45);back
 @media(prefers-color-scheme:dark){.uidlg{background:#192d22;color:#e7eee8;border-color:#30493a}.uidlg input{background:#0f1c15;color:#e7eee8;border-color:#30493a}.uidlg-btns button{background:#192d22;color:#e7eee8;border-color:#4b6a58}}`;
 let style=null;
 function ensureStyle(){if(!style){style=document.createElement('style');style.textContent=CSS;document.head.appendChild(style);}}
-function open({title='',body='',okText='确定',cancelText='取消',danger=false,placeholder='',withInput=false,validate}){
+function open({title='',body='',okText='确定',cancelText='取消',danger=false,placeholder='',withInput=false,validate,onlyOk=false}){
  ensureStyle();
  return new Promise(resolve=>{
   const mask=document.createElement('div');mask.className='uidlg-mask';
-  mask.innerHTML=`<div class="uidlg" role="dialog" aria-modal="true" aria-labelledby="uidlgTitle"><h3 id="uidlgTitle"></h3>${body?'<p></p>':''}${withInput?'<input type="text" autocomplete="off">':''}<p class="uidlg-err" hidden></p><div class="uidlg-btns"><button type="button" data-no></button><button type="button" class="ok${danger?' danger':''}" data-yes></button></div></div>`;
+  mask.innerHTML=`<div class="uidlg" role="dialog" aria-modal="true" aria-labelledby="uidlgTitle"><h3 id="uidlgTitle"></h3>${body?'<p></p>':''}${withInput?'<input type="text" autocomplete="off">':''}<p class="uidlg-err" hidden></p><div class="uidlg-btns">${onlyOk?'':'<button type="button" data-no></button>'}<button type="button" class="ok${danger?' danger':''}" data-yes></button></div></div>`;
   const q=s=>mask.querySelector(s),dlg=q('.uidlg'),input=q('input'),err=q('.uidlg-err');
   q('h3').textContent=title;body&&(q('p').textContent=body);
-  q('[data-no]').textContent=cancelText;q('[data-yes]').textContent=okText;
+  const noBtn=q('[data-no]');noBtn&&(noBtn.textContent=cancelText);q('[data-yes]').textContent=okText;
   if(input){input.placeholder=placeholder;}
   const prev=document.activeElement;
   let done=false;
@@ -39,5 +39,6 @@ function open({title='',body='',okText='确定',cancelText='取消',danger=false
  });
 }
 window.uiConfirm=o=>open({...o,withInput:false});
+window.uiAlert=o=>open({...o,onlyOk:true,okText:(o&&o.okText)||'知道了'});
 window.uiPrompt=o=>open({...o,withInput:true,okText:o&&o.okText||'提交'});
 })();

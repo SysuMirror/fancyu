@@ -36,7 +36,7 @@
       const j = await api('/pay/entitlements');
       entsEl.innerHTML = (j.entitlements || []).map(x =>
         `<span class="badge${x.valid ? '' : ' expired'}">${esc(x.title || x.item_key)}${x.resource_id ? ' · ' + esc(x.resource_id) : ''}${x.expires_at ? ' · 至 ' + esc(dt(x.expires_at).split(' ')[0]) : ' · 永久'}${x.valid ? '' : ' · 已过期'}</span>`).join('') || '<span class="muted">暂无权益。</span>';
-    } catch (e) { entsEl.textContent = ''; }
+    } catch (e) { entsEl.innerHTML = '<span class="err">权益读取失败，请刷新重试。</span>'; }
   }
 
   async function loadOrders() {
@@ -62,14 +62,15 @@
         ${link ? `<a href="${esc(link)}">打开微信小程序支付</a>` : '<p class="err">未能生成支付入口</p>'}
         <div class="muted" id="pstatus">等待支付…（在小程序内完成付款后本页自动刷新）</div>
       </div>`;
-      poll(j.out_trade_no);
+      poll(j.out_trade_no, btn);
     } catch (e) {
       paycard.hidden = false;
       paycard.innerHTML = '<p class="err">' + esc(e.message) + '</p>';
-    } finally { btn.disabled = false; }
+      btn.disabled = false; // 仅失败时恢复：等待支付期间保持禁用，避免重复下单
+    }
   }
 
-  function poll(outTradeNo) {
+  function poll(outTradeNo, btn) {
     clearInterval(pollTimer);
     let n = 0;
     pollTimer = setInterval(async () => {
@@ -78,12 +79,18 @@
         const j = await api('/pay/order/' + encodeURIComponent(outTradeNo));
         if (j.order.paid) {
           clearInterval(pollTimer);
+          if (btn) btn.disabled = false;
           const s = document.getElementById('pstatus');
           if (s) s.outerHTML = '<div class="ok">✓ 支付成功，权益已发放</div>';
           loadEntitlements(); loadOrders();
         }
       } catch (e) { /* 继续轮询 */ }
-      if (n > 150) clearInterval(pollTimer); // ~10 分钟
+      if (n > 150) { // ~10 分钟
+        clearInterval(pollTimer);
+        if (btn) btn.disabled = false;
+        const s = document.getElementById('pstatus');
+        if (s) s.textContent = '已超时，请刷新页面查看支付结果。';
+      }
     }, 4000);
   }
 
@@ -92,7 +99,6 @@
     startPay(b.dataset.key, b);
   });
 
-  loadItems();
-  loadEntitlements();
-  loadOrders();
+  if (!token()) location.href = '/login?redirect=/pay'; // 未登录直接跳转，避免三次 401 请求
+  else { loadItems(); loadEntitlements(); loadOrders(); }
 })();

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FancyU | 中意你 · 登录</title>
+    <title>登录 | FancyU · 中意你</title>
     <style>
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -258,7 +258,8 @@
             transform: translateY(-1px);
         }
         .btn:disabled {
-            background: #c0c0c0;
+            color: #5f6b66;
+            background: #dfe3df;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -446,6 +447,9 @@
             color: var(--sysu-green);
         }
 
+        /* 「|」分隔符：纯装饰，读屏忽略 */
+        .sep-dot { color: var(--text-muted); margin: 0 2px; }
+
         /* ========== 响应式 ========== */
         @media (max-width: 768px) {
             .container { padding: 40px 32px; max-width: 440px; }
@@ -518,6 +522,10 @@
             .btn {
                 background: var(--sysu-green-light);
             }
+            .btn:disabled {
+                color: var(--text-muted);
+                background: rgba(255, 255, 255, 0.14);
+            }
             .btn:hover {
                 background: #00a844;
             }
@@ -552,7 +560,7 @@
     </style>
 <script src="auth-session.js"></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-</head>
+<meta name="description" content="登录 FancyU · 中意你，查看本周配对结果、搭子邀请与站内消息。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="登录 | FancyU · 中意你"><meta property="og:description" content="登录 FancyU · 中意你，查看本周配对结果、搭子邀请与站内消息。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/login"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="auth">
     <div class="bg-pattern"></div>
 
@@ -573,7 +581,7 @@
             <div class="form-group">
                 <label for="loginPrefix">学校邮箱</label>
                 <div class="email-row">
-                    <input type="text" id="loginPrefix" placeholder="邮箱前缀" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <input type="text" id="loginPrefix" placeholder="邮箱前缀" autocomplete="username" autocapitalize="off" spellcheck="false">
                     <span class="email-at" aria-hidden="true">@</span>
                     <select id="loginSuffix" aria-label="选择邮箱后缀">
                         <option value="mail.sysu.edu.cn">mail.sysu.edu.cn</option>
@@ -586,18 +594,18 @@
 
             <div class="form-group">
                 <label for="loginUsername">用户名</label>
-                <input type="text" id="loginUsername" placeholder="输入用户名登录" autocomplete="off">
+                <input type="text" id="loginUsername" placeholder="输入用户名登录" autocomplete="username">
             </div>
             <div class="form-group">
                 <label for="password">密码</label>
-                <input type="password" id="password" placeholder="输入密码" required>
+                <input type="password" id="password" placeholder="输入密码" autocomplete="current-password" required>
             </div>
             <button type="submit" class="btn" id="submitBtn">登录</button>
         </form>
 
         <div class="links">
             <button type="button" onclick="openRegisterModal()">注册新账号</button>
-            <span style="color:var(--text-muted)">|</span>
+            <span class="sep-dot" aria-hidden="true">|</span>
             <button type="button" onclick="openForgotModal()">忘记密码</button>
         </div>
 
@@ -615,32 +623,32 @@
 
     <!-- 注册弹窗 -->
     <div class="modal-mask" id="registerModal">
-        <div class="modal-content">
-            <button class="modal-close-btn" onclick="closeAllModals()">&#215;</button>
-            <div class="modal-title">注册账号</div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
+            <button class="modal-close-btn" onclick="closeAllModals()" aria-label="关闭">&#215;</button>
+            <div class="modal-title" id="registerModalTitle">注册账号</div>
             <div id="registerMsg" class="msg"></div>
             <form id="registerForm">
                 <div class="form-group">
-                    <label>昵称</label>
-                    <input type="text" id="regNickname" placeholder="给自己起个昵称" required>
+                    <label for="regNickname">昵称</label>
+                    <input type="text" id="regNickname" placeholder="给自己起个昵称" autocomplete="nickname" required>
                 </div>
                 <div class="form-group">
-                    <label>学校邮箱 <span id="schoolTag"></span></label>
-                    <input type="email" id="regEmail" placeholder="请输入完整邮箱地址，如 xxx@sysu.edu.cn" required>
+                    <label for="regEmail">学校邮箱 <span id="schoolTag"></span></label>
+                    <input type="email" id="regEmail" placeholder="请输入完整邮箱地址，如 xxx@sysu.edu.cn" autocomplete="email" required>
                     <div id="regSchoolHint" class="hint">请输入学校官方邮箱</div>
                 </div>
                 <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="regPassword" placeholder="设置密码（至少8位）" required minlength="8">
+                    <label for="regPassword">密码</label>
+                    <input type="password" id="regPassword" placeholder="设置密码（至少8位）" autocomplete="new-password" required minlength="8">
                 </div>
                 <div class="form-group">
-                    <label>确认密码</label>
-                    <input type="password" id="regPasswordConfirm" placeholder="再次输入密码" required>
+                    <label for="regPasswordConfirm">确认密码</label>
+                    <input type="password" id="regPasswordConfirm" placeholder="再次输入密码" autocomplete="new-password" required>
                 </div>
                 <div class="form-group">
-                    <label>验证码</label>
+                    <label for="regCode">验证码</label>
                     <div class="code-input-group">
-                        <input type="text" id="regCode" placeholder="6位验证码" maxlength="6" style="flex:1;">
+                        <input type="text" id="regCode" placeholder="6位验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="flex:1;">
                         <button type="button" class="send-code-btn" id="regSendCodeBtn" onclick="sendRegisterCode()">发送验证码</button>
                     </div>
                 </div>
@@ -657,28 +665,28 @@
 
     <!-- 忘记密码弹窗 -->
     <div class="modal-mask" id="forgotModal">
-        <div class="modal-content">
-            <button class="modal-close-btn" onclick="closeAllModals()">&#215;</button>
-            <div class="modal-title">重置密码</div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="forgotModalTitle">
+            <button class="modal-close-btn" onclick="closeAllModals()" aria-label="关闭">&#215;</button>
+            <div class="modal-title" id="forgotModalTitle">重置密码</div>
             <div id="forgotMsg" class="msg"></div>
             <form id="forgotForm">
                 <div class="form-group">
-                    <label>注册邮箱</label>
-                    <input type="email" id="forgotEmail" placeholder="请输入完整邮箱地址" required>
+                    <label for="forgotEmail">注册邮箱</label>
+                    <input type="email" id="forgotEmail" placeholder="请输入完整邮箱地址" autocomplete="email" required>
                     <div id="forgotSchoolHint" class="hint">请输入学校官方邮箱</div>
                 </div>
                 <div class="form-group">
-                    <label>新密码</label>
-                    <input type="password" id="forgotPassword" placeholder="新密码（至少8位）" required minlength="8">
+                    <label for="forgotPassword">新密码</label>
+                    <input type="password" id="forgotPassword" placeholder="新密码（至少8位）" autocomplete="new-password" required minlength="8">
                 </div>
                 <div class="form-group">
-                    <label>确认新密码</label>
-                    <input type="password" id="forgotPasswordConfirm" placeholder="再次输入新密码" required>
+                    <label for="forgotPasswordConfirm">确认新密码</label>
+                    <input type="password" id="forgotPasswordConfirm" placeholder="再次输入新密码" autocomplete="new-password" required>
                 </div>
                 <div class="form-group">
-                    <label>验证码</label>
+                    <label for="forgotCode">验证码</label>
                     <div class="code-input-group">
-                        <input type="text" id="forgotCode" placeholder="6位验证码" maxlength="6" style="flex:1;">
+                        <input type="text" id="forgotCode" placeholder="6位验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="flex:1;">
                         <button type="button" class="send-code-btn" id="forgotSendCodeBtn" onclick="sendForgotCode()">发送验证码</button>
                     </div>
                 </div>
@@ -756,23 +764,38 @@
             msg.className = 'msg ' + type;
         }
 
+        // 弹窗打开前聚焦的元素，关闭后还原焦点（键盘用户不会丢失位置）
+        let lastFocused = null;
+
         function closeAllModals() {
             document.getElementById('registerModal').classList.remove('show');
             document.getElementById('forgotModal').classList.remove('show');
+            if (lastFocused && typeof lastFocused.focus === 'function') {
+                try { lastFocused.focus(); } catch (e) { /* ignore */ }
+            }
+            lastFocused = null;
         }
 
         function openRegisterModal() {
-            document.getElementById('registerModal').classList.add('show');
+            const modal = document.getElementById('registerModal');
+            lastFocused = document.activeElement;
+            modal.classList.add('show');
             document.getElementById('registerMsg').className = 'msg';
             document.getElementById('registerMsg').textContent = '';
             document.getElementById('registerForm').reset();
+            const first = modal.querySelector('input, select, textarea, button');
+            if (first) first.focus();
         }
 
         function openForgotModal() {
-            document.getElementById('forgotModal').classList.add('show');
+            const modal = document.getElementById('forgotModal');
+            lastFocused = document.activeElement;
+            modal.classList.add('show');
             document.getElementById('forgotMsg').className = 'msg';
             document.getElementById('forgotMsg').textContent = '';
             document.getElementById('forgotForm').reset();
+            const first = modal.querySelector('input, select, textarea, button');
+            if (first) first.focus();
         }
 
         function startCountdown(btnId) {
@@ -880,6 +903,7 @@
                 showMsg('请填写邮箱前缀或用户名', 'error');
                 return;
             }
+            let submitted = false; // 成功后不再复位按钮，避免跳转期间被重复提交
             btn.disabled = true;
             btn.textContent = '登录中...';
             try {
@@ -893,6 +917,7 @@
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     showMsg('登录成功，正在跳转...', 'success');
+                    submitted = true;
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
                         const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : '/';
@@ -904,8 +929,10 @@
             } catch (err) {
                 showMsg('网络错误: ' + err.message, 'error');
             } finally {
-                btn.disabled = false;
-                btn.textContent = '登录';
+                if (!submitted) {
+                    btn.disabled = false;
+                    btn.textContent = '登录';
+                }
             }
         });
 
@@ -939,6 +966,7 @@
             const domain = email.substring(atIndex + 1);
             const schoolInfo = SCHOOL_MAP[domain];
 
+            let submitted = false;
             btn.disabled = true;
             btn.textContent = '注册中...';
             try {
@@ -961,6 +989,7 @@
                         localStorage.setItem('user', JSON.stringify(data.user));
                     }
                     showMsg('注册成功！正在跳转...', 'success', 'registerMsg');
+                    submitted = true;
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
                         const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : '/';
@@ -972,8 +1001,10 @@
             } catch (err) {
                 showMsg('网络错误', 'error', 'registerMsg');
             } finally {
-                btn.disabled = false;
-                btn.textContent = '注册';
+                if (!submitted) {
+                    btn.disabled = false;
+                    btn.textContent = '注册';
+                }
             }
         });
 
@@ -998,6 +1029,7 @@
                 return;
             }
 
+            let submitted = false;
             btn.disabled = true;
             btn.textContent = '处理中...';
             try {
@@ -1009,6 +1041,7 @@
                 const data = await res.json();
                 if (data.code === 200) {
                     showMsg('密码重置成功！请登录', 'success', 'forgotMsg');
+                    submitted = true;
                     setTimeout(() => {
                         closeAllModals();
                         const at = email.indexOf('@');
@@ -1025,8 +1058,10 @@
             } catch (err) {
                 showMsg('网络错误', 'error', 'forgotMsg');
             } finally {
-                btn.disabled = false;
-                btn.textContent = '重置密码';
+                if (!submitted) {
+                    btn.disabled = false;
+                    btn.textContent = '重置密码';
+                }
             }
         });
 
@@ -1034,6 +1069,35 @@
             mask.addEventListener('click', (e) => {
                 if (e.target === mask) closeAllModals();
             });
+        });
+
+        // Esc 关闭弹窗，Tab 在弹窗内循环（简易焦点陷阱）
+        document.addEventListener('keydown', (e) => {
+            const open = document.querySelector('.modal-mask.show');
+            if (!open) return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeAllModals();
+                return;
+            }
+
+            if (e.key !== 'Tab') return;
+
+            const focusables = [...open.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+                .filter(el => el.offsetParent !== null || el === document.activeElement);
+            if (!focusables.length) return;
+
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
         });
     </script>
 </body>

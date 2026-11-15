@@ -20,11 +20,15 @@ app.use((req, res, next) => {
     next();
 });
 
+// 站点图标：优先返回 web/favicon.ico（品牌绿叶标），文件缺失时回退空白图标。
 app.get('/favicon.ico', (req, res) => {
     res.setHeader('Content-Type', 'image/x-icon');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    const blankIcon = Buffer.from('AAABAAEAEBACAAEAAQCwAAAAFgAAACgAAAAQAAAAIAAAAAEAAQAAAAAAQAAAAAAAAgAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA', 'base64');
-    res.send(blankIcon);
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+    res.sendFile(path.join(WEB_DIR, 'favicon.ico'), (err) => {
+        if (!err) return;
+        const blankIcon = Buffer.from('AAABAAEAEBACAAEAAQCwAAAAFgAAACgAAAAQAAAAIAAAAAEAAQAAAAAAQAAAAAAAAgAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA', 'base64');
+        res.end(blankIcon);
+    });
 });
 
 app.get('/health', (req, res) => {
@@ -625,6 +629,45 @@ const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMidd
 const studentVerification = require('./verification-guard')(app,{getPool,ensureSchema:daily.ensureSchema,authMiddleware});
 
 // 老用户绑定序列号
+// 绑定前置校验：只检查序列号与邮箱是否匹配、是否已绑定，不消耗验证码、不建账号。
+// 供 bind 页面「验证序列号」这一步使用（原先前端用一次假的 /account/bind 探测，既会误判又会占用限流额度）。
+app.post('/account/bind/check', async (req, res) => {
+    const { serial_number, email } = req.body || {};
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+    try {
+        if (!checkRateLimit(clientIp, 'bindcheck', 10, 60000)) {
+            return res.json({ code: 429, msg: '请求过于频繁，请稍后再试' });
+        }
+
+        if (!serial_number || !email) {
+            return res.json({ code: 400, msg: '序列号、邮箱不能为空' });
+        }
+
+        if (!isValidSysuEmail(email)) {
+            return res.json({ code: 400, msg: '仅支持指定学校官方邮箱' });
+        }
+
+        const userData = await queryUserBySerial(serial_number);
+        if (!userData) {
+            return res.json({ code: 404, msg: '序列号不存在' });
+        }
+
+        if (userData.email !== email && userData.contact_email !== email) {
+            return res.json({ code: 403, msg: '序列号与邮箱不匹配' });
+        }
+
+        if (userData.account_id) {
+            return res.json({ code: 400, msg: '该序列号已绑定账号' });
+        }
+
+        return res.json({ code: 200, msg: 'ok' });
+    } catch (error) {
+        console.error('Bind Check Error:', error);
+        return res.json({ code: 500, msg: '服务器错误' });
+    }
+});
+
 app.post('/account/bind', async (req, res) => {
     const { serial_number, email, code, password, username } = req.body;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';

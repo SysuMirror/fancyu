@@ -73,7 +73,7 @@ module.exports=function({getPool}){
    const activity_trend=await zeroFill(`SELECT day,SUM(logins) logins,SUM(senders) senders FROM (
     SELECT DATE_FORMAT(DATE_ADD(last_login_at,INTERVAL 8 HOUR),'%Y-%m-%d') day,COUNT(*) logins,0 senders FROM accounts WHERE last_login_at>=? AND last_login_at<? GROUP BY day
     UNION ALL SELECT DATE_FORMAT(DATE_ADD(created_at,INTERVAL 8 HOUR),'%Y-%m-%d') day,0,COUNT(DISTINCT sender_id) FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<? GROUP BY day
-   ) t GROUP BY day ORDER BY day`,times,['logins','senders']);
+   ) t GROUP BY day ORDER BY day`,[...times,...times],['logins','senders']);
    // 聊天运营：消息数 / 发信人数 / 会话数（mode+pair 去重）/ 联系方式交换数
    const chat_ops={
     messages:await count('SELECT COUNT(*) n FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<?',times),
@@ -88,11 +88,11 @@ module.exports=function({getPool}){
    report_ops.by_status=reports.map(r=>({status:r.status,count:Number(r.count)}));
    report_ops.pending_total=await count("SELECT COUNT(*) n FROM complaints WHERE status IN ('pending','processing')");
    {const [rt]=await q("SELECT COUNT(*) handled,ROUND(AVG(TIMESTAMPDIFF(MINUTE,created_at,updated_at)),1) avg_minutes,ROUND(MAX(TIMESTAMPDIFF(MINUTE,created_at,updated_at)),1) max_minutes FROM complaints WHERE status IN ('resolved','dismissed') AND updated_at>=? AND updated_at<?",times);
-    const row=rt[0]||{};report_ops.handled=Number(row.handled||0);report_ops.avg_minutes=row.avg_minutes===null||row.avg_minutes===undefined?null:Number(row.avg_minutes);report_ops.max_minutes=row.max_minutes===null||row.max_minutes===undefined?null:Number(row.max_minutes);report_ops.duration_note='以 updated_at 近似处置完成时间';}
+    const row=rt||{};report_ops.handled=Number(row.handled||0);report_ops.avg_minutes=row.avg_minutes===null||row.avg_minutes===undefined?null:Number(row.avg_minutes);report_ops.max_minutes=row.max_minutes===null||row.max_minutes===undefined?null:Number(row.max_minutes);report_ops.duration_note='以 updated_at 近似处置完成时间';}
    report_ops.top_targets=(await q("SELECT c.target_id,COUNT(*) count,MAX(a.username) username FROM complaints c LEFT JOIN accounts a ON a.id=CAST(c.target_id AS UNSIGNED) WHERE c.target_type='user' AND c.created_at>=? AND c.created_at<? GROUP BY c.target_id ORDER BY count DESC LIMIT 10",times)).map(r=>({target_id:r.target_id,username:r.username||null,count:Number(r.count)}));
    // 邀请增长：汇总 / 本期新增（邀请 vs 自然）/ 被邀注册趋势 / Top 邀请人（不含联系方式）
-   const [[invSum]]=await q('SELECT COUNT(*) accounts,COALESCE(SUM(invite_code IS NOT NULL),0) has_code,COALESCE(SUM(invited_by IS NOT NULL),0) invited,COUNT(DISTINCT invited_by) inviters FROM accounts');
-   const [[invPeriod]]=await q('SELECT COUNT(*) registered,COALESCE(SUM(invited_by IS NOT NULL),0) invited_registered FROM accounts WHERE created_at>=? AND created_at<?',times);
+   const [invSum]=await q('SELECT COUNT(*) accounts,COALESCE(SUM(invite_code IS NOT NULL),0) has_code,COALESCE(SUM(invited_by IS NOT NULL),0) invited,COUNT(DISTINCT invited_by) inviters FROM accounts');
+   const [invPeriod]=await q('SELECT COUNT(*) registered,COALESCE(SUM(invited_by IS NOT NULL),0) invited_registered FROM accounts WHERE created_at>=? AND created_at<?',times);
    const invite={total_accounts:Number(invSum.accounts),with_invite_code:Number(invSum.has_code),invited_accounts:Number(invSum.invited),active_inviters:Number(invSum.inviters),period_registered:Number(invPeriod.registered),period_invited:Number(invPeriod.invited_registered)};
    invite.period_organic=invite.period_registered-invite.period_invited;
    invite.invited_share=percent(invite.period_invited,invite.period_registered);

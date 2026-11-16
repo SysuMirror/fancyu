@@ -1,5 +1,7 @@
 'use strict';
-const VERSIONS={quick:'buddy-v4-weekly'};
+// 观测版本：一处定义，observe 写入 algorithm_version。新增 mode 时必须在这里登记，
+// 否则会绑定 undefined 直接抛错（见 api/tests/admin-overview.integration.cjs）。
+const VERSIONS={quick:'buddy-v4-weekly',daily:'daily-v1'};
 function dateRange(query={},now=new Date()){
  const today=new Date(now.getTime()+8*3600000).toISOString().slice(0,10);
  const end=query.end||today,start=query.start||new Date(new Date(today+'T00:00:00Z').getTime()-29*86400000).toISOString().slice(0,10);
@@ -24,7 +26,8 @@ module.exports=function({getPool}){
  })().catch(e=>{ready=null;throw e;});return ready;}
  async function observe(c,{mode,accountId,unit,outcome,pairId=null,time=new Date()}){
   const at=time.toISOString().slice(0,19).replace('T',' ');
-  await c.execute(`INSERT INTO recommendation_observations(mode,account_id,unit_key,algorithm_version,outcome,pair_id,first_at,last_at) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE outcome=IF(outcome='recommended',outcome,VALUES(outcome)),pair_id=COALESCE(pair_id,VALUES(pair_id)),last_at=VALUES(last_at)`,[mode,accountId,unit,VERSIONS[mode],outcome,pairId,at,at]);
+  const ver=VERSIONS[mode]||String(mode);   // 兜底：绝不绑定 undefined（会让整条配对事务回滚）
+  await c.execute(`INSERT INTO recommendation_observations(mode,account_id,unit_key,algorithm_version,outcome,pair_id,first_at,last_at) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE outcome=IF(outcome='recommended',outcome,VALUES(outcome)),pair_id=COALESCE(pair_id,VALUES(pair_id)),last_at=VALUES(last_at)`,[mode,accountId,unit,ver,outcome,pairId,at,at]);
  }
  async function summary(range,{readOnly=false}={}){
   if(!readOnly)await ensureSchema();const pool=await getPool(),c=await pool.getConnection();

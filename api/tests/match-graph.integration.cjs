@@ -132,7 +132,7 @@ let phase = 'init';
     for (let i = 0; i < 6; i++) assert.equal((await api('POST', '/account/weekly-match/enroll', { body: { batch: BATCH }, account: loveIds[i] })).code, 200, '报名 ' + i);
 
     phase = 'love.graph.open';
-    assert.equal((await api('GET', '/admin/match-graph')).http, 401, '全站关系网必须 admin-only');
+    assert.equal((await api('GET', '/admin/match-graph/overlay')).http, 401, '全站关系网必须 admin-only');
     const ad = '/admin/weekly-batches/' + BATCH;
     assert.equal((await api('GET', ad + '/graph')).http, 401, '批次图必须 admin-only');
     assert.equal((await get('/admin/weekly-batches/2020-01-06/graph')).http, 404, '批次不存在');
@@ -313,13 +313,13 @@ let phase = 'init';
 
     /* ============ 全站关系网（api/match-graph.js 只读叠加视图） ============ */
     phase = 'overlay';
-    const ov = await get('/admin/match-graph?line=all&days=365&limit=2000');
+    const ov = await get('/admin/match-graph/overlay?line=all&days=365&limit=2000');
     assert.equal(ov.code, 200); assert.equal(ov.edges.length, 5, 'love 2 + deep 1 + buddy 2');
     assert.equal(ov.lines.love, 2); assert.equal(ov.lines.deep, 1); assert.equal(ov.lines.buddy, 2);
     assert.equal(ov.nodes.length, 10, 'love 4 人 + deep 2 人 + buddy 4 人（去重）'); assert.ok(ov.nodes.every(n => n.username), '节点带用户名');
     assert.equal(JSON.stringify(ov).includes('password'), false);
-    assert.equal((await get('/admin/match-graph?line=history&days=365')).edges.length, 0);
-    const junk = await get('/admin/match-graph?line=bad&days=99999&limit=0');
+    assert.equal((await get('/admin/match-graph/overlay?line=history&days=365')).edges.length, 0);
+    const junk = await get('/admin/match-graph/overlay?line=bad&days=99999&limit=0');
     assert.equal(junk.code, 200, '非法参数不报错，回落默认值');
     assert.equal(junk.line, 'all'); assert.equal(junk.days, 60);
     assert.ok(Array.isArray(junk.edges) && junk.truncated && typeof junk.truncated.omitted === 'number');

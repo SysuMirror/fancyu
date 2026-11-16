@@ -49,7 +49,7 @@ module.exports = function (app, { getPool, adminAuthMiddleware }) {
     };
   }
 
-  app.get('/admin/match-graph', adminAuthMiddleware, async (req, res) => {
+  app.get('/admin/match-graph/overlay', adminAuthMiddleware, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     const line = ['all', 'love', 'deep', 'buddy', 'history'].includes(req.query.line) ? req.query.line : 'all';
     const days = cap(req.query.days, 1, 365, 60);

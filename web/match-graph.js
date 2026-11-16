@@ -61,7 +61,7 @@
   }
   async function loadGraph() {
     if (st.mode === 'overlay') {
-      const j = await api('/api/admin/match-graph?line=' + encodeURIComponent(st.oline) + '&days=' + st.days);
+      const j = await api('/api/admin/match-graph/overlay?line=' + encodeURIComponent(st.oline) + '&days=' + st.days);
       st.nodes = j.nodes || []; st.edges = j.edges || []; st.plan = []; st.status = ''; st.canPin = false;
       st.revision = 0; st.stats = null; st.dropped = [];
       st.truncated = j.truncated;

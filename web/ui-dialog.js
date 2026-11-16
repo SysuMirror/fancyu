@@ -1,6 +1,6 @@
 /* ui-dialog.js — 页内 confirm/prompt 替代（FancyU 统一交互）。自含样式，不依赖页面 CSS。 */
 (()=>{'use strict';
-const CSS=`.uidlg-mask{position:fixed;inset:0;background:rgba(10,20,15,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+const CSS=`.uidlg-mask{position:fixed;inset:0;background:rgba(10,20,15,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
 .uidlg{background:#faf9f5;color:#073b32;border:1px solid #cad8c8;border-radius:20px;box-shadow:0 16px 48px rgba(7,59,50,.25);width:100%;max-width:400px;padding:22px;font-family:Inter,"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;font-size:15px;line-height:1.65}
 .uidlg h3{margin:0 0 8px;font-size:17px;font-weight:700}
 .uidlg p{margin:0 0 14px;white-space:pre-line}

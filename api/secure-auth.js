@@ -54,9 +54,17 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
         const {login,password}=req.body||{};
         if(typeof login!=='string'||typeof password!=='string'||password.length>200) return res.status(400).json({code:400,msg:'请输入账号和密码'});
         if(password.length<8)return res.status(401).json({code:401,msg:'请使用至少 8 位的账号密码。旧体验账号请通过学生邮箱重置密码。'});
-        const pool=await getPool();const [rows]=await pool.execute('SELECT id,email,username,password_hash FROM accounts WHERE email=? OR username=? LIMIT 1',[login.trim(),login.trim()]);
-        const a=rows[0];
+        const pool=await getPool();
+        const cred='SELECT id,email,username,password_hash FROM accounts WHERE email=? OR username=? LIMIT 1';
+        const who=[login.trim(),login.trim()];
+        let found;
+        try { found=await pool.execute('SELECT id,email,username,password_hash,banned FROM accounts WHERE email=? OR username=? LIMIT 1',who); }
+        catch(e){ if(!/Unknown column/i.test(e.message||''))throw e; found=await pool.execute(cred,who); }
+        const a=found[0][0];
         if(!a||!(await bcrypt.compare(password,a.password_hash||''))) return res.status(401).json({code:401,msg:'账号或密码错误'});
+        if(a.banned) return res.status(403).json({code:403,msg:'账号已被封禁，如需申诉请联系管理员',banned:true});
+        // 记录最近登录（此前只有绑定流程会写，导致「活跃」口径失真）
+        try { await pool.execute('UPDATE accounts SET last_login_at=UTC_TIMESTAMP() WHERE id=?',[a.id]); } catch(e){ console.error('Login stamp:',e.code||e.name); }
         res.json({code:200,token:generateToken(a),user:{account_id:a.id,email:a.email,username:a.username},msg:'登录成功'});
     }));
     app.post('/account/register',limit,wrap(async(req,res)=>{
@@ -83,7 +91,9 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
         const b=req.body||{};const email=String(b.email||'').trim().toLowerCase();
         if(typeof b.new_password!=='string'||b.new_password.length<8||b.new_password.length>72)return res.status(400).json({code:400,msg:'密码需为 8–72 位'});
         if(!await check(email,'reset',b.code))return res.status(400).json({code:400,msg:'验证码错误或已过期'});
-        const pool=await getPool();await pool.execute('UPDATE accounts SET password_hash=? WHERE email=?',[await bcrypt.hash(b.new_password,10),email]);
+        const pool=await getPool();
+        try { await pool.execute('UPDATE accounts SET password_hash=?, must_reset_password=0 WHERE email=?',[await bcrypt.hash(b.new_password,10),email]); }
+        catch(e){ if(!/Unknown column/i.test(e.message||''))throw e; await pool.execute('UPDATE accounts SET password_hash=? WHERE email=?',[await bcrypt.hash(b.new_password,10),email]); }
         res.json({code:200,msg:'密码已更新，请重新登录'});
     }));
     app.post('/',limit,wrap(async(req,res,next)=>{

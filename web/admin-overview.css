@@ -7,3 +7,17 @@
 #operationsDashboard td{border-bottom-color:#cbdcc9;padding:13px 14px}
 #operationsDashboard tbody tr:hover{background:#e8f0e3}
 #operationsDashboard details,#operationsDashboard summary{color:#52675c}
+
+/* 可自定义分布面板：纯 CSS 饼图（conic-gradient）+ 图例；与既有 .ov-bars 同一套视觉。 */
+#operationsDashboard .ov-pie-wrap{display:grid;grid-template-columns:minmax(160px,220px) minmax(0,1fr);gap:22px;align-items:center;margin:14px 0}
+#operationsDashboard .ov-pie{width:100%;aspect-ratio:1/1;border-radius:50%;border:1px solid var(--border);box-shadow:inset 0 0 0 12px var(--card)}
+#operationsDashboard .ov-legend{min-width:0;max-height:260px;overflow:auto}
+#operationsDashboard .ov-legend .ov-label:last-child{border-bottom:0}
+#operationsDashboard .ov-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:middle}
+#operationsDashboard .ov-sub{font-weight:400;color:var(--text-muted);font-size:12px;margin-left:6px}
+#operationsDashboard .ov-funnel{padding:12px 0;border-bottom:1px dashed var(--border)}
+#operationsDashboard .ov-funnel:last-child{border-bottom:0}
+#operationsDashboard .ov-funnel h4{margin:0 0 8px;font-size:14px}
+#operationsDashboard .ov-funnel .ov-label b{white-space:nowrap}
+#operationsDashboard select{font:inherit;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);max-width:220px}
+@media(max-width:800px){#operationsDashboard .ov-pie-wrap{grid-template-columns:minmax(0,1fr)}#operationsDashboard .ov-pie{max-width:220px;margin:0 auto}#operationsDashboard .ov-legend{max-height:none}}

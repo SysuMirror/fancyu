@@ -234,8 +234,21 @@ async function authMiddleware(req, res, next) {
     const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : '';
     const decoded = verifyToken(token);
     if (!decoded) return res.status(401).json({code:401,msg:'请重新登录'});
-    try { const pool=await getPool(); const [rows]=await pool.execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);
-        if(!rows.length)return res.status(401).json({code:401,msg:'账号已失效'});
+    try { const pool=await getPool();
+        let row=null;
+        try {
+            const [rows]=await pool.execute('SELECT id,banned,force_logout_at FROM accounts WHERE id=?',[decoded.account_id]);
+            row=rows[0]||null;
+        } catch(e){
+            // 迁移尚未跑到（banned/force_logout_at 列不存在）时回落旧查询，绝不因此全站 503
+            if(!/Unknown column/i.test(e.message||''))throw e;
+            const [rows]=await pool.execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);
+            row=rows[0]||null;
+        }
+        if(!row)return res.status(401).json({code:401,msg:'账号已失效'});
+        if(row.banned)return res.status(403).json({code:403,msg:'账号已被封禁，如需申诉请联系管理员',banned:true});
+        // 强制下线：JWT 自带的 iat（UTC 秒）早于 force_logout_at 的旧 token 一律失效
+        if(row.force_logout_at&&Number(decoded.iat||0)<Number(row.force_logout_at))return res.status(401).json({code:401,msg:'登录状态已失效，请重新登录'});
         req.account=decoded;next();
     } catch(e){res.status(503).json({code:503,msg:'账号服务暂不可用'});}
 }
@@ -693,15 +706,20 @@ app.use('/daily', (req,res,next)=>{
  res.setHeader('Cache-Control','no-store');return res.status(410).json({code:410,msg:'日常配对功能已下线'});
 });
 app.use('/admin/daily',(req,res)=>res.status(410).json({code:410,msg:'日常配对功能已下线'}));
+const audit = require('./admin-audit')({getPool});
 const analytics = require('./admin-analytics')({getPool});
 const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddleware,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b),banWeekly:(c,id)=>weeklyMatch.ban(c,id),prepare:async pool=>{
     await analytics.ensureSchema();
     await ensureMatchHistoryTable(pool);await ensureComplaintTable(pool);
+    await audit.ensureSchema();
 }});
 const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,clientIp:trustedIp,
     emailConfigured:!!SMTP_PASSWORD,from:FROM_ALIAS+' <'+ACCOUNT_NAME+'>',ensureSchema:daily.ensureSchema,secret:JWT_SECRET});
 
 const studentVerification = require('./verification-guard')(app,{getPool,ensureSchema:daily.ensureSchema,authMiddleware});
+
+// 账号处置（封禁/解封/强制下线/重置密码/重发验证）+ 统一审计
+require('./admin-disposition')(app, {getPool,adminAuthMiddleware,audit,secureAuth});
 
 // 老用户绑定序列号
 // 绑定前置校验：只检查序列号与邮箱是否匹配、是否已绑定，不消耗验证码、不建账号。
@@ -823,12 +841,12 @@ app.use('/account/profile',(req,res)=>res.status(410).set('Cache-Control','no-st
 const chatRef={}; // 延后拿到 chat 的 WebSocket 广播函数（构造顺序在后）
 const notify=require('./notify')(app,{getPool,authMiddleware,refresh:ids=>{try{chatRef.notify&&chatRef.notify(ids);}catch(e){/* 广播失败不影响主流程 */}}});
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
-const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly,notify});
+const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly,notify,audit});
 weeklyMatch.start();
 const friends = require('./friends')(app,{getPool,authMiddleware,daily,notify,studentVerification,getBuddy:()=>buddyMatch,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
-const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,notify,observe:analytics.observe});
+const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,notify,observe:analytics.observe,audit});
 buddyMatch.start();
-const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,notify,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
+const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,notify,audit,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
 // 私有上传（头像 / 聊天图片）：文件落 .private/uploads，读取走 /api/account/* 鉴权。
 // 先于 chat 构造，聊天发图要拿它校验图片归属。
 const uploads=require('./uploads')(app,{getPool,authMiddleware});
@@ -848,11 +866,11 @@ const aiConfig = require('fs').existsSync(aiConfigPath)
 require('./icebreakers')(app,{getPool,authMiddleware,access:userChat.access,env:{...process.env,...aiConfig}});
 const deepDraft=require('./deep-draft')(app,{getPool,authMiddleware});
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
-const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
-require('./survey-admin')(app, {getPool, adminAuthMiddleware});
+const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware, audit});
+require('./survey-admin')(app, {getPool, adminAuthMiddleware, audit});
 require('./survey-stats')(app, {getPool, adminAuthMiddleware});
 deepMatch.start();
-analytics.register(app,{adminAuthMiddleware,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
+analytics.register(app,{adminAuthMiddleware,userIdentitySql:()=>USER_IDENTITY_SQL,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
 app.get('/account/me', authMiddleware, async (req, res) => {
@@ -1384,6 +1402,120 @@ app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
     }
 });
 
+// 整表导出：与列表同一套筛选/排序口径，分块写出（不在内存里堆整表），上限 20000 行。
+const EXPORT_CAP = 20000, EXPORT_CHUNK = 1000;
+app.get('/admin/users/export', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const pool = await getPool();
+        const { where, params, applied } = adminUsers.buildFilters(req.query);
+        const { expr: sortExpr, dir: sortOrder } = adminUsers.buildSort(req.query.sort, req.query.order);
+        const columns = adminUsers.exportColumns(req.query.cols);
+
+        const [[{ total }]] = await pool.execute(`SELECT COUNT(*) as total FROM ${USER_IDENTITY_SQL} WHERE ${where.join(' AND ')}`, params);
+        const want = Math.min(Number(total) || 0, EXPORT_CAP);
+        const stamp = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="fancyu-users-${stamp}.csv"`);
+        res.write('﻿' + columns.map(c => adminUsers.csvCell(c.label)).join(',') + '\r\n');
+
+        let written = 0;
+        while (written < want) {
+            const size = Math.min(EXPORT_CHUNK, want - written);
+            const sql = `SELECT ${USER_SELECT_SQL} FROM ${USER_IDENTITY_SQL} WHERE ${where.join(' AND ')} ORDER BY ${sortExpr} ${sortOrder}, a.id ASC LIMIT ${size} OFFSET ${written}`;
+            const [rows] = await pool.execute(sql, params);
+            if (!rows.length) break;
+            let buf = '';
+            for (const row of rows) {
+                const r = adminUsers.extractContacts(row);
+                buf += columns.map(c => adminUsers.csvCell(adminUsers.exportCell(c.key, r))).join(',') + '\r\n';
+            }
+            res.write(buf);
+            written += rows.length;
+            if (rows.length < size) break;
+        }
+        if (Number(total) > want) res.setHeader('X-Export-Truncated', '1');
+        res.end();
+        audit.write(req.admin, { action: 'user.export', target_type: 'users', method: req.method, path: req.originalUrl, status_code: 200,
+            detail: { rows: written, total: Number(total) || 0, truncated: Number(total) > want, columns: columns.map(c => c.key), filters: applied } });
+    } catch (error) {
+        console.error('Admin Users Export Error:', error);
+        if (!res.headersSent) return res.json({ code: 500, msg: '服务器错误' });
+        try { res.end(); } catch (e) { /* 已断开 */ }
+    }
+});
+
+// 筛选视图：把用户列表的整套 querystring 存下来复用（跨设备、按管理员隔离）。
+async function ensureUserViews(pool) {
+    await pool.execute(`CREATE TABLE IF NOT EXISTS admin_user_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_key VARCHAR(120) NOT NULL,
+        name VARCHAR(60) NOT NULL,
+        query VARCHAR(2000) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_admin_name (admin_key, name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+}
+const VIEW_CAP = 50;
+function cleanViewQuery(raw) {
+    let q = typeof raw === 'string' ? raw : '';
+    if (q.startsWith('?')) q = q.slice(1);
+    q = q.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 2000);
+    return q;
+}
+
+app.get('/admin/user-views', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const pool = await getPool();
+        await ensureUserViews(pool);
+        const [rows] = await pool.execute('SELECT id,name,query,updated_at FROM admin_user_views WHERE admin_key=? ORDER BY updated_at DESC', [audit.adminKey(req.admin)]);
+        return res.json({ code: 200, data: rows, max: VIEW_CAP });
+    } catch (error) {
+        console.error('Admin user-views list error:', error);
+        return res.json({ code: 500, msg: '服务器错误' });
+    }
+});
+
+app.post('/admin/user-views', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const name = String((req.body && req.body.name) || '').trim().slice(0, 60);
+        if (!name) return res.status(400).json({ code: 400, msg: '请填写视图名称' });
+        const query = cleanViewQuery(req.body && req.body.query);
+        if (!query) return res.status(400).json({ code: 400, msg: '视图条件为空' });
+        const pool = await getPool();
+        await ensureUserViews(pool);
+        const key = audit.adminKey(req.admin);
+        const [[{ n }]] = await pool.execute('SELECT COUNT(*) n FROM admin_user_views WHERE admin_key=?', [key]);
+        const [[exist]] = await pool.execute('SELECT id FROM admin_user_views WHERE admin_key=? AND name=?', [key, name]);
+        if (!exist.length && Number(n) >= VIEW_CAP) return res.status(400).json({ code: 400, msg: `最多保存 ${VIEW_CAP} 个视图，请先删除` });
+        await pool.execute(`INSERT INTO admin_user_views (admin_key,name,query) VALUES (?,?,?) ON DUPLICATE KEY UPDATE query=VALUES(query)`, [key, name, query]);
+        audit.write(req.admin, { action: 'user.view_save', target_type: 'view', target_id: name, method: req.method, path: req.originalUrl, status_code: 200, detail: { query } });
+        return res.json({ code: 200, msg: exist.length ? '视图已更新' : '视图已保存' });
+    } catch (error) {
+        console.error('Admin user-views save error:', error);
+        return res.json({ code: 500, msg: '服务器错误' });
+    }
+});
+
+app.delete('/admin/user-views/:id', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ code: 400, msg: '视图编号无效' });
+        const pool = await getPool();
+        await ensureUserViews(pool);
+        const [r] = await pool.execute('DELETE FROM admin_user_views WHERE id=? AND admin_key=?', [Number(req.params.id), audit.adminKey(req.admin)]);
+        if (!r.affectedRows) return res.status(404).json({ code: 404, msg: '视图不存在' });
+        audit.write(req.admin, { action: 'user.view_delete', target_type: 'view', target_id: req.params.id, method: req.method, path: req.originalUrl, status_code: 200 });
+        return res.json({ code: 200, msg: '已删除' });
+    } catch (error) {
+        console.error('Admin user-views delete error:', error);
+        return res.json({ code: 500, msg: '服务器错误' });
+    }
+});
+
 app.get('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
@@ -1470,6 +1602,8 @@ app.get('/admin/accounts/:id/contacts', adminAuthMiddleware, async (req, res) =>
             require('fs').appendFileSync(path.join(__dirname, '../.private/admin-contact-views.jsonl'),
                 JSON.stringify({ at: new Date().toISOString(), admin: req.admin && (req.admin.admin_account_id || req.admin.username) || 'unknown', action: 'rest_contact_view', account_id: id }) + '\n', { mode: 0o600 });
         } catch (e) { /* 审计失败不阻断查看 */ }
+        // 同一条 DB 留存（JSONL 继续写，两处并行）
+        audit.write(req.admin, { action: 'contact.view', target_type: 'account', target_id: id, method: req.method, path: req.originalUrl, status_code: 200 });
         const out = [{ 来源: '账号邮箱', 值: a[0].email }];
         const [u] = await p.execute('SELECT contact_email,contact_info FROM users WHERE account_id=?', [id]);
         for (const r of u) { out.push({ 来源: 'users', 邮箱: r.contact_email, 资料: r.contact_info }); }
@@ -1596,6 +1730,7 @@ app.post('/admin/import-matches', adminAuthMiddleware, async (req, res) => {
 
         return { code: 200, data: { success: successCount, skip: skipCount, fail: failCount } };
         });
+        if (result && result.code === 200) audit.write(req.admin, { action: 'match.import', target_type: 'match', method: req.method, path: req.originalUrl, status_code: 200, detail: result.data });
         return res.json(result);
     } catch (error) {
         console.error('Admin Import Matches Error:', error);
@@ -1615,6 +1750,8 @@ app.delete('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
             await pool.execute(`UPDATE complaints SET status = 'dismissed' WHERE reporter_account_id = ?`, [accountId]);
         }
         await pool.execute(`DELETE FROM users WHERE serial_number = ?`, [req.params.serial]);
+        // 破坏性操作必须留痕（此前完全没有审计）
+        audit.write(req.admin, { action: 'user.delete', target_type: 'user', target_id: req.params.serial, method: req.method, path: req.originalUrl, status_code: 200, detail: { account_id: accountId || null } });
         return res.json({ code: 200, msg: '已删除' });
     } catch (error) {
         console.error('Admin Delete Error:', error);
@@ -1687,6 +1824,7 @@ app.post('/admin/chat/save', adminAuthMiddleware, async (req, res) => {
              ON DUPLICATE KEY UPDATE title = VALUES(title), messages = VALUES(messages)`,
             [id, chatTitle, JSON.stringify(messages)]
         );
+        audit.write(req.admin, { action: 'chat.save', target_type: 'chat_session', target_id: id, method: req.method, path: req.originalUrl, status_code: 200, detail: { messages: Array.isArray(messages) ? messages.length : null } });
         return res.json({ code: 200, msg: '保存成功' });
     } catch (error) {
         console.error('Chat save error:', error);
@@ -1699,6 +1837,7 @@ app.delete('/admin/chat/:id', adminAuthMiddleware, async (req, res) => {
         const pool = await getPool();
         await ensureChatSessionsTable(pool);
         await pool.execute(`DELETE FROM chat_sessions WHERE id = ?`, [req.params.id]);
+        audit.write(req.admin, { action: 'chat.delete', target_type: 'chat_session', target_id: req.params.id, method: req.method, path: req.originalUrl, status_code: 200 });
         return res.json({ code: 200, msg: '已删除' });
     } catch (error) {
         console.error('Chat delete error:', error);
@@ -1712,35 +1851,39 @@ app.get('/admin/complaints', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         await ensureComplaintTable(pool);
-        const { status, page = 1, limit = 20 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const { status, q, page = 1, limit = 20 } = req.query;
+        const safeLimit = Math.min(200, Math.max(1, parseInt(limit, 10) || 20));
+        const safePage = Math.max(1, parseInt(page, 10) || 1);
+        const offset = (safePage - 1) * safeLimit;
 
-        let query = `SELECT * FROM complaints`;
-        let countQuery = `SELECT COUNT(*) as total FROM complaints`;
+        // 举报人 / 被举报人（target_type='user' 且 target_id 为数字时）一次带出，便于直接点进用户详情
+        const base = `FROM complaints c
+            LEFT JOIN accounts ra ON ra.id = c.reporter_account_id
+            LEFT JOIN accounts ta ON c.target_type='user' AND ta.id = CAST(c.target_id AS UNSIGNED)`;
+        let where = '';
         const params = [];
-
-        if (status) {
-            query += ` WHERE status = ?`;
-            countQuery += ` WHERE status = ?`;
-            params.push(status);
+        if (status) { where = ' WHERE c.status = ?'; params.push(status); }
+        // 关键词：举报人 / 被举报人账号名、举报人邮箱、原因与描述（参数化 LIKE，转义 % _ \）
+        const keyword = typeof q === 'string' ? q.trim().slice(0, 80) : '';
+        if (keyword) {
+            where += where ? ' AND' : ' WHERE';
+            where += ' (ra.username LIKE ? OR ta.username LIKE ? OR c.reporter_email LIKE ? OR c.reason LIKE ? OR c.description LIKE ?)';
+            const like = '%' + keyword.replace(/[\\%_]/g, c => '\\' + c) + '%';
+            params.push(like, like, like, like, like);
         }
 
-        query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-
-        const [countRows] = await pool.execute(countQuery, status ? [status] : []);
+        const [countRows] = await pool.execute(`SELECT COUNT(*) as total ${base}${where}`, params);
         const total = countRows[0].total;
 
-        const [rows] = await pool.execute(query, [...params, parseInt(limit), offset]);
+        const [rows] = await pool.execute(
+            `SELECT c.*, ra.username AS reporter_username, ta.username AS target_username,
+                CASE WHEN c.target_type='user' AND c.target_id REGEXP '^[0-9]+$' THEN CAST(c.target_id AS UNSIGNED) END AS target_account_id,
+                EXISTS(SELECT 1 FROM user_chat_reports r WHERE r.complaint_id=c.id) AS has_chat_context,
+                (SELECT COUNT(*) FROM complaints c2 WHERE c2.target_type='user' AND c2.target_id=c.target_id) AS target_report_count
+             ${base}${where} ORDER BY c.created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`,
+            params);
 
-        return res.json({
-            code: 200,
-            data: {
-                complaints: rows,
-                total,
-                page: parseInt(page),
-                limit: parseInt(limit)
-            }
-        });
+        return res.json({ code: 200, data: { complaints: rows, total, page: safePage, limit: safeLimit } });
     } catch (error) {
         console.error('Admin complaints error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
@@ -1760,14 +1903,59 @@ app.post('/admin/complaint/:id/status', adminAuthMiddleware, async (req, res) =>
         await ensureComplaintTable(pool);
 
         await pool.execute(
-            `UPDATE complaints SET status = ?, admin_reply = ? WHERE id = ?`,
-            [status, admin_reply || null, id]
+            `UPDATE complaints SET status = ?, admin_reply = ?, handled_by = ?, handled_at = UTC_TIMESTAMP() WHERE id = ?`,
+            [status, admin_reply || null, audit.adminKey(req.admin), id]
         );
+        audit.write(req.admin, { action: 'complaint.status', target_type: 'complaint', target_id: id, method: req.method, path: req.originalUrl, status_code: 200, detail: { status, replied: !!admin_reply } });
 
         return res.json({ code: 200, msg: '状态已更新' });
     } catch (error) {
         console.error('Admin complaint status error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
+    }
+});
+
+// 举报处置闭环：改状态 +（可选）回复 +（可选）就地封禁被举报人，一个事务内完成并落审计。
+app.post('/admin/complaints/:id/act', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ code: 400, msg: '举报编号无效' });
+    const body = req.body || {};
+    const status = String(body.status || '');
+    if (!['pending', 'processing', 'resolved', 'dismissed'].includes(status)) return res.status(400).json({ code: 400, msg: '无效的状态值' });
+    const reply = body.admin_reply === undefined || body.admin_reply === null ? null : String(body.admin_reply).slice(0, 2000);
+    if (status === 'resolved' && !(reply && reply.trim())) return res.status(400).json({ code: 400, msg: '标记为「已处理」必须填写回复内容' });
+    const id = Number(req.params.id);
+    try {
+        const pool = await getPool();
+        await ensureComplaintTable(pool);
+        const [rows] = await pool.execute('SELECT id,target_type,target_id,status FROM complaints WHERE id=?', [id]);
+        if (!rows.length) return res.status(404).json({ code: 404, msg: '举报不存在' });
+        const c = rows[0];
+        const targetAccountId = c.target_type === 'user' && /^\d+$/.test(String(c.target_id)) ? Number(c.target_id) : null;
+
+        const conn = await pool.getConnection();
+        let banned = false;
+        try {
+            await conn.beginTransaction();
+            await conn.execute('UPDATE complaints SET status=?, admin_reply=?, handled_by=?, handled_at=UTC_TIMESTAMP() WHERE id=?',
+                [status, reply, audit.adminKey(req.admin), id]);
+            if (body.ban === true) {
+                if (!targetAccountId) throw Object.assign(new Error('该举报没有可封禁的目标账号'), { httpCode: 400 });
+                const reason = '举报处置：' + (body.ban_reason ? String(body.ban_reason).slice(0, 200) : (reply ? reply.slice(0, 200) : '举报成立'));
+                await conn.execute('UPDATE accounts SET banned=1, banned_at=UTC_TIMESTAMP(), ban_reason=?, force_logout_at=? WHERE id=?',
+                    [reason, Math.floor(Date.now() / 1000), targetAccountId]);
+                banned = true;
+            }
+            await conn.commit();
+        } catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
+
+        audit.write(req.admin, { action: 'complaint.act', target_type: 'complaint', target_id: id, method: req.method, path: req.originalUrl, status_code: 200,
+            detail: { status, replied: !!reply, banned, target_account_id: targetAccountId } });
+        return res.json({ code: 200, msg: banned ? '已处理并封禁被举报人' : '已处理', banned, target_account_id: targetAccountId });
+    } catch (error) {
+        if (error && error.httpCode === 400) return res.status(400).json({ code: 400, msg: error.message });
+        console.error('Admin complaint act error:', error.code || error.name);
+        return res.status(503).json({ code: 503, msg: '处置失败，请稍后重试' });
     }
 });
 
@@ -2117,8 +2305,16 @@ async function ensureComplaintTable(pool) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_status (status),
-            INDEX idx_reporter (reporter_account_id)
+            INDEX idx_reporter (reporter_account_id),
+            INDEX idx_target (target_type, target_id)
         )`);
+        // 既有库容错补列（处置留痕）
+        for (const [col, def] of [['handled_by', 'VARCHAR(120) NULL'], ['handled_at', 'TIMESTAMP NULL DEFAULT NULL']]) {
+            try { await pool.execute(`ALTER TABLE complaints ADD COLUMN ${col} ${def}`); }
+            catch (e) { if (!/Duplicate|already/i.test(e.message || '')) throw e; }
+        }
+        try { await pool.execute('ALTER TABLE complaints ADD INDEX idx_target (target_type, target_id)'); }
+        catch (e) { if (!/Duplicate|already/i.test(e.message || '')) { /* 索引失败不影响功能 */ } }
     } catch (e) {
         console.log('ensureComplaintTable:', e.message.substring(0, 100));
     }
@@ -2299,6 +2495,10 @@ app.use((req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
-(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();await invite.ensureSchema();await perf.ensureIndexes();notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
+(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();await invite.ensureSchema();await perf.ensureIndexes();
+// 账号处置/审计迁移必须在接流量前跑完（authMiddleware 会读 accounts.banned / force_logout_at）。
+// 刻意不 await：迁移失败只打日志，绝不因此让整站起不来；ensureSchema 内部会把失败缓存清空，下次调用自动重试。
+audit.ensureSchema().catch(e=>console.error('Audit schema:',e.code||e.name||e.message));
+notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
 
 console.log('Function instance started successfully');

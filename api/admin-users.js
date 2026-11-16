@@ -285,6 +285,113 @@ function fieldCatalog() {
   return Object.entries(FILTER_FIELDS).map(([key, m]) => ({ key, label: m.label, type: m.type, ops: m.ops }));
 }
 
+// ---- 整表导出（服务端 CSV）----
+// key 与 web/admin.html 的 USER_COLUMNS 对齐；值一律在这里派生，杜绝任意表达式。
+// 依赖 USER_SELECT_SQL 的结果行（含 u.contact_info），经 extractContacts 后取 wechat/phone。
+const EXPORT_COLUMNS = [
+  { key: 'account_id', label: '账号ID' },
+  { key: 'nickname', label: '昵称' },
+  { key: 'account_username', label: '账号名' },
+  { key: 'sex', label: '性别' },
+  { key: 'campus', label: '校区' },
+  { key: 'grade', label: '年级' },
+  { key: 'major', label: '专业' },
+  { key: 'school', label: '学校' },
+  { key: 'height', label: '身高' },
+  { key: 'mbti', label: 'MBTI' },
+  { key: 'email', label: '邮箱' },
+  { key: 'wechat', label: '微信' },
+  { key: 'phone', label: '手机' },
+  { key: 'student_verified', label: '学邮验证' },
+  { key: 'email_verified', label: '邮箱验证' },
+  { key: 'has_love', label: '恋爱问卷' },
+  { key: 'has_deep', label: '深度交友问卷' },
+  { key: 'buddy_count', label: '搭子卡' },
+  { key: 'has_chat', label: '发过消息' },
+  { key: 'love_pair_count', label: '恋爱配对' },
+  { key: 'deep_pair_count', label: '深度配对' },
+  { key: 'join_matching', label: '恋爱匹配' },
+  { key: 'created_at', label: '注册时间' },
+  { key: 'last_login_at', label: '最近登录' },
+];
+const EXPORT_KEYS = EXPORT_COLUMNS.map(c => c.key);
+const yesno = v => (Number(v) ? '是' : '否');
+
+// 值的唯一出处（row 已过 extractContacts）
+function exportCell(key, row) {
+  const r = row || {};
+  switch (key) {
+    case 'nickname': return r.nickname || r.account_username || '';
+    case 'sex': return r.sex || '';
+    case 'school': return r.school || r.account_school || r.my_school || '';
+    case 'height': return r.height ? String(r.height) : '';
+    case 'email': return r.email || r.contact_email || '';
+    case 'student_verified': return r.student_verified ? '已验证' : '未验证';
+    case 'email_verified': return r.email_verified == 1 ? '已验证' : '未验证';
+    case 'has_love': return r.has_love ? '已填' : '未填';
+    case 'has_deep': return r.has_deep ? '已填' : (r.has_legacy_deep ? '旧版' : '未填');
+    case 'has_chat': return r.has_chat ? '是' : '否';
+    case 'join_matching': return r.join_matching == 1 ? '参与' : '未参与';
+    case 'created_at': return r.created_at ? String(r.created_at).slice(0, 19) : '';
+    case 'last_login_at': return r.last_login_at ? String(r.last_login_at).slice(0, 19) : '';
+    default: return r[key] === null || r[key] === undefined ? '' : String(r[key]);
+  }
+}
+
+// cols= 白名单：只认 EXPORT_KEYS，保持 EXPORT_COLUMNS 的规范顺序；空值给全集。
+function exportColumns(cols) {
+  const list = String(cols || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!list.length) return EXPORT_COLUMNS.slice();
+  const picked = EXPORT_KEYS.filter(k => list.includes(k));
+  return picked.length ? EXPORT_COLUMNS.filter(c => picked.includes(c.key)) : EXPORT_COLUMNS.slice();
+}
+
+// CSV 单元格：与 web/admin.html 同款公式注入防护
+function csvCell(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  const guarded = /^[=+@\-\t\r]/.test(s) ? "'" + s : s;
+  return /[",\r\n]/.test(guarded) ? '"' + guarded.replace(/"/g, '""') + '"' : guarded;
+}
+
+// ---- 分布统计（GET /admin/distribution）----
+// 只允许 str/bool 且**不含联系方式**的字段；expr 直接复用 FILTER_FIELDS（静态表达式，无占位符）。
+const GROUPABLE = {
+  campus: '校区',
+  sex: '性别',
+  sex_prefer: '期望性别（取向）',
+  sex_choice: '性别（选择）',
+  grade: '年级',
+  major: '专业',
+  school: '学校',
+  hometown: '家乡',
+  constellation: '星座',
+  mbti: 'MBTI',
+  relationship_goal: '恋爱目的',
+  friend_goal: '交友目的',
+  experience: '恋爱经历',
+  body_type: '体型',
+  online_offline: '线上/线下',
+  survey_type: '问卷类型',
+  join_matching: '参与恋爱匹配',
+  join_friend_matching: '参与深度交友',
+  email_verified: '邮箱验证',
+  student_verified: '学邮验证',
+  has_love: '已填恋爱问卷',
+  has_deep: '已填深度交友问卷',
+  has_profile: '有个人主页',
+  has_chat: '发过消息',
+};
+
+function groupableCatalog() {
+  return Object.entries(GROUPABLE).map(([key, label]) => ({ key, label }));
+}
+// 返回 {expr,label}；未知字段返回 null（调用方 400）
+function groupableField(key) {
+  if (!Object.hasOwn(GROUPABLE, String(key))) return null;
+  const m = FILTER_FIELDS[key];
+  return { key, label: GROUPABLE[key], expr: m.expr, type: m.type };
+}
+
 // 把 users.contact_info（JSON [{type|method|label, value}] 或纯文本）拆成 wechat/phone。
 // 只做展示派生，不改库、不参与筛选。
 function extractContacts(row) {
@@ -320,5 +427,7 @@ module.exports = {
   FILTER_FIELDS, SORT_MAP, fieldCatalog,
   buildFilters, buildSort, compileCondition,
   clampPageSize, clampPage, parseBool, extractContacts,
+  EXPORT_COLUMNS, exportColumns, exportCell, csvCell,
+  GROUPABLE, groupableCatalog, groupableField,
   MAX_CONDS, MAX_IN_VALUES,
 };

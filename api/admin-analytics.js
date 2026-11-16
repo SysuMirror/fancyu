@@ -66,16 +66,73 @@ module.exports=function({getPool}){
    const card_types=await q('SELECT type,COUNT(*) cards,SUM(enabled=1) enabled FROM friend_cards WHERE deleted=0 GROUP BY type');
    const reports=await q('SELECT status,COUNT(*) count FROM complaints WHERE created_at>=? AND created_at<? GROUP BY status',times);
    const survey_versions=await q('SELECT version,COUNT(*) count FROM weekly_questionnaires GROUP BY version');
+   // —— 本批新增面板（纯追加 key，不改既有 key 的口径）——
+   // 日期序列一律按北京时区补零，缺日不虚构。
+   const zeroFill=async(sql,args,keys)=>{const rows=await q(sql,args);const out=[];for(let d=new Date(range.start+'T00:00:00Z');d.toISOString().slice(0,10)<=range.end;d.setUTCDate(d.getUTCDate()+1)){const day=d.toISOString().slice(0,10),r=rows.find(x=>x.day===day)||{};const o={day};for(const k of keys)o[k]=Number(r[k]||0);out.push(o);}return out;};
+   // 注册与活跃趋势：每日新增登录（last_login_at，依赖登录时写入）+ 每日活跃发信人
+   const activity_trend=await zeroFill(`SELECT day,SUM(logins) logins,SUM(senders) senders FROM (
+    SELECT DATE_FORMAT(DATE_ADD(last_login_at,INTERVAL 8 HOUR),'%Y-%m-%d') day,COUNT(*) logins,0 senders FROM accounts WHERE last_login_at>=? AND last_login_at<? GROUP BY day
+    UNION ALL SELECT DATE_FORMAT(DATE_ADD(created_at,INTERVAL 8 HOUR),'%Y-%m-%d') day,0,COUNT(DISTINCT sender_id) FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<? GROUP BY day
+   ) t GROUP BY day ORDER BY day`,times,['logins','senders']);
+   // 聊天运营：消息数 / 发信人数 / 会话数（mode+pair 去重）/ 联系方式交换数
+   const chat_ops={
+    messages:await count('SELECT COUNT(*) n FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<?',times),
+    senders:await count('SELECT COUNT(DISTINCT sender_id) n FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<?',times),
+    conversations:await count("SELECT COUNT(DISTINCT CONCAT(mode,':',pair_id)) n FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<?",times),
+    exchanges:await count('SELECT COUNT(*) n FROM user_chat_contact_events WHERE exchanged_at>=? AND exchanged_at<?',times)
+   };
+   chat_ops.by_mode=(await q('SELECT mode,COUNT(*) messages,COUNT(DISTINCT sender_id) senders,COUNT(DISTINCT CONCAT(mode,\':\',pair_id)) conversations FROM user_chat_messages WHERE deleted_at IS NULL AND created_at>=? AND created_at<? GROUP BY mode',times)).map(r=>({mode:r.mode,messages:Number(r.messages),senders:Number(r.senders),conversations:Number(r.conversations)}));
+   chat_ops.avg_messages_per_conversation=chat_ops.conversations?Math.round(chat_ops.messages/chat_ops.conversations*10)/10:null;
+   // 举报运营：按状态 / 处置时长（以 updated_at 近似完成时间）/ 被举报 Top10（只到用户名，不含联系方式）
+   const report_ops={};
+   report_ops.by_status=reports.map(r=>({status:r.status,count:Number(r.count)}));
+   report_ops.pending_total=await count("SELECT COUNT(*) n FROM complaints WHERE status IN ('pending','processing')");
+   {const [rt]=await q("SELECT COUNT(*) handled,ROUND(AVG(TIMESTAMPDIFF(MINUTE,created_at,updated_at)),1) avg_minutes,ROUND(MAX(TIMESTAMPDIFF(MINUTE,created_at,updated_at)),1) max_minutes FROM complaints WHERE status IN ('resolved','dismissed') AND updated_at>=? AND updated_at<?",times);
+    const row=rt[0]||{};report_ops.handled=Number(row.handled||0);report_ops.avg_minutes=row.avg_minutes===null||row.avg_minutes===undefined?null:Number(row.avg_minutes);report_ops.max_minutes=row.max_minutes===null||row.max_minutes===undefined?null:Number(row.max_minutes);report_ops.duration_note='以 updated_at 近似处置完成时间';}
+   report_ops.top_targets=(await q("SELECT c.target_id,COUNT(*) count,MAX(a.username) username FROM complaints c LEFT JOIN accounts a ON a.id=CAST(c.target_id AS UNSIGNED) WHERE c.target_type='user' AND c.created_at>=? AND c.created_at<? GROUP BY c.target_id ORDER BY count DESC LIMIT 10",times)).map(r=>({target_id:r.target_id,username:r.username||null,count:Number(r.count)}));
+   // 邀请增长：汇总 / 本期新增（邀请 vs 自然）/ 被邀注册趋势 / Top 邀请人（不含联系方式）
+   const [[invSum]]=await q('SELECT COUNT(*) accounts,COALESCE(SUM(invite_code IS NOT NULL),0) has_code,COALESCE(SUM(invited_by IS NOT NULL),0) invited,COUNT(DISTINCT invited_by) inviters FROM accounts');
+   const [[invPeriod]]=await q('SELECT COUNT(*) registered,COALESCE(SUM(invited_by IS NOT NULL),0) invited_registered FROM accounts WHERE created_at>=? AND created_at<?',times);
+   const invite={total_accounts:Number(invSum.accounts),with_invite_code:Number(invSum.has_code),invited_accounts:Number(invSum.invited),active_inviters:Number(invSum.inviters),period_registered:Number(invPeriod.registered),period_invited:Number(invPeriod.invited_registered)};
+   invite.period_organic=invite.period_registered-invite.period_invited;
+   invite.invited_share=percent(invite.period_invited,invite.period_registered);
+   invite.trend=await zeroFill(`SELECT DATE_FORMAT(DATE_ADD(created_at,INTERVAL 8 HOUR),'%Y-%m-%d') day,COALESCE(SUM(invited_by IS NOT NULL),0) invited,COALESCE(SUM(invited_by IS NULL),0) organic FROM accounts WHERE created_at>=? AND created_at<? GROUP BY day`,times,['invited','organic']);
+   invite.top_inviters=(await q('SELECT i.id,i.username,COUNT(*) count FROM accounts r JOIN accounts i ON i.id=r.invited_by WHERE r.created_at>=? AND r.created_at<? GROUP BY i.id,i.username ORDER BY count DESC LIMIT 10',times)).map(r=>({account_id:r.id,username:r.username||null,count:Number(r.count)}));
    const [meta]=await q("SELECT DATE_FORMAT(started_at,'%Y-%m-%dT%H:%i:%sZ') started_at FROM analytics_metadata WHERE name='recommendations'");
    const core_metrics=await require('./core-metrics').summary(c,range);
    const funnels=await require('./core-metrics').funnel(c,range);
-   await c.commit();return {core_metrics,funnels,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at};
+   await c.commit();return {core_metrics,funnels,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString(),totals,period,modes,active,pause,statuses,trend,observations,card_types,reports,survey_versions,observation_started_at:meta.started_at,activity_trend,chat_ops,report_ops,invite};
   }catch(e){await c.rollback();throw e;}finally{c.release();}
  }
- function register(app,{adminAuthMiddleware,prepare}){
+ function register(app,{adminAuthMiddleware,prepare,userIdentitySql}){
   app.get('/admin/overview',adminAuthMiddleware,async(req,res)=>{res.setHeader('Cache-Control','no-store');let range;try{range=dateRange(req.query);}catch(e){return res.status(400).json({code:400,msg:e.message});}
    try{await prepare();res.json({code:200,data:await summary(range)});}catch(e){console.error('Admin overview:',e.code||e.name);res.status(503).json({code:503,msg:'统计暂不可用，请稍后重试'});}
   });
+  // 字段分布（校区/性别/期望性别…… 可自定义）：只出聚合，字段限 admin-users.js 的 GROUPABLE 白名单
+  app.get('/admin/distribution',adminAuthMiddleware,async(req,res)=>{
+   res.setHeader('Cache-Control','no-store');
+   const users=require('./admin-users');
+   const f=users.groupableField(req.query.field);
+   if(!f)return res.status(400).json({code:400,msg:'该字段不支持分布统计'});
+   let range;try{range=dateRange(req.query);}catch(e){return res.status(400).json({code:400,msg:e.message});}
+   try{
+    await prepare();
+    const identity=typeof userIdentitySql==='function'?userIdentitySql():userIdentitySql;
+    if(!identity)return res.status(503).json({code:503,msg:'统计暂不可用，请稍后重试'});
+    const pool=await getPool();
+    const RANGE=[range.from,range.until];
+    const [[t]]=await pool.execute(`SELECT COUNT(*) n FROM ${identity} WHERE COALESCE(a.created_at,u.created_at)>=? AND COALESCE(a.created_at,u.created_at)<?`,RANGE);
+    const total=Number(t.n||0);
+    const rows=await pool.execute(`SELECT ${f.expr} AS v,COUNT(*) n FROM ${identity} WHERE COALESCE(a.created_at,u.created_at)>=? AND COALESCE(a.created_at,u.created_at)<? GROUP BY v ORDER BY n DESC LIMIT 51`,RANGE).then(([r])=>r);
+    const [[d]]=await pool.execute(`SELECT COUNT(DISTINCT NULLIF(${f.expr},'')) d FROM ${identity} WHERE COALESCE(a.created_at,u.created_at)>=? AND COALESCE(a.created_at,u.created_at)<?`,RANGE);
+    const fmt=v=>v===null||v===undefined||v===''?(f.type==='bool'?'否':'未填写'):(f.type==='bool'?(Number(v)?'是':'否'):String(v));
+    const filled=rows.filter(r=>r.v!==null&&r.v!=='').slice(0,50);
+    const buckets=filled.map(r=>({value:fmt(r.v),count:Number(r.n),pct:percent(Number(r.n),total)}));
+    const unfilled=rows.filter(r=>r.v===null||r.v==='').reduce((s,r)=>s+Number(r.n),0);
+    res.json({code:200,data:{field:f.key,label:f.label,type:f.type,total,buckets,unfilled,truncated:Number(d.d||0)>filled.length,range:{start:range.start,end:range.end,timezone:range.timezone},generated_at:new Date().toISOString()}});
+   }catch(e){console.error('Admin distribution:',e.code||e.name);res.status(503).json({code:503,msg:'统计暂不可用，请稍后重试'});}
+  });
+  app.get('/admin/distribution/fields',adminAuthMiddleware,(req,res)=>{res.setHeader('Cache-Control','no-store');res.json({code:200,fields:require('./admin-users').groupableCatalog()});});
  }
  return {ensureSchema,observe,summary,register};
 };

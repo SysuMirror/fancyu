@@ -377,6 +377,23 @@ body[data-page="admin"] .detail-section h4{font-size:12px;color:var(--ink,#073b3
 body[data-page="admin"] .detail-actions{margin:14px 0 4px}
 body[data-page="admin"] #contactsBox .detail-field{grid-column:1/-1}
 
+/* 账号处置（详情弹窗内，管理员专属） */
+body[data-page="admin"] .disp-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 2px}
+body[data-page="admin"] .disp-actions .disp-state{flex-basis:100%;margin:0 0 4px;font-size:13px;color:var(--muted,#55726a)}
+body[data-page="admin"] .disp-actions button{padding:9px 14px;border:1px solid #cad8c8;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500;background:#fafcf9;color:var(--ink,#073b32);min-height:40px}
+body[data-page="admin"] .disp-actions button:hover:not(:disabled){border-color:#265a48;color:var(--primary,#265a48);background:#e5ebdf}
+body[data-page="admin"] .disp-actions button:disabled{opacity:.55;cursor:not-allowed}
+body[data-page="admin"] .disp-actions button.danger{color:var(--sysu-red,#a6372d);border-color:#dcb1aa}
+body[data-page="admin"] .disp-actions button.danger:hover:not(:disabled){background:var(--sysu-red,#a6372d);color:#fff;border-color:var(--sysu-red,#a6372d)}
+body[data-page="admin"] .disp-badge{display:inline-block;padding:3px 10px;border-radius:var(--radius-pill,999px);font-size:11px;font-weight:600;background:#fbefec;color:var(--sysu-red,#a6372d)}
+
+/* 举报面板 */
+body[data-page="admin"] #panelReports .report-desc{max-width:340px;white-space:pre-wrap;overflow-wrap:anywhere}
+body[data-page="admin"] #panelReports .report-actions{display:flex;flex-wrap:wrap;gap:6px}
+body[data-page="admin"] #panelReports .report-actions .btn-sm{padding:6px 10px;font-size:12px}
+body[data-page="admin"] #reportEvidenceBody p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;border-bottom:1px solid var(--line-hair,#dedfd6);padding:8px 0;margin:0}
+body[data-page="admin"] #reportEvidenceBody p.report-hit{background:#fdf3e0;border-radius:8px;padding:8px 10px}
+
 @media (max-width:760px){
   body[data-page="admin"] .col-picker{right:0;left:0;width:auto}
   body[data-page="admin"] .col-picker-body{grid-template-columns:1fr}

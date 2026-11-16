@@ -9,8 +9,38 @@
  let selected=range(30);
  const metric=(label,value)=>`<div class="ov-metric"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
  const table=(headers,rows)=>`<div class="ov-scroll"><table><thead><tr>${headers.map(x=>'<th>'+esc(x)+'</th>').join('')}</tr></thead><tbody>${rows.length?rows.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join(''):`<tr><td colspan="${headers.length}">当前范围暂无数据</td></tr>`}</tbody></table></div>`;
+ const PALETTE=['#428b62','#6aa37e','#8fbf9c','#b6d5b7','#245c40','#c9a44a','#b7b06a','#7fa6c9','#a98fc9','#c98fa0'];
+ const dateShort=x=>String(x||'').slice(5);
+ function bars(series,key,label,note){
+  if(!Array.isArray(series)||!series.length)return `<section class="ov-box"><h3>${esc(label)}</h3><p>当前范围暂无数据。</p></section>`;
+  const max=Math.max(1,...series.map(x=>Number(x[key]||0)));
+  return `<section class="ov-box"><h3>${esc(label)}</h3><div class="ov-bars" role="img" aria-label="${esc(label)}，下方可展开数据表">${series.map(x=>`<div class="ov-bar" style="height:${Number(x[key]||0)/max*100}%" title="${esc(x.day)}：${Number(x[key]||0)}"></div>`).join('')}</div><div class="ov-axis"><span>${esc(series[0].day)}</span><span>单日最高 ${max} </span><span>${esc(series[series.length-1].day)}</span></div>${note?`<p>${esc(note)}</p>`:''}<details><summary>展开数据表</summary>${table(['日期',label],series.map(x=>[dateShort(x.day),Number(x[key]||0)]))}</details></section>`;
+ }
+ function ladder(rows){
+  const modes={love:'恋爱配对',deep:'深度交友',buddy:'约个搭子'};
+  const steps=[['agreement','双方同意率'],['chat','双向开聊率'],['continuation','持续交流率']];
+  return rows.filter(r=>r&&r.mode).map(r=>{
+   const items=steps.map(([k,l])=>r[k]?`<div class="ov-label"><span>${esc(l)}</span><b>${r[k].rate===null?'—':pct(r[k].rate)}<span class="ov-sub"> ${r[k].numerator} / ${r[k].denominator}</span></b></div>`:'').join('');
+   return `<div class="ov-funnel"><h4>${esc(modes[r.mode]||r.mode)}</h4>${items||'<p>本期暂无可计算样本。</p>'}</div>`;
+  }).join('');
+ }
+ function newPanels(d){
+  let h='';
+  const a=d.activity_trend||[];
+  h+=`<div class="ov-split">${bars(a,'logins','每日登录账号数','登录时间由账号最近一次成功登录记录；同一账号同一天只计一次，只反映所选范围内最近一次登录落在该天的账号数，不等于每日活跃用户数（DAU）。')}${bars(a,'senders','每日发消息人数','所选范围内有发过站内消息的去重人数（不含已撤回/已删除消息），不读取消息正文。')}</div>`;
+  const c=d.chat_ops||{};
+  h+=`<section class="ov-box"><h3>聊天运营（所选日期）</h3><div class="ov-metrics">${metric('站内消息数',c.messages??0)+metric('发消息人数',c.senders??0)+metric('会话数（方式×配对）',c.conversations??0)+metric('联系方式交换数',c.exchanges??0)}</div><p>平均每会话消息数：${c.avg_messages_per_conversation===null||c.avg_messages_per_conversation===undefined?'—':c.avg_messages_per_conversation}。会话按「配对方式 + 配对 ID」去重，双向消息算同一会话；联系方式交换以用户主动交换事件计。</p>${table(['方式','消息数','发消息人数','会话数'],(c.by_mode||[]).map(r=>[names[r.mode]||r.mode,r.messages,r.senders,r.conversations]))}</section>`;
+  const ro=d.report_ops||{};
+  h+=`<section class="ov-box"><h3>举报运营（所选日期）</h3><div class="ov-metrics">${metric('当前待处理 / 处理中',ro.pending_total??0)+metric('本期已处置',ro.handled??0)+metric('平均处置时长（分钟）',ro.avg_minutes===null||ro.avg_minutes===undefined?'—':ro.avg_minutes)+metric('最长处置时长（分钟）',ro.max_minutes===null||ro.max_minutes===undefined?'—':ro.max_minutes)}</div><p>处置时长${esc(ro.duration_note||'以更新时间近似')}；「已处置」只统计本期处置完成的记录。</p><div class="ov-split"><div>${table(['状态','数量'],(ro.by_status||[]).map(r=>[r.status==='pending'?'待处理':names[r.status]||r.status,r.count]))}</div><div>${table(['被举报账号','用户名','举报次数'],(ro.top_targets||[]).map(r=>['#'+r.target_id,r.username||'（无匹配账号）',r.count]))}</div></div><p>被举报榜只显示账号编号与用户名，不含联系方式与举报正文。</p></section>`;
+  const iv=d.invite||{};
+  h+=`<section class="ov-box"><h3>邀请增长</h3><div class="ov-metrics">${metric('注册账号总数',iv.total_accounts??0)+metric('已生成邀请码',iv.with_invite_code??0)+metric('通过邀请注册',iv.invited_accounts??0)+metric('有效邀请人',iv.active_inviters??0)}</div><div class="ov-metrics">${metric('本期新增注册',iv.period_registered??0)+metric('其中被邀请',iv.period_invited??0)+metric('自然注册',iv.period_organic??0)+metric('被邀占比',iv.invited_share===null||iv.invited_share===undefined?'—':pct(iv.invited_share))}</div><details><summary>展开被邀 / 自然注册每日数据</summary>${table(['日期','被邀请注册','自然注册'],(iv.trend||[]).map(r=>[dateShort(r.day),r.invited,r.organic]))}</details><h4>邀请人排行（本期，仅到用户名）</h4>${table(['账号','用户名','邀请注册数'],(iv.top_inviters||[]).map(r=>['#'+r.account_id,r.username||'（无用户名）',r.count]))}<p>邀请关系来自账号表已记录的邀请码/邀请人字段，早期账号可能未记录；不含任何联系方式。</p></section>`;
+  const rows=(d.core_metrics&&d.core_metrics.rows)||[];
+  h+=`<section class="ov-box"><h3>匹配转化漏斗（三线）</h3><p>沿用上方「六项核心指标」同一批样本与观察期，不额外计算；「双方同意 → 双向开聊 → 持续交流」逐级收窄，未满观察期的不计入分母（待观察见核心指标表）。</p>${ladder(rows)}</section>`;
+  h+=`<section class="ov-box"><h3>信息分布（可自定义）</h3><div class="ov-tools"><label>统计字段<select id="ovDistField"></select></label><label>显示方式<select id="ovDistView"><option value="pie">饼图</option><option value="bar">条形图</option><option value="table">表格</option></select></label></div><p>按账号注册时间落在所选日期范围内统计，只出聚合人数与占比，不展示个人资料原文。</p><div id="ovDistBody"><p>正在读取分布…</p></div></section>`;
+  return h;
+ }
  function shell(){document.getElementById('operationsDashboard').innerHTML=`<div class="ov-box"><h2>运营数据看板</h2><div class="ov-tools"><label>开始日期<input type="date" id="ovStart" value="${selected.start}" max="${today()}"></label><label>结束日期<input type="date" id="ovEnd" value="${selected.end}" max="${today()}"></label><button class="ov-primary" id="ovRefresh">查询 / 刷新</button><button data-ov-days="7">近 7 天</button><button data-ov-days="30">近 30 天</button><button data-ov-days="90">近 90 天</button><button id="ovExport" disabled>导出汇总 CSV</button></div><p id="ovMessage" role="status">正在读取统计…</p></div><div id="ovContent"></div>`;document.getElementById('ovRefresh').onclick=()=>{selected={start:document.getElementById('ovStart').value,end:document.getElementById('ovEnd').value};load();};document.querySelectorAll('[data-ov-days]').forEach(b=>b.onclick=()=>{selected=range(Number(b.dataset.ovDays));shell();load();});document.getElementById('ovExport').onclick=download;}
- async function load(){const seq=++request;latest=null;document.getElementById('ovExport').disabled=true;document.getElementById('ovContent').innerHTML='';const msg=document.getElementById('ovMessage');msg.className='';msg.textContent='正在读取统计…';try{const response=await fetch('/api/admin/overview?'+new URLSearchParams(selected),{headers:getAdminHeaders()});const j=await response.json();if(seq!==request)return;if(response.status===401){adminLogout();throw Error('管理员登录已过期，请重新登录');}if(!response.ok||j.code!==200)throw Error(j.msg||'读取失败');latest=j.data;render(latest);document.getElementById('ovExport').disabled=false;msg.textContent='北京时间 · 更新于 '+new Date(latest.generated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});}catch(e){if(seq===request){msg.className='ov-error';msg.textContent=e.message+'，可以点击查询重试。';}}}
+ async function load(){const seq=++request;latest=null;document.getElementById('ovExport').disabled=true;document.getElementById('ovContent').innerHTML='';const msg=document.getElementById('ovMessage');msg.className='';msg.textContent='正在读取统计…';try{const response=await fetch('/api/admin/overview?'+new URLSearchParams(selected),{headers:getAdminHeaders()});const j=await response.json();if(seq!==request)return;if(response.status===401){adminLogout();throw Error('管理员登录已过期，请重新登录');}if(!response.ok||j.code!==200)throw Error(j.msg||'读取失败');latest=j.data;render(latest);initDistribution();document.getElementById('ovExport').disabled=false;msg.textContent='北京时间 · 更新于 '+new Date(latest.generated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});}catch(e){if(seq===request){msg.className='ov-error';msg.textContent=e.message+'，可以点击查询重试。';}}}
  function render(d){const t=d.totals,p=d.period;let h=`<section class="ov-box"><h3>当前平台概况</h3><p>以下为当前仍保留的数据，不随日期筛选变化。</p><div class="ov-metrics">${metric('注册账号',t.accounts)+metric('已验证学生',t.verified)+metric('邮箱验证覆盖率',pct(t.verification_rate))+metric('新版恋爱问卷人数',t.weekly_surveys)+metric('深度交友问卷人数',t.friend_surveys)+metric('有效搭子卡（未删除）',t.cards)+metric('待处理 / 处理中举报',t.pending_reports)}</div></section>`;
  h+=`<section class="ov-box"><h3>所选日期内的新增记录</h3><div class="ov-metrics">${metric('新增账号',p.registrations)+metric('验证记录',p.verifications)+metric('举报记录',p.reports)+metric('仍保留的屏蔽记录',p.blocks)}</div><p>验证记录不等于本期注册用户的验证转化；解除屏蔽、注销及删除会影响保留数据统计。</p></section>`;
  h+=`<section class="ov-box"><h3>三种配对方式</h3>${table(['方式','当前有效参与人数','本期生成配对数','其中已交换联系方式','交换率','已跳过','运行方式'],d.modes.map(m=>[m.name,m.active,m.pairs,m.connected,pct(m.exchange_rate),m.skipped===null?'未记录':m.skipped,m.algorithm]))}<p>有效参与：当前已验证、已填写所需资料并开启的用户；快速交友有 ${d.active.quick_cards} 张开启且符合验证要求的卡。配对按“对”计数，每周导入的双向记录去重。交换率＝本期生成配对中，截至现在已交换联系方式的对数 ÷ 本期生成配对数；不能视为恋爱成功率。</p><p>当前暂停：搭子卡 ${d.pause.quick_cards} 张。尚未统计暂停操作次数或暂停率。</p></section>`;
@@ -21,6 +51,7 @@
   h+=`<section class="ov-box"><h3>每周恋爱问卷漏斗（所选日期）</h3><div class="ov-metrics">${metric('进入问卷',f.started)+metric('完成提交',f.completed)}</div>${table(['步骤','到达人数','占进入比'],[['进入问卷',f.started,'100%'],...f.steps.map(r=>[stepName(r.step),r.count,pct(rate(r.count))]),['完成提交',f.completed,pct(rate(f.completed))]])}<p>按账号去重统计所选日期内首次到达各步骤的人数；「进入问卷」以首次交互计，「完成提交」以成功保存问卷计。步骤为问卷分区编号。历史数据未采集分区事件，早期批次会显示为空。</p></section>`;
  }
  const max=Math.max(1,...d.trend.map(x=>x.registrations));h+=`<section class="ov-box"><h3>每日注册趋势</h3><div class="ov-bars" role="img" aria-label="所选日期每日新增注册人数，下方可展开数据表">${d.trend.map(r=>`<div class="ov-bar" style="height:${r.registrations/max*100}%" title="${r.day}：${r.registrations} 人"></div>`).join('')}</div><div class="ov-axis"><span>${d.range.start}</span><span>单日最高 ${max===1&&!d.trend.some(x=>x.registrations)?0:max} 人</span><span>${d.range.end}</span></div><details><summary>展开每日注册、验证和配对数据</summary>${table(['日期','注册','验证','生成配对（对）'],d.trend.map(r=>[r.day,r.registrations,r.verifications,r.pairs]))}</details></section>`;
+ h+=newPanels(d);
  h+=`<section class="ov-box"><h3>推荐覆盖与算法版本</h3><p>开始记录时间：${esc(new Date(d.observation_started_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}))}。此前没有推荐尝试记录，不能推算历史无合适人选比例。</p>${table(['方式','算法版本','尝试单元数','已获得推荐','仍无合适人选','无候选占比','关联配对已交换率'],d.observations.map(r=>[names[r.mode],r.algorithm_version,r.units,r.recommended_units,r.empty_units,pct(r.empty_rate),pct(r.exchange_rate)]))}<p>快速交友按“发起用户＋卡片＋周”去重，并按首次尝试日期归入筛选范围。重复刷新不增加样本，后来匹配成功会更新原记录；被动收到搭子推荐者不算发起尝试。</p></section>`;
  h+=`<div class="ov-split"><section class="ov-box"><h3>当前搭子卡类别</h3>${table(['类别','未删除卡片','已开启开关'],d.card_types.map(r=>[names[r.type]||r.type,r.cards,r.enabled]))}</section><section class="ov-box"><h3>所选日期内的举报状态</h3>${table(['状态','数量'],d.reports.map(r=>[r.status==='pending'?'待处理':names[r.status]||r.status,r.count]))}<p>这里显示汇总数量，不包含举报内容和联系方式。</p></section></div>`;
  h+=`<div class="ov-split">${['quick'].map(key=>`<section class="ov-box"><h3>${names[key]} · 本期配对当前状态</h3>${d.statuses[key].length?d.statuses[key].map(r=>`<div class="ov-label"><span>${esc(names[r.status]||r.status)}</span><b>${r.count}</b></div>`).join(''):'<p>暂无配对记录</p>'}</section>`).join('')}</div>`;
@@ -43,6 +74,41 @@
  '</ul><p>开始采集：'+esc(d.started_at?new Date(d.started_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'未知')+'。历史问卷开始时间不补造；同意和聊天指标由保留的正式批次及消息时间补算。注销删除会影响历史统计。已排除指定演示账号 '+d.excluded_accounts+' 个。</p><p>本期已保存问卷的编辑人数：'+d.rows.filter(r=>r.mode!=='buddy').map(r=>modes[r.mode]+' '+r.revision_fills).join('；')+'。</p></details></section>';
  }
  function download(){if(!latest)return;const d=latest,rows=[['统计范围',d.range.start,d.range.end,'北京时间'],['生成时间',d.generated_at],[],['当前概况','数值']];const labels={accounts:'注册账号',verified:'已验证学生',weekly_surveys:'新版恋爱问卷人数',friend_surveys:'深度交友问卷人数',cards:'未删除搭子卡',pending_reports:'待处理举报',verification_rate:'验证覆盖率（%）'};for(const [k,v]of Object.entries(d.totals))rows.push([labels[k]||k,v]);rows.push([],['期间新增','数量'],['账号',d.period.registrations],['验证记录',d.period.verifications],['举报',d.period.reports],['仍保留屏蔽',d.period.blocks]);rows.push([],['模式','当前有效参与人数','本期配对数','本期配对已交换数','交换率百分比','运行方式']);d.modes.forEach(m=>rows.push([m.name,m.active,m.pairs,m.connected,m.exchange_rate??'',m.algorithm]));rows.push([],['日期','新增注册','验证记录','配对数']);d.trend.forEach(r=>rows.push([r.day,r.registrations,r.verifications,r.pairs]));rows.push([],['推荐开始记录时间',d.observation_started_at],['方式','版本','尝试单元','获得推荐','无候选','无候选占比']);d.observations.forEach(r=>rows.push([names[r.mode],r.algorithm_version,r.units,r.recommended_units,r.empty_units,r.empty_rate??'']));rows.push([],['搭子类别','当前卡片','开启开关']);d.card_types.forEach(r=>rows.push([names[r.type]||r.type,r.cards,r.enabled]));rows.push([],['举报状态','数量']);d.reports.forEach(r=>rows.push([r.status==='pending'?'待处理':names[r.status]||r.status,r.count]));rows.push([],['方式','配对状态','数量']);for(const k of ['quick'])d.statuses[k].forEach(r=>rows.push([names[k],names[r.status]||r.status,r.count]));rows.push([],['问卷版本','当前人数']);d.survey_versions.forEach(r=>rows.push([r.version,r.count]));rows.push([],['说明','当前概况不受日期筛选影响；历史数据未完整采集；删除或注销会改变汇总；交换率仅指交换联系方式；双方同意和聊天指标请见核心指标。']);if(d.core_metrics){rows.push([],['六项核心指标','方式','指标','分子','分母','百分比','待观察样本']);for(const r of d.core_metrics.rows)for(const k of ['survey','coverage','agreement','chat','continuation','retention'])if(r[k])rows.push(['core-v1',r.mode,k,r[k].numerator,r[k].denominator,r[k].rate??'',r[k].waiting]);rows.push(['核心指标采集开始',d.core_metrics.started_at]);}const cell=v=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const url=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`FancyU-运营汇总-${d.range.start}-${d.range.end}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ /* ===== 信息分布（可自定义字段）：/admin/distribution 只读聚合端点 ===== */
+ let distCatalog=null,distField=null,distView='pie',distSeq=0;
+ async function initDistribution(){
+  if(!distCatalog){try{const r=await fetch('/api/admin/distribution/fields',{headers:getAdminHeaders()});const j=await r.json();distCatalog=(j&&j.fields)||[];}catch(e){distCatalog=[];}}
+  const sel=document.getElementById('ovDistField');if(!sel)return;
+  if(!distField||!distCatalog.some(f=>f.key===distField))distField=((distCatalog.find(f=>f.key==='campus')||distCatalog[0]||{}).key)||'';
+  sel.innerHTML=distCatalog.length?distCatalog.map(f=>`<option value="${esc(f.key)}"${f.key===distField?' selected':''}>${esc(f.label)}</option>`).join(''):'<option value="">无可用字段</option>';
+  sel.onchange=()=>{distField=sel.value;loadDistribution();};
+  const vw=document.getElementById('ovDistView');if(vw){vw.value=distView;vw.onchange=()=>{distView=vw.value;loadDistribution();};}
+  loadDistribution();
+ }
+ function pie(b){
+  const total=b.reduce((s,x)=>s+Number(x.count||0),0)||1;let acc=0;const stops=[];
+  b.forEach((x,i)=>{const p=Number(x.count||0)/total*100;stops.push(`${PALETTE[i%PALETTE.length]} ${acc.toFixed(2)}% ${(acc+p).toFixed(2)}%`);acc+=p;});
+  return `<div class="ov-pie-wrap"><div class="ov-pie" style="background:conic-gradient(${stops.join(',')})" role="img" aria-label="字段分布饼图"></div><div class="ov-legend">${b.map((x,i)=>`<div class="ov-label"><span><i class="ov-dot" style="background:${PALETTE[i%PALETTE.length]}"></i>${esc(x.value)}</span><b>${x.count} · ${x.pct===null?'—':x.pct+'%'}</b></div>`).join('')}</div></div>`;
+ }
+ async function loadDistribution(){
+  const box=document.getElementById('ovDistBody');if(!box)return;
+  if(!distField){box.innerHTML='<p>没有可用于分布统计的字段。</p>';return;}
+  const seq=++distSeq;box.innerHTML='<p>正在读取分布…</p>';
+  try{
+   const r=await fetch('/api/admin/distribution?'+new URLSearchParams({field:distField,start:selected.start,end:selected.end}),{headers:getAdminHeaders()});
+   const j=await r.json();if(seq!==distSeq)return;
+   if(r.status===401){adminLogout();return;}
+   if(!r.ok||j.code!==200)throw Error(j.msg||'读取失败');
+   const d=j.data,b=d.buckets||[];
+   if(!b.length){box.innerHTML='<p>所选范围内没有可统计的数据。</p>';return;}
+   let html='';
+   if(distView==='pie')html=pie(b);
+   else if(distView==='bar'){const max=Math.max(1,...b.map(x=>Number(x.count||0)));html=`<div class="ov-bars">${b.map(x=>`<div class="ov-bar" style="height:${Number(x.count||0)/max*100}%" title="${esc(x.value)}：${x.count}"></div>`).join('')}</div>`;}
+   html+=`<p>所选范围内共 ${d.total} 个账号，其中 ${b.reduce((s,x)=>s+Number(x.count||0),0)} 个填写了「${esc(d.label)}」${d.unfilled?`，${d.unfilled} 个未填写`:''}${d.truncated?'；取值过多，仅列出占比最高的 50 项，其余未展开':''}。</p>`;
+   html+=table(['取值','人数','占比'],b.map(x=>[x.value,x.count,x.pct===null?'—':x.pct+'%']));
+   box.innerHTML=html;
+  }catch(e){if(seq===distSeq)box.innerHTML='<p class="ov-error">'+esc(e.message||'读取失败')+'</p>';}
+ }
  window.loadOperationsStats=()=>{shell();return load();};
 })();
 (()=>{const s=document.createElement('script');s.src='/school-email.js?v=2';document.head.appendChild(s);})();

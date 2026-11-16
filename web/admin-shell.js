@@ -13,11 +13,11 @@
     { key: 'pay',       label: '支付定价',     href: '/admin/pay' },
     { key: 'survey',    label: '问卷管理',     href: '/admin/survey' },
     { key: 'users',     label: '用户列表',     href: '/admin#users' },
-    { key: 'reports',   label: '聊天举报',     href: '/admin/reports' },
+    { key: 'reports',   label: '举报',         href: '/admin#reports' },
     { key: 'assistant', label: 'AI助手',       href: '/admin#assistant' }
   ];
   // /admin 内的面板 tab（需调用其 switchTab，而非跳转）
-  var PANEL = { stats: 1, users: 1, assistant: 1 };
+  var PANEL = { stats: 1, users: 1, reports: 1, assistant: 1 };
 
   function pathName() { return location.pathname.replace(/\.html$/, '').replace(/\/+$/, ''); }
   function isAdminHome() { var p = pathName(); return p === '/admin' || p === ''; }

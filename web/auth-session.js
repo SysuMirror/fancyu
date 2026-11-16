@@ -47,6 +47,17 @@
             localStorage.removeItem('token');localStorage.removeItem('user');
             location.replace('/login?redirect='+encodeURIComponent(window.fancyuCurrentPath()));
         }
+        // 账号被封禁：后端对所有用户端点统一回 403 + {banned:true}。只认这个明确的标志，
+        // 不误伤普通权限类 403；登录接口本身除外（登录页自己会提示）。
+        if(response.status===403 && url.startsWith('/api/') && !url.startsWith('/api/admin/') && !url.endsWith('/login')) {
+            try{
+                const j=await response.clone().json();
+                if(j && j.banned){
+                    localStorage.removeItem('token');localStorage.removeItem('user');
+                    location.replace('/login?banned=1');
+                }
+            }catch(e){}
+        }
         return response;
     };
 })();

@@ -40,7 +40,7 @@ function loadPrivateConfig() {
 }
 
 module.exports = function payModule(app, ctx) {
-    const { getPool, authMiddleware, adminAuthMiddleware } = ctx;
+    const { getPool, authMiddleware, adminAuthMiddleware, audit } = ctx;
     const FILE_CFG = loadPrivateConfig();
 
     const PAY_API_BASE = (process.env.PAY_API_BASE || FILE_CFG.api_base || 'https://fhapi.thinkerhui.top/api/v1/pay/open').replace(/\/$/, '');
@@ -387,6 +387,7 @@ module.exports = function payModule(app, ctx) {
                  ON DUPLICATE KEY UPDATE title=VALUES(title), amount_cents=VALUES(amount_cents), description=VALUES(description), duration_days=VALUES(duration_days), is_active=VALUES(is_active)`,
                 [key, title, amount, desc, days, active]);
             console.log('[pay] item upserted', key, amount, 'days=' + days, 'active=' + active);
+            if (audit && audit.write) audit.write(req.admin, { action: 'pay_item.save', target_type: 'pay_item', target_id: key, method: req.method, path: req.originalUrl, status_code: 200, detail: { amount_cents: amount, duration_days: days, is_active: active } });
             res.json({ code: 200, msg: '已保存：' + key + ' = ¥' + (amount / 100).toFixed(2) + (days ? ' / ' + days + '天' : '') });
         } catch (e) { res.status(500).json({ code: 500, msg: '保存失败' }); }
     });
@@ -395,6 +396,7 @@ module.exports = function payModule(app, ctx) {
         try {
             const pool = await getPool();
             await pool.execute('UPDATE pay_items SET is_active=0 WHERE item_key=?', [req.params.key]);
+            if (audit && audit.write) audit.write(req.admin, { action: 'pay_item.delete', target_type: 'pay_item', target_id: req.params.key, method: req.method, path: req.originalUrl, status_code: 200 });
             res.json({ code: 200, msg: '已下架：' + req.params.key });
         } catch (e) { res.status(500).json({ code: 500, msg: '下架失败' }); }
     });

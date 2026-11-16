@@ -6,8 +6,8 @@
     <title>FancyU · 管理后台</title>
     
 <link rel="stylesheet" href="/campus-ui.css?v=20261112a">
-<link rel="stylesheet" href="/admin-overview.css?v=20261113c">
-<link rel="stylesheet" href="/admin-ui.css?v=20261116a">
+<link rel="stylesheet" href="/admin-overview.css?v=20261116b">
+<link rel="stylesheet" href="/admin-ui.css?v=20261116b">
 <meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
 <body data-ui="campus" data-page="admin">
 
@@ -38,7 +38,7 @@
 
 <div class="admin-page" id="adminPage">
     <div data-admin-shell></div>
-    <script src="/admin-shell.js?v=20261113c"></script>
+    <script src="/admin-shell.js?v=20261116b"></script>
     <div class="content">
         <div class="panel active" id="panelStats">
             <div id="operationsDashboard"></div>
@@ -58,6 +58,9 @@
                     <button class="btn-sm" onclick="resetFilters()">重置</button>
                     <button class="btn-sm" id="colPickerBtn" type="button" onclick="toggleColPicker(event)">显示列 ▾</button>
                     <button class="btn-sm" type="button" onclick="exportUsersCsv()">导出 CSV</button>
+                    <select id="viewSelect" title="已保存的筛选视图"><option value="">筛选视图…</option></select>
+                    <button class="btn-sm" type="button" onclick="saveCurrentView()">保存视图</button>
+                    <button class="btn-sm" type="button" onclick="deleteCurrentView()">删除视图</button>
                     <select id="pageSizeSelect" title="每页条数"><option value="20">20 条/页</option><option value="50">50 条/页</option><option value="100">100 条/页</option><option value="200">200 条/页</option></select>
                     <span class="count" id="totalCount"></span>
                 </div>
@@ -114,6 +117,51 @@
             </div>
             <div class="pagination" id="pagination"></div>
         </div>
+        <div class="panel" id="panelReports">
+            <div class="filters">
+                <div class="filter-row">
+                    <select id="reportStatus">
+                        <option value="">全部状态</option>
+                        <option value="pending">待处理</option>
+                        <option value="processing">处理中</option>
+                        <option value="resolved">已处理</option>
+                        <option value="dismissed">已驳回</option>
+                    </select>
+                    <select id="reportTargetType">
+                        <option value="">全部对象</option>
+                        <option value="user">举报用户</option>
+                        <option value="content">举报内容</option>
+                        <option value="other">其他</option>
+                    </select>
+                    <input type="text" class="search-input" id="reportSearch" placeholder="搜索举报人/被举报人/原因...">
+                    <button class="btn-sm" type="button" onclick="loadReports(1)">筛选</button>
+                    <button class="btn-sm" type="button" onclick="resetReportFilters()">重置</button>
+                    <span class="count" id="reportCount"></span>
+                </div>
+                <p class="hint" style="margin:0">举报处置为账号级操作，全部记录审计；「封禁被举报人」会同时使对方现有登录状态失效。回复内容会覆盖写入举报记录。</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>状态</th>
+                            <th>举报人</th>
+                            <th>被举报人</th>
+                            <th>原因 / 描述</th>
+                            <th>被举报次数</th>
+                            <th>处置</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="reportPagination"></div>
+            <div class="detail-section" id="reportEvidence" hidden>
+                <h3>聊天证据</h3>
+                <div id="reportEvidenceBody"></div>
+            </div>
+        </div>
         <div class="panel" id="panelAssistant">
             <div class="assistant-container">
                 <div class="chat-sidebar">
@@ -159,8 +207,8 @@
     <img id="imgModalSrc" src="" alt="用户照片大图">
 </div>
 
-<script src="admin-overview.js"></script>
-<script src="/ui-dialog.js?v=20261114a"></script>
+<script src="admin-overview.js?v=20261116b"></script>
+<script src="/ui-dialog.js?v=20261116b"></script>
 <script>
 document.addEventListener('keydown', function (e) {
   var t = e.target;
@@ -253,6 +301,7 @@ function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === tab); });
     document.querySelectorAll('.panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel' + tab.charAt(0).toUpperCase() + tab.slice(1)); });
     if (tab === 'stats') loadStats();
+    if (tab === 'reports') loadReports(REPORT_PAGE);
     if (tab === 'assistant') initAssistant();
 }
 
@@ -576,6 +625,11 @@ function addCondition(preset) {
     var fieldSel = row.querySelector('.cond-field');
     if (preset && preset.field && FIELDS_BY_KEY[preset.field]) fieldSel.value = preset.field;
     syncCondOps(row);
+    if (preset && preset.op) {
+        var ops = FIELDS_BY_KEY[fieldSel.value] ? (FIELDS_BY_KEY[fieldSel.value].ops || []) : [];
+        if (ops.indexOf(preset.op) >= 0) row.querySelector('.cond-op').value = preset.op;
+    }
+    if (preset && preset.value !== undefined && preset.value !== null) row.querySelector('.cond-value').value = String(preset.value);
     row.querySelector('.cond-del').addEventListener('click', function () { row.remove(); });
     row.querySelector('.cond-value').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadUsers(1); });
 }
@@ -604,45 +658,381 @@ function collectConditions(p) {
     });
 }
 
-/* ================= 导出 CSV（复用 admin-overview.js 的公式注入防护） ================= */
-function csvCell(v) {
-    var s = (v === null || v === undefined) ? '' : String(v);
-    if (/^[=+@\-\t\r]/.test(s)) s = "'" + s;           // 防表格公式注入
-    return '"' + s.replace(/"/g, '""') + '"';
-}
-
-function stripTags(html) {
-    var d = document.createElement('div');
-    d.innerHTML = String(html === null || html === undefined ? '' : html);
-    return d.textContent || '';
-}
-
-function csvValue(col, u) {
-    if (col.text) return col.text(u);
-    if (col.key === 'actions') return '';
-    var t = stripTags(col.render ? col.render(u) : '');
-    return t === '-' ? '' : t;
-}
-
-function exportUsersCsv() {
-    if (!lastLoadedRows.length) { toast('当前没有可导出的数据', true); return; }
+/* ================= 导出 CSV（服务端整表导出：同一套筛选口径，上限 20000 行） ================= */
+// 之前只导出「当前页」；现在把筛选串原样交给 /admin/users/export 服务端分块写出，
+// 列取当前可见列（服务端有白名单），并会落一条 user.export 审计。
+async function exportUsersCsv() {
     var keys = visibleColumnKeys();
-    var cols = USER_COLUMNS.filter(function (c) { return c.key !== 'actions' && keys.indexOf(c.key) >= 0; });
-    var lines = [cols.map(function (c) { return csvCell(c.label); }).join(',')];
-    lastLoadedRows.forEach(function (u) {
-        lines.push(cols.map(function (c) { return csvCell(csvValue(c, u)); }).join(','));
-    });
-    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'FancyU-用户列表-' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    var cols = USER_COLUMNS
+        .filter(function (c) { return c.key !== 'actions' && keys.indexOf(c.key) >= 0; })
+        .map(function (c) { return c.key; });
+    var p = buildFilterParams(1);
+    p.delete('page');
+    p.delete('pageSize');
+    p.set('cols', cols.join(','));
+    try {
+        var res = await fetch(API + '/admin/users/export?' + p.toString(), { headers: getAdminHeaders() });
+        if (res.status === 401) { adminLogout(); return; }
+        if ((res.headers.get('Content-Type') || '').indexOf('text/csv') < 0) {
+            var d = null; try { d = await res.json(); } catch (e) { /* 非 JSON 响应 */ }
+            uiAlert({ title: '导出失败', body: (d && d.msg) || '请稍后重试' });
+            return;
+        }
+        var truncated = res.headers.get('X-Export-Truncated') === '1';
+        var cd = res.headers.get('Content-Disposition') || '';
+        var m = cd.match(/filename="([^"]+)"/);
+        var blob = await res.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = m ? m[1] : ('FancyU-用户列表-' + new Date().toISOString().slice(0, 10) + '.csv');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast(truncated ? '已导出（超过 20000 行，已截断，请缩小筛选范围）' : '已按当前筛选条件导出');
+    } catch (e) {
+        uiAlert({ title: '导出失败', body: '请稍后重试' });
+    }
 }
 
+/* ================= 筛选视图：存下整套筛选条件复用（服务端按管理员隔离） ================= */
+var SAVED_VIEWS = [];
+
+async function loadViews(keepSelection) {
+    var sel = document.getElementById('viewSelect');
+    if (!sel) return;
+    try {
+        var res = await fetch(API + '/admin/user-views', { headers: getAdminHeaders() });
+        if (res.status === 401) { adminLogout(); return; }
+        var d = await res.json();
+        if (!d || d.code !== 200) return;
+        SAVED_VIEWS = d.data || [];
+        var pick = keepSelection === undefined ? sel.value : keepSelection;
+        sel.innerHTML = '<option value="">筛选视图…</option>' + SAVED_VIEWS.map(function (v) {
+            return '<option value="' + escAttr(String(v.id)) + '">' + escHtml(v.name) + '</option>';
+        }).join('');
+        sel.value = pick && SAVED_VIEWS.some(function (v) { return String(v.id) === String(pick); }) ? pick : '';
+    } catch (e) { /* 视图列表读取失败不阻断主流程 */ }
+}
+
+// 把保存过的 querystring 还原到筛选区（未知字段由服务端静默忽略，还原时也一律走 FIELDS_BY_KEY）
+function applyQueryToForm(qs) {
+    var p = new URLSearchParams(qs || '');
+    ['searchInput', 'filterSex', 'filterCampus', 'filterGrade', 'filterMatching', 'filterFriendMatching',
+     'filterStudentVerified', 'filterEmailVerified', 'filterLove', 'filterDeep', 'filterBuddy', 'filterActive',
+     'regFrom', 'regTo', 'loginFrom', 'loginTo'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('condList').innerHTML = '';
+
+    var setVal = function (id, v) { var el = document.getElementById(id); if (el && v !== null) el.value = v; };
+    setVal('searchInput', p.get('search'));
+    setVal('filterSex', p.get('sex'));
+    setVal('filterCampus', p.get('campus'));
+    setVal('filterGrade', p.get('grade'));
+    setVal('filterMatching', p.get('join_matching'));
+    [['filterStudentVerified', 'f_student_verified'], ['filterEmailVerified', 'f_email_verified'],
+     ['filterFriendMatching', 'f_join_friend_matching'], ['filterLove', 'f_has_love'],
+     ['filterDeep', 'f_has_deep'], ['filterBuddy', 'f_has_buddy_cards']].forEach(function (pair) {
+        setVal(pair[0], p.get(pair[1]));
+    });
+    var activeMap = [['f_has_chat', '1'], ['f_has_love_pair', '2'], ['f_has_deep_pair', '3'], ['f_has_buddy_pair', '4'], ['f_has_profile', '5']];
+    for (var i = 0; i < activeMap.length; i++) {
+        if (p.get(activeMap[i][0]) === '1') { setVal('filterActive', activeMap[i][1]); break; }
+    }
+    if (filterValue('filterActive') === '') { var h = p.get('f_has_login'); if (h === '0') setVal('filterActive', '6'); }
+    setVal('regFrom', p.get('f_created_at__gte'));
+    setVal('regTo', p.get('f_created_at__lte'));
+    setVal('loginFrom', p.get('f_last_login_at__gte'));
+    setVal('loginTo', p.get('f_last_login_at__lte'));
+
+    var skip = ['page', 'pageSize', 'sort', 'order', 'search', 'sex', 'campus', 'grade', 'join_matching',
+        'f_student_verified', 'f_email_verified', 'f_join_friend_matching', 'f_has_love', 'f_has_deep',
+        'f_has_buddy_cards', 'f_has_chat', 'f_has_love_pair', 'f_has_deep_pair', 'f_has_buddy_pair',
+        'f_has_profile', 'f_has_login', 'f_created_at__gte', 'f_created_at__lte', 'f_last_login_at__gte', 'f_last_login_at__lte', 'cols'];
+    p.forEach(function (value, key) {
+        if (skip.indexOf(key) >= 0) return;
+        if (key.indexOf('f_') !== 0) return;
+        var rest = key.slice(2);
+        var at = rest.lastIndexOf('__');
+        var field = at >= 0 ? rest.slice(0, at) : rest;
+        var op = at >= 0 ? rest.slice(at + 2) : 'eq';
+        if (!FIELDS_BY_KEY[field]) return;
+        addCondition({ field: field, op: op, value: value });
+    });
+
+    var ps = parseInt(p.get('pageSize'), 10);
+    if (PAGE_SIZES.indexOf(ps) >= 0) {
+        setPageSize(ps);
+        var sel = document.getElementById('pageSizeSelect');
+        if (sel) sel.value = String(ps);
+    }
+    if (p.get('sort')) { currentSort = p.get('sort'); currentOrder = p.get('order') === 'ASC' ? 'ASC' : 'DESC'; updateSortArrows(); }
+}
+
+function onViewSelect(id) {
+    if (!id) return;
+    var view = SAVED_VIEWS.filter(function (v) { return String(v.id) === String(id); })[0];
+    if (!view) return;
+    applyQueryToForm(view.query);
+    loadUsers(1);
+}
+
+async function saveCurrentView() {
+    if (FIELDS_CATALOG.length === 0 || FIELDS_CATALOG === FALLBACK_FIELDS) await loadFieldCatalog();
+    var p = buildFilterParams(1);
+    p.delete('page');
+    p.delete('pageSize');
+    var name = await uiPrompt({ title: '保存筛选视图', body: '把当前筛选条件保存成一个视图，随时一键还原（同名则覆盖）。', placeholder: '视图名称，例如「未验证学邮的大一女生」', okText: '保存', validate: function (v) { return (v || '').trim() ? '' : '请填写视图名称'; } });
+    if (name === null) return;
+    try {
+        var res = await fetch(API + '/admin/user-views', {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify({ name: String(name).slice(0, 60), query: p.toString() })
+        });
+        var d = await res.json();
+        if (d && d.code === 200) { toast(d.msg || '视图已保存'); loadViews(); }
+        else uiAlert({ title: '保存失败', body: (d && d.msg) || '请稍后重试' });
+    } catch (e) { uiAlert({ title: '保存失败', body: '请稍后重试' }); }
+}
+
+async function deleteCurrentView() {
+    var sel = document.getElementById('viewSelect');
+    var id = sel ? sel.value : '';
+    if (!id) { toast('请先在下拉里选择要删除的视图', true); return; }
+    var view = SAVED_VIEWS.filter(function (v) { return String(v.id) === String(id); })[0];
+    if (!await uiConfirm({ title: '删除筛选视图', body: '确认删除视图「' + (view ? view.name : id) + '」？', okText: '删除', danger: true })) return;
+    try {
+        var res = await fetch(API + '/admin/user-views/' + encodeURIComponent(id), { method: 'DELETE', headers: getAdminHeaders() });
+        var d = await res.json();
+        if (d && d.code === 200) { toast('已删除'); loadViews(''); }
+        else uiAlert({ title: '删除失败', body: (d && d.msg) || '请稍后重试' });
+    } catch (e) { uiAlert({ title: '删除失败', body: '请稍后重试' }); }
+}
+
+
+/* ================= 举报面板：从举报 → 用户详情 → 处置 的闭环 ================= */
+var REPORT_PAGE = 1;
+var REPORT_LIMIT = 20;
+var REPORT_STATUS = { pending: '待处理', processing: '处理中', resolved: '已处理', dismissed: '已驳回' };
+var REPORT_TARGET = { user: '用户', content: '内容', other: '其他' };
+
+function reportStatusTag(s) {
+    var cls = s === 'resolved' ? 'tag tag-on' : s === 'dismissed' ? 'tag tag-off' : s === 'processing' ? 'tag tag-warn' : 'tag';
+    return '<span class="' + cls + '">' + escHtml(REPORT_STATUS[s] || s || '未知') + '</span>';
+}
+
+function reportWhoHtml(accountId, username, fallback) {
+    if (accountId) {
+        return '<button class="btn-sm" type="button" data-action="detail" data-serial="account-' + accountId + '" data-account-id="' + accountId + '">'
+            + escHtml(username || ('账号 #' + accountId)) + '</button>';
+    }
+    return '<span>' + escHtml(username || fallback || '—') + '</span>';
+}
+
+function renderReportRow(r) {
+    var targetLabel = r.target_type === 'user'
+        ? reportWhoHtml(r.target_account_id ? Number(r.target_account_id) : 0, r.target_username, '账号 #' + r.target_id)
+        : '<span>' + escHtml(REPORT_TARGET[r.target_type] || r.target_type || '—') + '</span><br><span class="muted">#' + escHtml(String(r.target_id || '')) + '</span>';
+    var desc = (r.reason ? '【' + r.reason + '】' : '') + (r.description || '');
+    var acts = '<div class="report-actions">'
+        + '<button class="btn-sm" type="button" data-action="complaint-act" data-complaint-id="' + r.id + '" data-kind="processing">处理中</button>'
+        + '<button class="btn-sm" type="button" data-action="complaint-act" data-complaint-id="' + r.id + '" data-kind="resolved">回复并处理</button>'
+        + '<button class="btn-sm" type="button" data-action="complaint-act" data-complaint-id="' + r.id + '" data-kind="dismissed">驳回</button>';
+    if (r.target_account_id) {
+        acts += '<button class="btn-sm danger" type="button" data-action="complaint-act" data-complaint-id="' + r.id + '" data-kind="ban">封禁被举报人</button>';
+    }
+    if (r.has_chat_context) {
+        acts += '<button class="btn-sm" type="button" data-action="chat-evidence" data-complaint-id="' + r.id + '">核查聊天</button>';
+    }
+    acts += '</div>';
+    var handled = r.handled_at ? '<br><span class="muted">' + escHtml(String(r.handled_at).slice(0, 16)) + (r.handled_by ? ' · ' + escHtml(String(r.handled_by)) : '') + '</span>' : '';
+    var reply = r.admin_reply ? '<br><span class="muted">回复：' + escHtml(String(r.admin_reply).slice(0, 120)) + '</span>' : '';
+    return '<tr>'
+        + '<td>' + escHtml(String(r.created_at || '').slice(0, 16)) + '</td>'
+        + '<td>' + reportStatusTag(r.status) + handled + '</td>'
+        + '<td>' + reportWhoHtml(r.reporter_account_id ? Number(r.reporter_account_id) : 0, r.reporter_username, r.reporter_email) + '</td>'
+        + '<td>' + targetLabel + '</td>'
+        + '<td class="report-desc">' + escHtml(desc || '—') + '</td>'
+        + '<td>' + String(Number(r.target_report_count || 0)) + '</td>'
+        + '<td>' + acts + reply + '</td>'
+        + '</tr>';
+}
+
+async function loadReports(page) {
+    REPORT_PAGE = page || 1;
+    var params = new URLSearchParams();
+    params.set('page', String(REPORT_PAGE));
+    params.set('limit', String(REPORT_LIMIT));
+    var st = filterValue('reportStatus');
+    var tt = filterValue('reportTargetType');
+    var kw = filterValue('reportSearch').trim();
+    if (st) params.set('status', st);
+    if (kw) params.set('q', kw);
+    var tbody = document.getElementById('reportTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row">正在读取举报记录…</td></tr>';
+    try {
+        var res = await fetch(API + '/admin/complaints?' + params.toString(), { headers: getAdminHeaders() });
+        if (res.status === 401) { adminLogout(); return; }
+        var d = await res.json();
+        if (!d || d.code !== 200) throw Error((d && d.msg) || '读取失败');
+        var body = d.data || {};
+        var rows = (body.complaints || []).filter(function (r) { return !tt || r.target_type === tt; });
+        document.getElementById('reportCount').textContent = '共 ' + Number(body.total || 0) + ' 条';
+        tbody.innerHTML = rows.length ? rows.map(renderReportRow).join('')
+            : '<tr><td colspan="7" class="empty-row">没有符合条件的举报</td></tr>';
+        renderReportPagination(Number(body.total || 0), Number(body.limit || REPORT_LIMIT));
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-row">' + escHtml(e.message || '读取失败') + '</td></tr>';
+    }
+}
+
+function renderReportPagination(total, limit) {
+    var el = document.getElementById('reportPagination');
+    var totalPages = Math.max(1, Math.ceil(total / (limit || REPORT_LIMIT)));
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    var html = '<button ' + (REPORT_PAGE <= 1 ? 'disabled' : '') + ' onclick="loadReports(' + (REPORT_PAGE - 1) + ')">上一页</button>';
+    for (var p = 1; p <= totalPages; p++) {
+        if (totalPages > 7 && p > 2 && p < totalPages - 1 && Math.abs(p - REPORT_PAGE) > 1) {
+            if (p === 3) html += '<span style="color:#8ba397">...</span>';
+            continue;
+        }
+        html += '<button ' + (p === REPORT_PAGE ? 'class="active"' : '') + ' onclick="loadReports(' + p + ')">' + p + '</button>';
+    }
+    html += '<button ' + (REPORT_PAGE >= totalPages ? 'disabled' : '') + ' onclick="loadReports(' + (REPORT_PAGE + 1) + ')">下一页</button>';
+    html += '<span class="page-info">第 ' + REPORT_PAGE + ' / ' + totalPages + ' 页</span>';
+    el.innerHTML = html;
+}
+
+function resetReportFilters() {
+    ['reportStatus', 'reportTargetType', 'reportSearch'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('reportEvidence').hidden = true;
+    loadReports(1);
+}
+
+async function complaintAct(id, kind) {
+    if (!id) return;
+    var payload = null;
+    if (kind === 'processing') {
+        if (!await uiConfirm({ title: '标记为处理中', body: '确认把举报 #' + id + ' 标记为「处理中」？', okText: '确认' })) return;
+        payload = { status: 'processing' };
+    } else if (kind === 'resolved') {
+        var reply = await uiPrompt({
+            title: '回复并处理',
+            body: '回复内容会写入举报记录并覆盖旧回复；标记为「已处理」必须填写回复。',
+            placeholder: '例如：已核实并警告对方，如再发生将封禁。',
+            okText: '提交回复',
+            validate: function (v) { return (v || '').trim() ? '' : '请填写回复内容'; }
+        });
+        if (reply === null) return;
+        payload = { status: 'resolved', admin_reply: String(reply) };
+    } else if (kind === 'dismissed') {
+        if (!await uiConfirm({ title: '驳回举报', body: '确认驳回举报 #' + id + '？', okText: '驳回', danger: true })) return;
+        payload = { status: 'dismissed' };
+    } else if (kind === 'ban') {
+        var reason = await uiPrompt({
+            title: '封禁被举报人',
+            body: '会同时把该账号标记为封禁并使其所有登录状态失效（对方需重新登录，但会被拦截）。',
+            placeholder: '封禁原因（会记入审计，例如：举报核实，骚扰他人）',
+            okText: '确认封禁',
+            validate: function (v) { return (v || '').trim() ? '' : '请填写封禁原因'; }
+        });
+        if (reason === null) return;
+        payload = { status: 'processing', ban: true, ban_reason: String(reason) };
+    }
+    if (!payload) return;
+    try {
+        var res = await fetch(API + '/admin/complaints/' + encodeURIComponent(id) + '/act', {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+        });
+        var d = await res.json();
+        if (d && d.code === 200) {
+            toast(d.msg || '已处置');
+            loadReports(REPORT_PAGE);
+        } else {
+            uiAlert({ title: '处置失败', body: (d && d.msg) || '请稍后重试' });
+        }
+    } catch (e) { uiAlert({ title: '处置失败', body: '请稍后重试' }); }
+}
+
+async function loadChatEvidence(id) {
+    var box = document.getElementById('reportEvidence');
+    var body = document.getElementById('reportEvidenceBody');
+    box.hidden = false;
+    body.innerHTML = '<p class="muted">正在读取聊天记录…</p>';
+    try {
+        var res = await fetch(API + '/admin/chat-reports/' + encodeURIComponent(id), { headers: getAdminHeaders() });
+        var d = await res.json();
+        if (!d || d.code !== 200) throw Error((d && d.msg) || '读取失败');
+        var msgs = d.messages || [];
+        body.innerHTML = msgs.length ? msgs.map(function (m) {
+            return '<p' + (m.id === d.message_id ? ' class="report-hit"' : '') + '>' + (m.id === d.message_id ? '【被举报消息】' : '')
+                + '用户 ' + escHtml(String(m.sender_id)) + ' · ' + escHtml(String(m.created_at || '').slice(0, 19)) + '\n' + escHtml(m.body || '') + '</p>';
+        }).join('') : '<p class="muted">没有查到对应的聊天记录。</p>';
+        box.scrollIntoView({ block: 'nearest' });
+    } catch (e) {
+        body.innerHTML = '<p class="muted">' + escHtml(e.message || '读取失败') + '</p>';
+    }
+}
+
+/* ================= 账号处置（详情弹窗内，全部落审计） ================= */
+async function loadAccountState(accountId) {
+    var el = document.getElementById('dispState');
+    if (!el) return;
+    try {
+        var res = await fetch(API + '/admin/accounts/' + accountId + '/state', { headers: getAdminHeaders() });
+        var d = await res.json();
+        if (!d || d.code !== 200) { el.textContent = '账号状态读取失败。'; return; }
+        var bits = [d.banned ? '<span class="disp-badge">已封禁</span>' : '状态正常'];
+        if (d.banned && d.ban_reason) bits.push('原因：' + escHtml(String(d.ban_reason)));
+        if (d.banned_at) bits.push('封禁时间：' + escHtml(String(d.banned_at).slice(0, 19)));
+        if (d.must_reset_password) bits.push('已要求重新设置密码');
+        if (d.force_logout_at) bits.push('最近强制下线：' + escHtml(new Date(d.force_logout_at * 1000).toLocaleString('zh-CN')));
+        el.innerHTML = bits.join(' · ');
+    } catch (e) { el.textContent = '账号状态读取失败。'; }
+}
+
+async function disposition(accountId, kind) {
+    if (!accountId || !kind) return;
+    var cfg = {
+        'force-logout': { title: '强制下线', body: '该账号当前的登录状态会立即失效（需重新登录）。确认继续？', okText: '强制下线' },
+        'reset': { title: '重置密码', body: '会给该账号发送重置验证码，并立即作废旧密码（用户走「忘记密码」重设）。确认继续？', okText: '发送并作废旧密码' },
+        'resend': { title: '重发学邮验证码', body: '会给该账号的学校邮箱重发一封验证码邮件。确认继续？', okText: '重发' },
+        'ban': { title: '封禁账号', body: '封禁后该账号无法登录，所有登录状态立即失效。确认继续？', okText: '封禁', danger: true },
+        'unban': { title: '解除封禁', body: '解除后该账号可重新登录。确认继续？', okText: '解除封禁' }
+    }[kind];
+    if (!cfg) return;
+    var confirmOpts = { title: cfg.title, body: cfg.body, okText: cfg.okText, danger: !!cfg.danger };
+    var payload = {};
+    if (kind === 'ban') {
+        var reason = await uiPrompt({ title: '封禁账号', body: '请填写封禁原因（记入审计）', placeholder: '例如：举报核实', okText: '确认封禁', validate: function (v) { return (v || '').trim() ? '' : '请填写封禁原因'; } });
+        if (reason === null) return;
+        payload = { reason: String(reason) };
+    } else {
+        if (!await uiConfirm(confirmOpts)) return;
+    }
+    var btn = document.querySelector('#dispActions [data-disp="' + kind + '"]');
+    if (btn) btn.disabled = true;
+    try {
+        var res = await fetch(API + '/admin/accounts/' + accountId + '/' + kind, {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+        });
+        var d = await res.json();
+        if (d && d.code === 200) { toast(d.msg || '已执行'); loadAccountState(accountId); loadUsers(currentPage); }
+        else uiAlert({ title: '处置失败', body: (d && d.msg) || '请稍后重试' });
+    } catch (e) { uiAlert({ title: '处置失败', body: '请稍后重试' }); }
+    if (btn) btn.disabled = false;
+}
 
 /* ================= 详情弹窗：多源聚合 + 分块折叠 ================= */
 // 字段中文名表（问卷/搭子卡的 key 由 WeeklySchema / FriendsSchema 动态补充）
@@ -760,6 +1150,20 @@ function renderDetail(serial, accountId, u, mat, sum) {
         kvField('资料更新时间', String(u.updated_at || '').slice(0, 19))
     ));
 
+    // 2.5 账号处置（每个动作都会写入统一审计）
+    if (accountId) {
+        var disp = '<p class="disp-state" id="dispState">账号状态读取中…</p>'
+            + '<div class="disp-actions" id="dispActions">'
+            + '<button type="button" data-disp="unban" data-account-id="' + accountId + '">解除封禁</button>'
+            + '<button type="button" class="danger" data-disp="ban" data-account-id="' + accountId + '">封禁账号</button>'
+            + '<button type="button" data-disp="force-logout" data-account-id="' + accountId + '">强制下线</button>'
+            + '<button type="button" data-disp="reset" data-account-id="' + accountId + '">重置密码</button>'
+            + '<button type="button" data-disp="resend" data-account-id="' + accountId + '">重发学邮验证码</button>'
+            + '</div>'
+            + '<p class="muted">处置动作仅作用于账号本身；封禁与强制下线会让该账号当前登录状态立即失效。所有动作都会记录到后台审计日志。</p>';
+        html += detailSection('账号处置', disp);
+    }
+
     // 3 联系方式（汇总需管理员显式点击，会落审计）
     var contactBody = gridOf(
         kvField('登录邮箱', u.email || acct.email) + kvField('联系邮箱', u.contact_email) +
@@ -872,6 +1276,7 @@ async function viewDetail(serial, accountId) {
         box.innerHTML = renderDetail(serial, accountId, all[0].data || {}, all[1], all[2]);
         var btn = document.getElementById('loadContactsBtn');
         if (btn) btn.addEventListener('click', function () { loadContactsInto(accountId); });
+        if (accountId) loadAccountState(accountId);
     } catch (e) {
         box.innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button><h2>读取失败</h2><p>' + escHtml(e.message || '请稍后重试') + '</p>';
     }
@@ -983,6 +1388,41 @@ if (searchInput) searchInput.addEventListener('keydown', function(e) { if (e.key
         sizeSel.addEventListener('change', function () {
             setPageSize(parseInt(sizeSel.value, 10) || 20);
             loadUsers(1);
+        });
+    }
+
+    // 筛选视图：选中即还原
+    var viewSel = document.getElementById('viewSelect');
+    if (viewSel) viewSel.addEventListener('change', function () { onViewSelect(viewSel.value); });
+
+    // 举报面板：状态/类型下拉改变即刷新
+    ['reportStatus', 'reportTargetType'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', function () { loadReports(1); });
+    });
+    var reportSearch = document.getElementById('reportSearch');
+    if (reportSearch) reportSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') loadReports(1); });
+
+    // 举报表格：全部走事件委托（点用户 → 打开详情弹窗；操作 → 处置接口）
+    var reportBody = document.getElementById('reportTableBody');
+    if (reportBody) {
+        reportBody.addEventListener('click', function (e) {
+            var btn = e.target.closest ? e.target.closest('[data-action]') : null;
+            if (!btn) return;
+            var action = btn.dataset.action;
+            if (action === 'detail') viewDetail(btn.dataset.serial, btn.dataset.accountId ? Number(btn.dataset.accountId) : null);
+            else if (action === 'complaint-act') complaintAct(Number(btn.dataset.complaintId), btn.dataset.kind);
+            else if (action === 'chat-evidence') loadChatEvidence(Number(btn.dataset.complaintId));
+        });
+    }
+
+    // 详情弹窗里的账号处置按钮
+    var detailBox = document.getElementById('detailBox');
+    if (detailBox) {
+        detailBox.addEventListener('click', function (e) {
+            var btn = e.target.closest ? e.target.closest('[data-disp]') : null;
+            if (!btn) return;
+            disposition(Number(btn.dataset.accountId), btn.dataset.disp);
         });
     }
 })();
@@ -1299,9 +1739,14 @@ function hideTypingIndicator() {
         try { document.getElementById('adminName').textContent = JSON.parse(decodeURIComponent(escape(atob(saved.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))))).username || '管理员'; } catch(e) { document.getElementById('adminName').textContent = '管理员'; }
         loadStats();
         loadUsers(1);
+        loadViews();
         initAssistant();
         var _h = (location.hash || '').replace('#', '');
-        if (_h === 'users' || _h === 'assistant' || _h === 'stats') switchTab(_h);
+        if (_h === 'users' || _h === 'assistant' || _h === 'stats' || _h === 'reports') switchTab(_h);
+        window.addEventListener('hashchange', function () {
+            var h = (location.hash || '').replace('#', '');
+            if (h === 'users' || h === 'assistant' || h === 'stats' || h === 'reports') switchTab(h);
+        });
     }
 })();
 </script>

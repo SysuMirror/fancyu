@@ -97,10 +97,13 @@
         q.options = [...el.querySelectorAll('.q-opt')].map(o => ({ value: o.dataset.v, label: o.querySelector('input').value }));
         if (q.type === 'multi') q.max = Number(el.querySelector('.q-max') && el.querySelector('.q-max').value) || 0;
       } else if (q.type === 'rating') {
-        q.max = Number(el.querySelector('.q-rmax').value) || 5;
+        // 切题型时 DOM 还是旧题型的控件，读不到就沿用原值（不能直接 .value，否则报错并中断重渲染）
+        const box = el.querySelector('.q-rmax');
+        q.max = box ? (Number(box.value) || 5) : (q.max || 5);
         delete q.options; delete q.maxLen;
       } else {
-        q.maxLen = Number(el.querySelector('.q-len').value) || 500;
+        const box = el.querySelector('.q-len');
+        q.maxLen = box ? (Number(box.value) || 500) : (q.maxLen || 500);
         delete q.options; delete q.max;
       }
     });

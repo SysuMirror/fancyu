@@ -128,23 +128,77 @@ function peerTyping() {
   typingClearTimer = setTimeout(paintPresence, 4200);
 }
 
-/* ---------- 破冰话题（只在空白会话里出现） ---------- */
-let iceKey = null, iceRound = 0;
+/* ---------- 破冰话题 ----------
+   空白会话（谁都没开口）：静态话题，确定性选题，两边看到同一批。
+   双方都开口之后：AI 破冰助手 —— 先出现入口，点一下才生成（聊天内容只在点击后才会发给模型服务），
+   结果按 (会话,轮次) 入库缓存，双方共用同一批，同一轮不重复调用。 */
+let iceKey = null, iceRound = 0, iceKind = null;
+const ICE_MAX = 5;                     // AI 最多 5 批，把模型调用量钉死
+const iceDismissed = new Set();        // 「不用了」只在本页有效，刷新即恢复入口
+function hasSpoken() { return msgs.length > 0 || pendingMsgs.length > 0; }
+function bothSpoke() {
+  let me = pendingMsgs.length > 0, peer = false;
+  for (const m of msgs) {
+    if (m.recalled || !(m.body || m.image)) continue;   // 撤回/空消息不算
+    if (m.mine) me = true; else peer = true;
+  }
+  return me && peer;
+}
 function useTopic(text) {
   const t = $('message'); if (!t || t.disabled) return;
   t.value = text; autoGrow(); updateCounter(); t.focus();
 }
-function renderIcebreakers(topics, round) {
+// 双方都开口之后先给入口，不自动把聊天内容发出去
+function showIceEntry() {
+  const box = $('icebreakers'); if (!box || !current) return;
+  const k = key(current);
+  box.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'ice-head';
+  const title = document.createElement('strong');
+  title.textContent = 'AI 破冰助手';
+  const go = document.createElement('button');
+  go.type = 'button'; go.className = 'text-button'; go.textContent = '让 AI 想几个话题 →';
+  go.onclick = () => loadIcebreakers(0, true);
+  const no = document.createElement('button');
+  no.type = 'button'; no.className = 'text-button'; no.textContent = '不用了';
+  no.onclick = () => { iceDismissed.add(k); box.hidden = true; };
+  head.append(title, go, no);
+  const tip = document.createElement('div');
+  tip.className = 'ice-tip';
+  tip.textContent = '你们都开口了。点一下，AI 会参考最近 24 条消息想几个接得住的话题（只发消息文字，不含问卷与联系方式）。';
+  box.append(head, tip);
+  box.hidden = false; iceKind = 'entry'; iceKey = k;
+}
+function showIceLoading(ai) {
   const box = $('icebreakers'); if (!box) return;
   box.replaceChildren();
   const head = document.createElement('div');
   head.className = 'ice-head';
   const title = document.createElement('strong');
-  title.textContent = '第一次开口？试试这些';
+  title.textContent = ai ? 'AI 破冰助手' : '破冰话题';
+  head.append(title);
+  const tip = document.createElement('div');
+  tip.className = 'ice-tip';
+  tip.textContent = ai ? 'AI 正在想…（大概十几秒，想完就存下来，你们俩看到的是同一批）' : '正在准备话题…';
+  box.append(head, tip);
+  box.hidden = false;
+}
+function renderIcebreakers(topics, round, source) {
+  const box = $('icebreakers'); if (!box) return;
+  const ai = source === 'llm';
+  box.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'ice-head';
+  const title = document.createElement('strong');
+  title.textContent = ai ? 'AI 破冰助手：接着聊点什么' : (iceKind === 'ai' ? 'AI 没接上话，先试试这些' : '第一次开口？试试这些');
   const swap = document.createElement('button');
   swap.type = 'button'; swap.className = 'text-button'; swap.textContent = '换一批';
-  swap.onclick = () => { iceRound = (round + 1) % 10; loadIcebreakers(iceRound); };
-  head.append(title, swap);
+  swap.onclick = () => { iceRound = (round + 1) % (ai || iceKind === 'ai' ? ICE_MAX : 10); loadIcebreakers(iceRound, iceKind === 'ai'); };
+  const hide = document.createElement('button');
+  hide.type = 'button'; hide.className = 'text-button'; hide.textContent = '收起';
+  hide.onclick = () => { if (current) iceDismissed.add(key(current)); box.hidden = true; };
+  head.append(title, swap, hide);
   const list = document.createElement('div');
   list.className = 'ice-list';
   for (const t of topics) {
@@ -154,25 +208,43 @@ function renderIcebreakers(topics, round) {
     list.append(b);
   }
   box.append(head, list);
+  if (ai) {
+    const tip = document.createElement('div');
+    tip.className = 'ice-tip';
+    tip.textContent = '由 AI 根据你们的对话生成，仅供参考';
+    box.append(tip);
+  }
   box.hidden = false;
+  iceKind = ai ? 'ai' : 'static';
   iceKey = current ? key(current) : null;
 }
-async function loadIcebreakers(round) {
+async function loadIcebreakers(round, wantAi) {
   const box = $('icebreakers'); if (!box || !current) return;
   const selected = key(current);
+  const ai = !!wantAi || bothSpoke();          // 双方都开口之后才走 AI 版
+  if (ai) iceKind = 'ai';
+  if (ai) showIceLoading(true);                // AI 版慢（十几秒），先给个正在想的提示
   try {
-    const j = await api(prefix() + '/icebreakers?round=' + round);
-    if (!current || key(current) !== selected || msgs.length) return;
-    if (!j.topics || !j.topics.length) { box.hidden = true; return; }
-    renderIcebreakers(j.topics, j.round || 0);
+    const j = await api(prefix() + '/icebreakers' + (ai ? '/llm' : '') + '?round=' + round);
+    if (!current || key(current) !== selected) return;
+    if (!ai && hasSpoken()) return;            // 静态话题只在空白会话里出现
+    if (!j.topics || !j.topics.length) { box.hidden = true; return; }   // 对方还没开口时 ready=false
+    renderIcebreakers(j.topics, j.round || 0, j.source || (ai ? 'llm' : 'static'));
   } catch (e) { box.hidden = true; }   // 话题只是锦上添花，拿不到就不显示
 }
 function maybeIcebreakers() {
   const box = $('icebreakers'); if (!box) return;
-  if (!current || msgs.length) { box.hidden = true; return; }
-  if (iceKey === key(current)) { box.hidden = false; return; }
-  box.hidden = true;                   // 先藏起，拿到话题再显示，避免闪烁
-  loadIcebreakers(iceRound);
+  if (!current) { box.hidden = true; return; }
+  if (!hasSpoken()) {                          // 空白会话：静态话题
+    if (iceKind === 'static' && iceKey === key(current)) { box.hidden = false; return; }
+    box.hidden = true;                         // 先藏起，拿到话题再显示，避免闪烁
+    loadIcebreakers(iceRound);
+    return;
+  }
+  if (!bothSpoke()) { box.hidden = true; return; }   // 只有一方开口：不显示（触发条件未满足）
+  if (iceKey === key(current) && (iceKind === 'ai' || iceKind === 'entry')) { box.hidden = false; return; }
+  if (iceDismissed.has(key(current))) { box.hidden = true; return; }
+  box.hidden = true; showIceEntry();           // 只给入口，点一下才生成
 }
 
 /* ---------- 搜索聊天记录 ---------- */
@@ -674,7 +746,7 @@ async function send() {
   if (!body || !current) return;
   const client_id = crypto.randomUUID();
   pendingMsgs.push({ client_id, body, created_at: new Date().toISOString() });
-  $('icebreakers').hidden = true;   // 已经开口了，破冰话题退场
+  maybeIcebreakers();               // 我开口了：静态话题退场；等对方也开口才给 AI 破冰入口
   renderAll();
   $('messages').scrollTop = $('messages').scrollHeight;
   if ($('message').value.trim() === body) $('message').value = '';

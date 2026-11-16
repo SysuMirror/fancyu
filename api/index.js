@@ -839,8 +839,13 @@ const invite=require('./invite')(app,{getPool,authMiddleware});
 const profileGuide=require('./profile-guide')(app,{getPool,authMiddleware});
 const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken,uploads,notify});
 chatRef.notify=userChat.notify;
+// 模型服务配置（.private/admin-ai.json）：管理员数据助手与用户侧 AI 破冰助手共用同一份。
+const aiConfigPath = require('path').join(__dirname, '../.private/admin-ai.json');
+const aiConfig = require('fs').existsSync(aiConfigPath)
+  ? JSON.parse(require('fs').readFileSync(aiConfigPath, 'utf8')) : {};
 // 破冰话题：复用 chat 的 access() 做可见性判定（不属于我的会话拿不到话题）。
-require('./icebreakers')(app,{getPool,authMiddleware,access:userChat.access});
+// 空白会话给静态话题；双方都开口之后才走 /icebreakers/llm 的 AI 版（缓存入库，两边共用同一批）。
+require('./icebreakers')(app,{getPool,authMiddleware,access:userChat.access,env:{...process.env,...aiConfig}});
 const deepDraft=require('./deep-draft')(app,{getPool,authMiddleware});
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
 const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
@@ -1545,9 +1550,7 @@ app.delete('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
     }
 });
 
-const adminAiConfigPath = require('path').join(__dirname, '../.private/admin-ai.json');
-const adminAiConfig = require('fs').existsSync(adminAiConfigPath)
-  ? JSON.parse(require('fs').readFileSync(adminAiConfigPath, 'utf8')) : {};
+const adminAiConfig = aiConfig;   // 见 userChat 之上的 aiConfig（同一份配置，管理员助手与破冰助手共用）
 app.post('/llm/chat', adminAuthMiddleware, require('./admin-ai')({analytics,business:require('./admin-business')({getPool}),env:{...process.env,...adminAiConfig}}));
 
 // ==================== AI助手对话存储 ====================

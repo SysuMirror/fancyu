@@ -3,6 +3,7 @@ const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {weekKey,weekDeadline}=require('./friends-rules');const {validate,evaluate,publicData}=require('./deep-rules');const {exchangeState}=require('./contact-exchange');
 const {batchTimes,openBatch}=require('./weekly-match-rules');
 const solve=require('./buddy-solver');
+const mp=require('./match-pin');
 const json=x=>typeof x==='string'?JSON.parse(x):x;
 const stamp=d=>d.toISOString().slice(0,19).replace('T',' ');
 const key=(a,b)=>[Math.min(a,b),Math.max(a,b)].join(':');
@@ -41,16 +42,25 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,no
   const ownerIds=new Map();for(const p of people)if(!ownerIds.has(p.account_id))ownerIds.set(p.account_id,ownerIds.size);
   for(let a=0;a<people.length;a++)for(let b=a+1;b<people.length;b++){const x=people[a],y=people[b];if(blocked.has(key(x.account_id,y.account_id)))continue;const result=evaluate(x.data,y.data);if(result)edges.push({a,b,owners:key(ownerIds.get(x.account_id),ownerIds.get(y.account_id)),score:result.score});}
   if(edges.length>20000)fail(409,'本批候选组合超过容量，请先扩容');
-  const fingerprint=crypto.createHash('sha256').update(JSON.stringify({people,edges})).digest('hex');return {people,edges,fingerprint,accounts:people.map(p=>ownerIds.get(p.account_id))};
+  const fingerprint=crypto.createHash('sha256').update(JSON.stringify({people,edges})).digest('hex');return {people,edges,fingerprint,accounts:people.map(p=>ownerIds.get(p.account_id)),blocked};
+ }
+ // build() 重算后重放管理员的手工指定（按 account_id 从新池重新定位 + 重跑 blocked/evaluate 守卫）。
+ function reapplyPins(people,plan,previousPlan,blocked){
+  const ad={people,blocked,owns:(x,id)=>x.a_id===id||x.b_id===id,
+   score:(i,j)=>{const r=evaluate(people[i].data,people[j].data);return r?{score:r.score}:null;},
+   item:(i,j,sc)=>({a:people[i].id,b:people[j].id,a_id:people[i].account_id,b_id:people[j].account_id,score:sc.score})};
+  return mp.reapplyPins({plan,pins:mp.collectPins(previousPlan),ad});
  }
  async function batch(c,id){try{batchTimes(id);}catch{fail(400,'批次编号无效');}const [r]=await c.execute('SELECT * FROM deep_batches WHERE batch_key=?',[id]);if(!r.length)fail(404,'批次不存在');return r[0];}
  async function build(c,b,time){
   const t=batchTimes(b.batch_key);if(b.algorithm!=='deep-v3-education-weight')fail(409,'批次算法版本不一致');if(b.status==='published')fail(409,'已发布批次不能重算');if(time<t.cutoff||time>=t.expires)fail(409,'请在周三截止后、周日 20:00 前生成预览');
-  const {people,edges,fingerprint,accounts}=await pool(c,b,time),chosen=await solver({n:people.length,edges,accounts});
+  const {people,edges,fingerprint,accounts,blocked}=await pool(c,b,time),chosen=await solver({n:people.length,edges,accounts});
   const map=new Map(edges.map(e=>[key(e.a,e.b),e])),used=new Set(),owners=new Set(),usedAccounts=new Set();
-  const plan=chosen.map(([a,b])=>{const e=map.get(key(a,b));if(!e||used.has(a)||used.has(b)||owners.has(e.owners)||usedAccounts.has(accounts[a])||usedAccounts.has(accounts[b]))throw Error('invalid_deep_plan');used.add(a);used.add(b);owners.add(e.owners);usedAccounts.add(accounts[a]);usedAccounts.add(accounts[b]);return {a:people[a].id,b:people[b].id,a_id:people[a].account_id,b_id:people[b].account_id,score:e.score};});
+  const auto=chosen.map(([a,b])=>{const e=map.get(key(a,b));if(!e||used.has(a)||used.has(b)||owners.has(e.owners)||usedAccounts.has(accounts[a])||usedAccounts.has(accounts[b]))throw Error('invalid_deep_plan');used.add(a);used.add(b);owners.add(e.owners);usedAccounts.add(accounts[a]);usedAccounts.add(accounts[b]);return {a:people[a].id,b:people[b].id,a_id:people[a].account_id,b_id:people[b].account_id,score:e.score};});
+  const {plan,dropped}=reapplyPins(people,auto,json(b.plan)||[],blocked);
   const degree=new Set(edges.flatMap(e=>[e.a,e.b])),matchedUsers=new Set(plan.flatMap(p=>[p.a_id,p.b_id]));
   const excluded=invalidByConn.get(c)||0;const stats={eligible:people.length,users:new Set(people.map(p=>p.account_id)).size,with_candidates:degree.size,no_candidates:people.length-degree.size,pairs:plan.length,matched_users:matchedUsers.size,unmatched:new Set(people.map(p=>p.account_id)).size-matchedUsers.size,mean_score:plan.length?Math.round(plan.reduce((n,p)=>n+p.score,0)/plan.length):null,fingerprint,excluded:{count:excluded,reasons:{invalid:excluded}}};
+  stats.manual=plan.filter(p=>p.manual).length;stats.manual_dropped=dropped;
   await c.execute("UPDATE deep_batches SET status='preview',plan=?,stats=?,revision=revision+1,approved_revision=NULL,approved_by=NULL,last_error=NULL WHERE batch_key=?",[JSON.stringify(plan),JSON.stringify(stats),b.batch_key]);return {stats,msg:'预览已生成，等待管理员确认'};
  }
  async function publish(c,b,time){
@@ -62,12 +72,56 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,no
   await c.execute("UPDATE deep_batches SET status='published',published_at=?,last_error=NULL WHERE batch_key=?",[stamp(time),b.batch_key]);return {pairs:plan.length,msg:'本周深度交友已发布'};
  }
  async function tx(fn){await ensureSchema();return daily.transaction(async c=>{const time=now();await sync(c,time);await c.execute("UPDATE deep_pairs SET status='expired',a_wechat=NULL,b_wechat=NULL WHERE status='pending' AND week_key<>?",[weekKey(time)]);return fn(c,time);});}
- const route=(fn,aud)=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{const r=await tx((c,t)=>fn(req,c,t));if(aud&&audit&&audit.write)audit.write(req.admin,{...aud,target_id:req.params.key,method:req.method,path:req.originalUrl,status_code:200});res.json({code:200,...r});}catch(e){console.error('Deep:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'深度交友配对暂不可用，请稍后重试'});}};
+ const route=(fn,aud)=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{const r=await tx((c,t)=>fn(req,c,t));if(aud&&audit&&audit.write){const {__audit,...rest}=r||{};audit.write(req.admin,{...aud,target_id:req.params.key,method:req.method,path:req.originalUrl,status_code:200,...(__audit?{detail:__audit}:{})});return res.json({code:200,...rest});}res.json({code:200,...r});}catch(e){console.error('Deep:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'深度交友配对暂不可用，请稍后重试'});}};
  async function state(c,time,id){const b=await batch(c,openBatch(time).key),t=batchTimes(b.batch_key);const [entries]=await c.execute('SELECT e.card_id,e.batch_key,e.active,b.status,EXISTS(SELECT 1 FROM deep_slots w WHERE w.account_id=e.account_id AND w.week_key=e.batch_key) assigned FROM deep_entries e JOIN deep_batches b ON b.batch_key=e.batch_key WHERE e.account_id=? ORDER BY e.batch_key DESC LIMIT 24',[id]);return {registration:{key:b.batch_key,cutoff:t.cutoff.toISOString(),release:t.release.toISOString()},entries:entries.map(e=>({...e,status:e.status==='published'?'published':e.status==='missed'?'missed':'waiting'}))};}
  app.get('/admin/deep-batches',adminAuthMiddleware,route(async(req,c)=>{const [rows]=await c.query('SELECT * FROM deep_batches ORDER BY batch_key DESC LIMIT 30');const [fbRows]=await c.query('SELECT p.week_key batch_key,f.answer,COUNT(*) count FROM deep_match_feedback f JOIN deep_pairs p ON p.id=f.pair_id GROUP BY p.week_key,f.answer');const [fbAll]=await c.query('SELECT answer,COUNT(*) count FROM deep_match_feedback GROUP BY answer');const fbMap={};for(const r of fbRows)(fbMap[r.batch_key]??={})[r.answer]=Number(r.count);return {batches:rows.map(r=>{const t=batchTimes(r.batch_key);return {batch_key:r.batch_key,status:r.status,algorithm:r.algorithm,revision:r.revision,approved_revision:r.approved_revision,last_error:r.last_error,stats:json(r.stats),cutoff:t.cutoff.toISOString(),release:t.release.toISOString(),published:r.published_at,feedback:fbMap[r.batch_key]||null};}),feedback:fbAll};}));
  app.post('/admin/deep-batches/:key/preview',adminAuthMiddleware,route(async(req,c,t)=>build(c,await batch(c,req.params.key),t)));
  app.post('/admin/deep-batches/:key/approve',adminAuthMiddleware,route(async(req,c,t)=>{const b=await batch(c,req.params.key);if(b.status!=='preview'||req.body?.revision!==b.revision||t>=batchTimes(b.batch_key).expires)fail(409,'预览已变化或过期，请刷新');await c.execute('UPDATE deep_batches SET approved_revision=revision,approved_by=? WHERE batch_key=?',[req.admin.username||'admin',b.batch_key]);return {msg:'已确认，周四 20:00 到时发布'};},{action:'deep_batch.approve',target_type:'deep_batch'}));
  app.post('/admin/deep-batches/:key/publish',adminAuthMiddleware,route(async(req,c,t)=>publish(c,await batch(c,req.params.key),t)));
+ /* ---------- 匹配拓扑图（只读）+ 管理员指定配对（只改本批 plan） ---------- */
+ const gcache=mp.createCache();
+ const ownsDeep=(x,id)=>x.a_id===id||x.b_id===id;
+ const keyOfDeep=x=>key(x.a_id??x.a,x.b_id??x.b);
+ function deepNodes(people,names,plan){const pd=p=>{try{return publicData(p.data);}catch{return {};}};const matched=new Set(plan.flatMap(p=>[p.a_id??p.a,p.b_id??p.b]));return people.map(p=>{const n=names.get(p.account_id)||{},d=pd(p);return {id:p.id,aid:p.account_id,username:n.username||('#'+p.account_id),avatar:n.avatar||'',campus:d.own_campus||null,college:d.major||null,matched:matched.has(p.account_id)};});}
+ async function graphFor(c,b,time){
+  const ck='deep:'+b.batch_key+':'+b.revision+':'+b.status,hit=gcache.get(ck);if(hit)return hit;
+  const {people,edges}=await pool(c,b,time),names=await mp.loadNodes(c,people.map(p=>p.account_id)),plan=json(b.plan)||[];
+  const out=mp.graphPayload({key:b.batch_key,line:'deep',status:b.status,revision:b.revision,nodes:deepNodes(people,names,plan),edges:edges.map(e=>({a:people[e.a].id,b:people[e.b].id,score:e.score})),plan,stats:json(b.stats)});
+  gcache.set(ck,out);return out;
+ }
+ app.get('/admin/deep-batches/:key/graph',adminAuthMiddleware,route(async(req,c,t)=>graphFor(c,await batch(c,req.params.key),t)));
+ async function manualPair(c,b,time,req){
+  if(time>=batchTimes(b.batch_key).expires)fail(409,'本批已过期，不能改计划');
+  const a_id=mp.positiveInt(req.body?.a_id),b_id=mp.positiveInt(req.body?.b_id);
+  if(!a_id||!b_id||a_id===b_id)fail(400,'请选择两个不同的用户');
+  const plan=json(b.plan)||[];
+  if(b.status!=='preview'||!plan.length)fail(409,'请先生成预览，再指定配对');
+  const {people,blocked}=await pool(c,b,time);
+  const at=new Map();people.forEach((p,i)=>{if(!at.has(p.account_id))at.set(p.account_id,i);});
+  const i=at.get(a_id),j=at.get(b_id);
+  if(i===undefined||j===undefined)fail(400,'该用户不在本批候选池（未报名或资格不符）');
+  if(blocked.has(key(a_id,b_id)))fail(409,'这两人当前互为屏蔽或存在冲突，不能指定');
+  const sc=evaluate(people[i].data,people[j].data);
+  if(!sc)fail(409,'两位用户不满足本线的硬性条件，无法配对');
+  const r=mp.applyPin({plan,i,j,a_id,b_id,sc:{score:sc.score},by:req.admin?.username||'admin',ad:{owns:ownsDeep,item:(ii,jj,s)=>({a:people[ii].id,b:people[jj].id,a_id:people[ii].account_id,b_id:people[jj].account_id,score:s.score})}});
+  const prev=json(b.stats)||{},stats=mp.refreshStats(prev,r.plan,{poolUsers:Number(prev.users)||people.length,manual:r.plan.filter(p=>p.manual).length,dropped:[],meanRound:'int'});
+  await c.execute('UPDATE deep_batches SET plan=?,stats=?,revision=revision+1,approved_revision=NULL,approved_by=NULL WHERE batch_key=?',[JSON.stringify(r.plan),JSON.stringify(stats),b.batch_key]);
+  const nk=new Set(r.plan.map(keyOfDeep));const removed=plan.filter(p=>!nk.has(keyOfDeep(p))).map(p=>({a_id:p.a_id??p.a,b_id:p.b_id??p.b}));
+  return {__audit:{a_id,b_id,manual:stats.manual,removed:removed.length},msg:'已指定配对；需重新确认预览后才会发布',revision:(Number(b.revision)||0)+1,plan_n:r.plan.length,manual_n:stats.manual,removed};
+ }
+ async function manualRemove(c,b,time,req){
+  if(time>=batchTimes(b.batch_key).expires)fail(409,'本批已过期，不能改计划');
+  const a_id=mp.positiveInt(req.body?.a_id),b_id=mp.positiveInt(req.body?.b_id);
+  if(!a_id||!b_id||a_id===b_id)fail(400,'请选择要撤销的两个用户');
+  if(b.status!=='preview')fail(409,'批次状态不允许修改计划');
+  const plan=json(b.plan)||[],r=mp.dropPin({plan,ad:{owns:ownsDeep},a_id,b_id});
+  if(!r.removed)fail(404,'没有这条指定配对');
+  const prev=json(b.stats)||{},stats=mp.refreshStats(prev,r.plan,{poolUsers:Number(prev.users)||0,manual:r.plan.filter(p=>p.manual).length,dropped:[],meanRound:'int'});
+  await c.execute('UPDATE deep_batches SET plan=?,stats=?,revision=revision+1,approved_revision=NULL,approved_by=NULL WHERE batch_key=?',[JSON.stringify(r.plan),JSON.stringify(stats),b.batch_key]);
+  return {__audit:{a_id,b_id,manual:stats.manual},msg:'已撤销指定配对；需重新确认预览',revision:(Number(b.revision)||0)+1,plan_n:r.plan.length,manual_n:stats.manual};
+ }
+ app.post('/admin/deep-batches/:key/manual-pair',adminAuthMiddleware,route(async(req,c,t)=>manualPair(c,await batch(c,req.params.key),t,req),{action:'deep_batch.manual_pair',target_type:'deep_batch'}));
+ app.post('/admin/deep-batches/:key/manual-pair/remove',adminAuthMiddleware,route(async(req,c,t)=>manualRemove(c,await batch(c,req.params.key),t,req),{action:'deep_batch.manual_pair.remove',target_type:'deep_batch'}));
  async function tick(){if(running)return;running=true;try{await tx(async(c,time)=>{const [rows]=await c.query("SELECT batch_key FROM deep_batches WHERE status IN ('open','preview') ORDER BY batch_key");for(const r of rows){let b=await batch(c,r.batch_key);const t=batchTimes(b.batch_key);if(time>=t.expires){await c.execute("UPDATE deep_batches SET status='missed',plan=NULL WHERE batch_key=?",[b.batch_key]);if(notify){const [es]=await c.execute('SELECT account_id FROM deep_entries WHERE batch_key=? AND active=1',[b.batch_key]);for(const e of es)await notify.record(c,{account_id:e.account_id,kind:'batch',title:'本批未按期发布',body:'本批深度交友没有按期发布，下周会继续为你匹配。',link:'/deep',dedup_key:'deep:missed:'+b.batch_key+':'+e.account_id});}continue;}if(time<t.cutoff)continue;if(b.status==='open'){await build(c,b,time);b=await batch(c,b.batch_key);}if(b.status==='preview'&&b.approved_revision===b.revision&&time>=t.release)await publish(c,b,time);}});}catch(e){console.error('Deep scheduler:',e.status||e.code||e.name);try{const p=await getPool();await p.query("UPDATE deep_batches SET last_error='processing_failed' WHERE status IN ('open','preview')");}catch{}}finally{running=false;}}
  function start(){const t=setInterval(tick,60000),f=setTimeout(tick,5000);t.unref();f.unref();return()=>{clearInterval(t);clearTimeout(f);};}
  async function eligible(c,id){const [rows]=await c.execute('SELECT a.id FROM accounts a JOIN verified_students v ON v.account_id=a.id AND v.email=a.email LEFT JOIN daily_settings d ON d.account_id=a.id WHERE a.id=? AND COALESCE(d.banned,0)=0',[id]);if(!rows.length)return false;const [bt]=await c.query("SHOW TABLES LIKE 'weekly_match_bans'");if(bt.length){const [b]=await c.execute('SELECT account_id FROM weekly_match_bans WHERE account_id=?',[id]);if(b.length)return false;}return true;}

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>匹配拓扑图 · FancyU 管理后台</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#33475f">
+<link rel="stylesheet" href="/campus-ui.css?v=20261112a">
+<link rel="stylesheet" href="/admin-ui.css?v=20261113d">
+<link rel="stylesheet" href="/match-graph.css?v=20261118b">
+<script defer src="/admin-shell.js?v=20261118a"></script>
+<script defer src="/ui-dialog.js?v=20261113c"></script>
+<script defer src="/match-graph.js?v=20261118b"></script>
+</head>
+<body data-ui="campus" data-page="admin">
+<div data-admin-shell></div>
+<main>
+  <header class="mg-head">
+    <h1>匹配拓扑图</h1>
+    <div class="mg-actions">
+      <button type="button" id="refresh">刷新</button>
+      <button type="button" id="exp-json">导出 JSON</button>
+      <button type="button" id="exp-png">导出 PNG</button>
+    </div>
+  </header>
+  <p class="muted small">候选边由该批当前池子实时重算（与预览同源），分数越高越粗；橙色实线＝本批计划内配对，橙色虚线＝管理员手工指定。只显示用户名与院系校区，不含问卷答案。</p>
+
+  <div class="mg-toolbar">
+    <div class="mg-modes" role="tablist">
+      <button type="button" class="mg-mode on" data-mode="batch">单批候选拓扑</button>
+      <button type="button" class="mg-mode" data-mode="overlay">全站关系网</button>
+    </div>
+    <div class="mg-ctl" id="batchCtl">
+      <label class="mg-f">线路
+        <select id="line">
+          <option value="love">每周恋爱</option>
+          <option value="deep">深度交友</option>
+          <option value="buddy">约个搭子</option>
+        </select>
+      </label>
+      <label class="mg-f">批次<select id="batch"></select></label>
+    </div>
+    <div class="mg-ctl" id="overlayCtl" hidden>
+      <label class="mg-f">线路
+        <select id="oline">
+          <option value="all">全部</option>
+          <option value="love">每周恋爱</option>
+          <option value="deep">深度交友</option>
+          <option value="buddy">约个搭子</option>
+          <option value="history">历史导入</option>
+        </select>
+      </label>
+      <label class="mg-f">范围
+        <select id="days">
+          <option value="30">近 30 天</option>
+          <option value="60" selected>近 60 天</option>
+          <option value="90">近 90 天</option>
+          <option value="180">近 180 天</option>
+          <option value="365">近 365 天</option>
+        </select>
+      </label>
+    </div>
+    <label class="mg-f">搜索用户名<input id="q" type="search" placeholder="用户名片段" autocomplete="off"></label>
+    <label class="mg-f">最低分 <b id="thrV">0</b><input id="thr" type="range" min="0" max="100" step="1" value="0"></label>
+    <label class="mg-f">每点保留边 <b id="topkV">3</b><input id="topk" type="range" min="0" max="8" step="1" value="3"></label>
+    <label class="mg-f">邻域
+      <select id="hop">
+        <option value="1" selected>1 跳（选中点）</option>
+        <option value="2">2 跳</option>
+        <option value="3">3 跳</option>
+        <option value="0">不裁剪</option>
+      </select>
+    </label>
+    <label class="mg-f"><input id="orphan" type="checkbox"> 只看未匹配 / 孤立点</label>
+  </div>
+  <p class="mg-meta" id="graphMeta"></p>
+
+  <div class="mg-body">
+    <div class="mg-canvas" id="canvas">
+      <svg id="graph" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" role="img" aria-label="匹配拓扑图"></svg>
+      <div class="mg-zoom">
+        <button type="button" id="zin" aria-label="放大">＋</button>
+        <button type="button" id="zout" aria-label="缩小">－</button>
+        <button type="button" id="zreset">复位</button>
+      </div>
+      <div class="mg-clip" id="clip"></div>
+    </div>
+    <aside class="mg-side">
+      <h2>节点详情</h2>
+      <div id="detail"></div>
+      <div id="pairBox" hidden></div>
+      <h2>手工指定（<span id="pinN">0</span>）</h2>
+      <div id="pins"></div>
+    </aside>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+</main>
+</body>
+</html>

@@ -13,6 +13,7 @@
     { key: 'pay',       label: '支付定价',     href: '/admin/pay' },
     { key: 'survey',    label: '问卷管理',     href: '/admin/survey' },
     { key: 'notice',    label: '公告与问卷',   href: '/admin/notice' },
+    { key: 'graph',     label: '匹配拓扑',     href: '/admin/match-graph' },
     { key: 'users',     label: '用户列表',     href: '/admin#users' },
     { key: 'reports',   label: '举报',         href: '/admin#reports' },
     { key: 'assistant', label: 'AI助手',       href: '/admin#assistant' }
@@ -27,6 +28,7 @@
     var p = pathName();
     if (/\/admin\/survey$/.test(p)) return 'survey';
     if (/\/admin\/notice$/.test(p)) return 'notice';
+    if (/\/admin\/match-graph$/.test(p)) return 'graph';
     if (/\/admin\/pay$/.test(p)) return 'pay';
     if (/\/admin\/weekly$/.test(p)) return 'weekly';
     if (/\/admin\/buddy$/.test(p)) return 'buddy';

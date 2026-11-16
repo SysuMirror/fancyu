@@ -875,6 +875,7 @@ const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware,
 require('./survey-admin')(app, {getPool, adminAuthMiddleware, audit});
 require('./survey-stats')(app, {getPool, adminAuthMiddleware});
 deepMatch.start();
+const matchGraph=require('./match-graph')(app,{getPool,adminAuthMiddleware});
 analytics.register(app,{adminAuthMiddleware,userIdentitySql:()=>USER_IDENTITY_SQL,prepare:async()=>{await daily.ensureSchema();await weekly.ensureSchema();await friends.ensureSchema();await weeklyMatch.ensureSchema();await buddyMatch.ensureSchema();await deepMatch.ensureSchema();await ensurePreferencesTable(await getPool());}});
 
 // 获取当前用户信息
@@ -2428,6 +2429,7 @@ app.use((req, res, next) => {
     const PAGES2 = {
         'admin/pay': 'admin-pay.html',
         'admin/notice': 'admin-notice.html',
+        'admin/match-graph': 'match-graph.html',
         'admin/weekly': 'admin-weekly.html',
         'admin/deep': 'admin-deep.html',
         'admin/buddy': 'admin-buddy.html',

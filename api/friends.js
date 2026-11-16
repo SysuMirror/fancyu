@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),path=require('path');
-const {weekKey,validateCard,MAX}=require('./friends-rules');
+const {weekKey,weekDeadline,validateCard,MAX}=require('./friends-rules');const {exchangeState}=require('./contact-exchange');
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
 module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,observe=async()=>{},invalidateWeekly=async()=>{},now=()=>new Date(),getBuddy=()=>null}){
  let ready;
@@ -18,8 +18,8 @@ module.exports=function(app,{getPool,authMiddleware,daily,studentVerification,ob
   const [r]=await c.execute('SELECT a.username FROM accounts a WHERE a.id=?',[other]);
   const [cards]=await c.execute('SELECT type,data FROM friend_cards WHERE id=?',[mine?p.b_card:p.a_card]);
   const v=parse(cards[0].data);const {gender,...publicValues}=v;const a=r[0];
-  let feedback=null;if(p.status==='connected'){const [f]=await c.execute('SELECT answer FROM buddy_match_feedback WHERE pair_id=? AND account_id=?',[p.id,id]);feedback=f[0]?.answer||null;}
-  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:p.a_wechat&&p.b_wechat?(mine?p.b_wechat:p.a_wechat):null,feedback}:{})};
+  let feedback=null,ex={exchanged:false,wechat:null,mine:false,other:false};if(p.status==='connected'){const [f]=await c.execute('SELECT answer FROM buddy_match_feedback WHERE pair_id=? AND account_id=?',[p.id,id]);feedback=f[0]?.answer||null;ex=await exchangeState(c,{mode:'buddy',pairId:p.id,id,other,legacy:p.a_wechat&&p.b_wechat?(mine?p.b_wechat:p.a_wechat):null});}
+  return {id:p.id,card_id:mine?p.a_card:p.b_card,week:p.week_key,status:p.status,agreed:!!(mine?p.a_agreed:p.b_agreed),expires_at:p.status==='pending'?weekDeadline(p.week_key):null,person:{id:a.username,avatar:'',bio:'',tags:[],photos:[]},card:{type:cards[0].type,v:publicValues},...(p.status==='connected'?{wechat:ex.wechat,wechat_requested:ex.mine,wechat_incoming:ex.other&&!ex.exchanged,feedback}:{})};
  }
  app.get('/account/friends',authMiddleware,route(async(req,c,week)=>{
   const id=req.account.account_id;const [rows]=await c.execute('SELECT * FROM friend_cards WHERE account_id=? AND deleted=0 ORDER BY slot',[id]);

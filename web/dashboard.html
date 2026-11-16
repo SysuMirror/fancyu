@@ -53,19 +53,13 @@
         </div>
         
         <div class="card">
-            <h2>匹配设置</h2>
-            <ul class="settings-list">
-                <li>
-                    <div>
-                        <div class="label">参与本轮匹配</div>
-                        <div class="desc" id="matchingDesc">开启后你的资料将参与本周匹配</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="joinMatching" checked onchange="toggleMatching()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </li>
-            </ul>
+            <h2>每周配对</h2>
+            <p class="desc" style="margin-bottom:12px">每周恋爱配对改为按批次报名：在「每周恋爱配对」页面确认资格并报名当批，报名截止（周三 20:00）前可随时退出。深度交友与约个搭子在各板块内以每周开关参与。</p>
+            <div class="nav-links">
+                <a href="/weekly-match">前往每周恋爱配对报名 →</a>
+                <a href="/deep">深度交友</a>
+                <a href="/friends#quick">约个搭子</a>
+            </div>
         </div>
 
         <div class="card">
@@ -359,40 +353,6 @@ function requireLogin() {
             }
         }
         
-        function updateMatchingDesc(isOn) {
-            document.getElementById('matchingDesc').textContent = isOn ? '开启后你的资料将参与本周匹配' : '已关闭，本周不会参与匹配';
-        }
-
-        async function toggleMatching() {
-            const toggle = document.getElementById('joinMatching');
-            const value = toggle.checked;
-            toggle.disabled = true;
-
-            try {
-                const token = localStorage.getItem('token');
-                const res = await fetch(API_BASE + '/account/toggle-matching', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ join_matching: value })
-                });
-                const data = await res.json();
-                if (data.code === 200) {
-                    updateMatchingDesc(value);
-                    const user = JSON.parse(localStorage.getItem('user') || '{}');
-                    user.join_matching = value;
-                    localStorage.setItem('user', JSON.stringify(user));
-                } else {
-                    toggle.checked = !value;
-                    updateMatchingDesc(!value);
-                }
-            } catch (err) {
-                toggle.checked = !value;
-                updateMatchingDesc(!value);
-            } finally {
-                toggle.disabled = false;
-            }
-        }
-
         async function loadUser() {
             const token = checkAuth();
             if (!token) return;
@@ -415,9 +375,6 @@ function requireLogin() {
                     document.getElementById('username').textContent = data.user.username;
                     document.getElementById('email').textContent = data.user.email;
                     document.getElementById('contactEmail').textContent = data.user.contact_email || '-';
-                    const toggle = document.getElementById('joinMatching');
-                    toggle.checked = data.user.join_matching !== false;
-                    updateMatchingDesc(data.user.join_matching !== false);
                     if (data.user.created_at) {
                         document.getElementById('createdAt').textContent = new Date(data.user.created_at).toLocaleString('zh-CN');
                     }

@@ -54,7 +54,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
   return {id:r.insertId,notify:[id,a.other]};
  }));
  app.post('/account/chat/:mode/:id/read',authMiddleware,route(async(req,c)=>{
-  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id);await access(c,id,mode,pairId);const last=positive(req.body?.last_id);
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);const last=positive(req.body?.last_id);
   const [m]=await c.execute('SELECT id FROM user_chat_messages WHERE mode=? AND pair_id=? AND id=?',[mode,pairId,last]);if(!m.length)fail(400,'已读位置无效');
   await c.execute('INSERT INTO user_chat_reads(mode,pair_id,account_id,last_read) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE last_read=GREATEST(last_read,VALUES(last_read))',[mode,pairId,id,last]);return {notify:[id,a.other]};
  }));

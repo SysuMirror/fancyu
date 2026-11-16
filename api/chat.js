@@ -217,7 +217,7 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
    if(!identity){
     if(msg.type!=='auth')return ws.close(1008,'不支持的操作');
     busy=true;
-    try{const decoded=verifyToken(msg.token);if(!decoded)throw Error();const [r]=await(await getPool()).execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);if(!r.length||ws.readyState!==1)throw Error();if((sockets.get(decoded.account_id)?.size||0)>=3)throw Error();identity=decoded;ws.token=msg.token;ws.alive=true;clearTimeout(timeout);if(!sockets.has(identity.account_id))sockets.set(identity.account_id,new Set());sockets.get(identity.account_id).add(ws);ws.send('{"type":"ready"}');}
+    try{const decoded=verifyToken(msg.token);if(!decoded)throw Error();const [r]=await(await getPool()).execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);if(!r.length||ws.readyState!==1)throw Error();if((sockets.get(decoded.account_id)?.size||0)>=3)throw Error();identity=decoded;ws.identity=decoded;ws.token=msg.token;ws.alive=true;clearTimeout(timeout);if(!sockets.has(identity.account_id))sockets.set(identity.account_id,new Set());sockets.get(identity.account_id).add(ws);ws.send('{"type":"ready"}');}
     catch{ws.close(1008,'登录失效');}finally{busy=false;}
     return;
    }

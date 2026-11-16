@@ -30,6 +30,14 @@ if [ ! -d "$LIVE/.private" ]; then
 fi
 [ -f "$LIVE/.private/pay.json" ] || log "警告: $LIVE/.private/pay.json 不存在 —— 支付定价回落环境变量"
 
+# 私有上传目录（头像 + 聊天图片）：与 .private 同性质（hostPath，单节点语义）
+mkdir -p "$LIVE/.private/uploads" 2>/dev/null && chmod 700 "$LIVE/.private/uploads" 2>/dev/null || true
+[ -d "$LIVE/.private/uploads" ] || log "警告: $LIVE/.private/uploads 创建失败 —— 头像/聊天图片上传会失败"
+# 推送密钥：首次启动会自动生成。重新生成会让既有订阅全部失效，故只提示不动它。
+[ -f "$LIVE/.private/vapid.json" ] || log "提示: $LIVE/.private/vapid.json 不存在 —— node 启动后会生成新的 Web Push 密钥"
+# 出网推送依赖 web-push（装在持久 api/node_modules 里）
+[ -d "$LIVE/api/node_modules/web-push" ] || log "警告: 未安装 web-push —— 浏览器推送停用（站内通知中心仍可用）"
+
 # node_modules 属主自愈(曾被 root 污染会致 cloud 读不到)
 if find "$LIVE/api/node_modules" -maxdepth 3 ! -user cloud 2>/dev/null | grep -q .; then
     sudo -n chown -R cloud:cloud "$LIVE/api/node_modules" 2>/dev/null || true

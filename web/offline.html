@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>网络不可用 | FancyU · 中意你</title>
+<meta name="theme-color" content="#faf9f5">
+<style>
+  :root{color-scheme:light}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:#faf9f5;color:#204d40;font:16px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  main{max-width:420px;text-align:center}
+  .leaf{width:56px;height:56px;margin:0 auto 12px;display:block}
+  h1{font-size:20px;margin:0 0 8px}
+  p{color:#55726a;margin:0 0 18px}
+  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  a,button{font:inherit;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;
+    border-radius:12px;border:1px solid #dedfd6;background:#fff;color:#265a48;text-decoration:none;cursor:pointer}
+  a.primary{background:#265a48;border-color:#265a48;color:#fff}
+</style>
+</head>
+<body>
+<main>
+  <svg class="leaf" viewBox="0 0 32 32" aria-hidden="true"><path d="M15 28C16 18 10 10 3 6c-1 11 3 16 12 15" fill="#265a48"/><path d="M16 24C15 11 21 5 29 3c1 12-4 19-13 21" fill="#78977D"/><path d="M16 30V20" stroke="#265a48" stroke-width="1.5" fill="none"/></svg>
+  <h1>现在连不上网络</h1>
+  <p>你已经离线了。恢复网络后刷新即可继续；已打开的页面内容仍可滚动查看。</p>
+  <div class="actions">
+    <button type="button" onclick="location.reload()" class="primary">重新加载</button>
+    <a href="/">回首页</a>
+  </div>
+</main>
+</body>
+</html>

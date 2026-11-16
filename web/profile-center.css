@@ -38,7 +38,7 @@ h3{font-family:var(--serif);font-weight:900;font-size:22px;letter-spacing:.5px}
 /* 身份卡 */
 .identity{margin:26px 0 34px;padding:26px 30px;display:flex;align-items:center;gap:22px;
   border:1px solid var(--line-2);border-radius:var(--radius);background:var(--card-grad)}
-.avatar{width:62px;height:62px;flex-shrink:0;background:var(--pill);border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:700;color:var(--green)}
+.avatar{width:62px;height:62px;flex-shrink:0;background:var(--pill);border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:700;color:var(--green);border:0;padding:0;cursor:pointer;overflow:hidden}.avatar{position:relative}.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .identity-info{min-width:0;flex:1}
 .identity-title{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .identity-title h2{font-size:22px;overflow-wrap:anywhere}

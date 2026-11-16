@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN" data-ui="fancyu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>页面不存在 | FancyU · 中意你</title>
+<link rel="stylesheet" href="fancyu.css?v=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#faf9f5"><meta name="apple-mobile-web-app-title" content="中意你">
+<style>
+  .err-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:6px;}
+  .err-code{font-family:var(--fu-serif);font-weight:900;font-size:clamp(64px,12vw,120px);line-height:1;color:var(--fu-green-deep);letter-spacing:.02em;}
+  .err-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:22px;}
+  .err-actions a,.err-actions button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="leaf" viewBox="0 0 32 32"><path d="M15 28C16 18 10 10 3 6c-1 11 3 16 12 15" fill="currentColor"/><path d="M16 24C15 11 21 5 29 3c1 12-4 19-13 21" fill="#78977D"/><path d="M16 30V20" stroke="currentColor" stroke-width="1.5"/></symbol>
+</svg>
+<header class="fu-header fu-wrap">
+  <a href="/" class="fu-brand" aria-label="FancyU 中意你首页"><svg><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
+  <nav class="fu-nav" aria-label="页面导航"><a href="/">首页</a><a class="fu-back" href="/profile">个人中心</a></nav>
+</header>
+<main class="fu-main fu-wrap">
+  <div class="err-wrap">
+    <div class="err-code">404</div>
+    <h1 class="fu-title" style="font-size:clamp(24px,3vw,34px)">这个页面不见了</h1>
+    <p class="fu-sub">你访问的地址不存在，或该功能已经下线。</p>
+    <div class="err-actions">
+      <a class="fu-btn primary" href="/">回到首页</a>
+      <button class="fu-btn" type="button" onclick="history.length>1?history.back():location.assign('/')">返回上一页</button>
+      <a class="fu-btn" href="/profile">个人中心</a>
+    </div>
+  </div>
+</main>
+<footer class="fu-footer fu-wrap">
+  <a href="/" class="fu-brand" style="font-size:17px"><svg style="width:25px;height:28px"><use href="#leaf"/></svg><span>FancyU · 中意你</span></a>
+  <nav aria-label="网站说明"><a href="/">关于我们</a><a href="/profile">个人中心</a></nav>
+</footer>
+</body>
+</html>

@@ -3,9 +3,18 @@ const fs=require('fs'),path=require('path');
 const TABLES={love:'weekly_match_pairs',deep:'deep_pairs',buddy:'friend_card_pairs'};
 const fail=(status,msg)=>{throw Object.assign(Error(msg),{status});};
 const positive=x=>{const n=Number(x);if(!Number.isSafeInteger(n)||n<1)fail(400,'编号无效');return n;};
-module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken,now=()=>new Date()}){
+const json=x=>typeof x==='string'?JSON.parse(x):x;
+const RECALL_MS=2*60*1000; // 发送后 2 分钟内可撤回
+module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken,uploads,notify:notifier,now=()=>new Date()}){
  let ready;const sockets=new Map();
- function ensureSchema(){if(!ready)ready=(async()=>{const p=await getPool();for(const sql of fs.readFileSync(path.join(__dirname,'chat-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await p.query(sql);const c=await p.getConnection();try{await c.beginTransaction();const [marker]=await c.execute('INSERT IGNORE INTO user_chat_meta(id) VALUES (1)');if(marker.affectedRows){for(const [mode,table]of Object.entries(TABLES)){const condition=mode==='love'?'connected_at IS NOT NULL':'a_agreed=1 AND b_agreed=1';await c.query(`INSERT IGNORE INTO user_chat_contact_events(mode,pair_id,exchanged_at) SELECT '${mode}',id,created_at FROM ${table} WHERE ${condition}`);}}await c.commit();}catch(e){await c.rollback();throw e;}finally{c.release();}})().catch(e=>{ready=null;throw e;});return ready;}
+ function ensureSchema(){if(!ready)ready=(async()=>{const p=await getPool();for(const sql of fs.readFileSync(path.join(__dirname,'chat-schema.sql'),'utf8').split(';').map(x=>x.trim()).filter(Boolean))await p.query(sql);
+  // 线上表已存在：把「只换微信」扩展为「可选渠道 + 内容」，旧行默认微信。
+  try{await p.query("ALTER TABLE user_chat_exchange ADD COLUMN channel VARCHAR(12) NOT NULL DEFAULT '微信'");}catch(e){if(!/Duplicate|already/i.test(e.message))throw e;}
+  // 联系方式从「微信号」扩为「渠道 + 内容」：内容最长 100 字（非微信渠道），线上列需加宽。
+  try{await p.query("ALTER TABLE user_chat_exchange MODIFY COLUMN wechat VARCHAR(100) NOT NULL");}catch(e){if(!/Duplicate|already/i.test(e.message))throw e;}
+  // 图片消息 + 撤回（软删）：线上表已存在，启动时补列。
+  for(const ddl of ["ALTER TABLE user_chat_messages ADD COLUMN image_id BIGINT UNSIGNED NULL","ALTER TABLE user_chat_messages ADD COLUMN deleted_at DATETIME NULL"]){try{await p.query(ddl);}catch(e){if(!/Duplicate|already/i.test(e.message))throw e;}}
+  const c=await p.getConnection();try{await c.beginTransaction();const [marker]=await c.execute('INSERT IGNORE INTO user_chat_meta(id) VALUES (1)');if(marker.affectedRows){for(const [mode,table]of Object.entries(TABLES)){const condition=mode==='love'?'connected_at IS NOT NULL':'a_agreed=1 AND b_agreed=1';await c.query(`INSERT IGNORE INTO user_chat_contact_events(mode,pair_id,exchanged_at) SELECT '${mode}',id,created_at FROM ${table} WHERE ${condition}`);}}await c.commit();}catch(e){await c.rollback();throw e;}finally{c.release();}})().catch(e=>{ready=null;throw e;});return ready;}
  async function access(c,id,mode,pairId){
   if(!Object.hasOwn(TABLES,mode))fail(400,'会话类型无效');pairId=positive(pairId);
   const [rows]=await c.execute(`SELECT * FROM ${TABLES[mode]} WHERE id=? AND (a_id=? OR b_id=?)`,[pairId,id,id]);
@@ -20,50 +29,108 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
  function notify(ids){for(const id of ids)for(const ws of sockets.get(id)||[])if(ws.readyState===1&&ws.bufferedAmount<8192)ws.send('{"type":"refresh"}');}
  const route=fn=>async(req,res)=>{res.setHeader('Cache-Control','no-store');try{await ensureSchema();const result=await daily.transaction(c=>fn(req,c));const {notify:recipients,...data}=result;res.json({code:200,...data});if(recipients)notify(recipients);}catch(e){console.error('Chat:',e.status||e.code||e.name);res.status(e.status||503).json({code:e.status||503,msg:e.status?e.message:'聊天暂时不可用，请稍后重试'});}};
  async function exchange(c,id,mode,pairId,p){
-  const [rows]=await c.execute('SELECT account_id,wechat FROM user_chat_exchange WHERE mode=? AND pair_id=?',[mode,pairId]);
+  const [rows]=await c.execute('SELECT account_id,wechat,channel FROM user_chat_exchange WHERE mode=? AND pair_id=?',[mode,pairId]);
   const mine=rows.find(x=>x.account_id===id),other=rows.find(x=>x.account_id===(p.a_id===id?p.b_id:p.a_id));
   const legacy=p.a_wechat&&p.b_wechat;
-  return {requested:!!mine,incoming:!!other,exchanged:!!legacy||!!(mine&&other),wechat:legacy?(p.a_id===id?p.b_wechat:p.a_wechat):(mine&&other?other.wechat:null)};
+  const peer=legacy?{channel:'微信',value:(p.a_id===id?p.b_wechat:p.a_wechat)}:(mine&&other?{channel:other.channel||'微信',value:other.wechat}:null);
+  return {requested:!!mine,incoming:!!other,exchanged:!!peer,mine_channel:mine?(mine.channel||'微信'):null,
+   channel:peer?peer.channel:null,value:peer?peer.value:null,wechat:peer&&peer.channel==='微信'?peer.value:null};
+ }
+ // 会话内对方资料卡：头像 + 昵称 + 各线公开资料（只取 publicData 允许展示的字段）。
+ async function peerCard(c,mode,other,p){
+  const [acc]=await c.execute('SELECT username FROM accounts WHERE id=?',[other]);
+  if(!acc.length)return null;
+  const card={id:other,name:acc[0].username,avatar:await require('./avatar-url')(c,other)};
+  try{
+   if(mode==='love'){
+    const [rows]=await c.execute('SELECT snapshot FROM weekly_match_enrollments WHERE account_id=? AND batch_key=?',[other,p.batch_key]);
+    if(rows.length){const a=json(rows[0].snapshot).answers||{};card.campus=a['7']||'';card.college=a['9']||'';card.hometown=a['11']||'';card.interests=a['47']||'';}
+   }else if(mode==='deep'){
+    const [rows]=await c.execute('SELECT s.data FROM deep_entries e JOIN deep_surveys s ON s.account_id=e.account_id WHERE e.batch_key=? AND e.account_id=?',[p.week_key,other]);
+    if(rows.length){const pub=require('./deep-rules').publicData(json(rows[0].data));card.bio=pub.bio||'';card.campus=pub.own_campus||'';card.college=pub.major||'';card.hometown=pub.hometown||'';}
+   }else{
+    const [rows]=await c.execute('SELECT type,data FROM friend_cards WHERE id=?',[p.a_id===other?p.a_card:p.b_card]);
+    if(rows.length){const v=json(rows[0].data)||{};card.type=rows[0].type;card.bio=v.intro||v.description||'';card.tags=Array.isArray(v.tags)?v.tags:[];}
+   }
+  }catch(e){/* 资料源缺失时只保留昵称与头像 */}
+  return card;
  }
  app.get('/account/chat',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,rooms=[];
+  const [hiddenRows]=await c.execute('SELECT mode,pair_id,hidden_at FROM user_chat_hidden WHERE account_id=?',[id]);
+  const hidden=new Map(hiddenRows.map(r=>[r.mode+':'+r.pair_id,new Date(r.hidden_at).getTime()]));
   for(const [mode,table]of Object.entries(TABLES)){const [rows]=await c.execute(`SELECT id FROM ${table} WHERE (a_id=? OR b_id=?) AND status='connected' ORDER BY id DESC LIMIT 100`,[id,id]);
    for(const row of rows){let a;try{a=await access(c,id,mode,row.id);}catch(e){if(e.status)continue;throw e;}
     const [[counts]]=await c.execute('SELECT COUNT(*) unread,MAX(id) last_id FROM user_chat_messages WHERE mode=? AND pair_id=? AND sender_id<>? AND id>COALESCE((SELECT last_read FROM user_chat_reads WHERE mode=? AND pair_id=? AND account_id=?),0)',[mode,row.id,id,mode,row.id,id]);
-    const [last]=await c.execute('SELECT id,body,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ORDER BY id DESC LIMIT 1',[mode,row.id]);
-    rooms.push({mode,pair_id:row.id,name:a.name,unread:Number(counts.unread),last_id:last[0]?.id||0,last_preview:last[0]?String(last[0].body).slice(0,60):'',updated_at:last[0]?.created_at||null});
+    const [last]=await c.execute('SELECT id,body,image_id,deleted_at,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ORDER BY id DESC LIMIT 1',[mode,row.id]);
+    const stamp=last[0]?.created_at?new Date(last[0].created_at).getTime():0;
+    const hiddenAt=hidden.get(mode+':'+row.id);
+    if(hiddenAt&&hiddenAt>=stamp)continue; // 隐藏后没有新消息 → 不出现
+    rooms.push({mode,pair_id:row.id,name:a.name,unread:Number(counts.unread),last_id:last[0]?.id||0,last_preview:last[0]?(last[0].deleted_at?'[已撤回]':String(last[0].body).trim()||(last[0].image_id?'[图片]':'')):'',updated_at:last[0]?.created_at||null});
    }
-  }rooms.sort((a,b)=>b.last_id-a.last_id);return {rooms,unread:rooms.reduce((n,r)=>n+r.unread,0)};
+  }rooms.sort((a,b)=>b.last_id-a.last_id);const history=require('./match-history');const archived=[];for(const mode of Object.keys(TABLES))for(const h of await history(c,id,mode,30))archived.push(h);archived.sort((a,b)=>String(b.ended_at||'').localeCompare(String(a.ended_at||'')));return {rooms,unread:rooms.reduce((n,r)=>n+r.unread,0),archived};
  }));
  app.get('/account/chat/:mode/:id',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);
   const after=req.query.after===undefined?null:Math.max(0,Number(req.query.after)),before=req.query.before===undefined?null:positive(req.query.before);
   if(after!==null&&!Number.isSafeInteger(after)||after!==null&&before!==null)fail(400,'分页参数无效');
-  const [rows]=await c.execute(`SELECT id,sender_id,client_id,body,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ${after!==null?'AND id>?':before!==null?'AND id<?':''} ORDER BY id ${after!==null?'ASC':'DESC'} LIMIT 51`,[mode,pairId,...(after!==null?[after]:before!==null?[before]:[])]);
+  const [rows]=await c.execute(`SELECT id,sender_id,client_id,body,image_id,deleted_at,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? ${after!==null?'AND id>?':before!==null?'AND id<?':''} ORDER BY id ${after!==null?'ASC':'DESC'} LIMIT 51`,[mode,pairId,...(after!==null?[after]:before!==null?[before]:[])]);
   const [reads]=await c.execute('SELECT last_read FROM user_chat_reads WHERE mode=? AND pair_id=? AND account_id=?',[mode,pairId,a.other]);
   const otherLastRead=reads.length?Number(reads[0].last_read):0;
-  const more=rows.length>50,messages=rows.slice(0,50);if(after===null)messages.reverse();return {name:a.name,messages:messages.map(m=>({...m,mine:m.sender_id===id,sender_id:undefined})),more,other_last_read:otherLastRead,exchange:await exchange(c,id,mode,pairId,a.p)};
+  const more=rows.length>50,messages=rows.slice(0,50);if(after===null)messages.reverse();const peer=await peerCard(c,mode,a.other,a.p);return {name:a.name,peer,messages:messages.map(m=>({id:m.id,client_id:m.client_id,created_at:m.created_at,body:m.deleted_at?'':m.body,image:m.deleted_at||!m.image_id?null:'/api/account/uploads/'+m.image_id,recalled:!!m.deleted_at,mine:m.sender_id===id})),more,other_last_read:otherLastRead,exchange:await exchange(c,id,mode,pairId,a.p)};
  }));
  app.post('/account/chat/:mode/:id/messages',authMiddleware,route(async(req,c)=>{
-  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),{body,client_id}=req.body||{};
-  if(typeof body!=='string'||!body.trim()||body.length>2000||typeof client_id!=='string'||!/^[-a-zA-Z0-9_]{16,64}$/.test(client_id))fail(400,'消息需为1–2000字');
-  const [existing]=await c.execute('SELECT id,body FROM user_chat_messages WHERE mode=? AND pair_id=? AND sender_id=? AND client_id=?',[mode,pairId,id,client_id]);
-  if(existing.length){if(existing[0].body!==body.trim())fail(409,'重试内容已变化，请重新发送');return {id:existing[0].id,duplicate:true};}
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),{body,client_id,image_id}=req.body||{};
+  if(typeof client_id!=='string'||!/^[-a-zA-Z0-9_]{16,64}$/.test(client_id))fail(400,'消息编号无效');
+  const text=typeof body==='string'?body.trim():'';
+  let image=null;
+  if(image_id!==undefined&&image_id!==null&&image_id!==''){if(!uploads)fail(503,'图片功能暂未开放');image=positive(image_id);if(!await uploads.own(c,id,image))fail(403,'图片不可用，请重新上传');}
+  if(!text&&!image)fail(400,'消息不能为空');if(text.length>2000)fail(400,'消息需为1–2000字');
+  const [existing]=await c.execute('SELECT id,body,image_id FROM user_chat_messages WHERE mode=? AND pair_id=? AND sender_id=? AND client_id=?',[mode,pairId,id,client_id]);
+  if(existing.length){const same=String(existing[0].body)===text&&(image?Number(existing[0].image_id)===image:!existing[0].image_id);if(!same)fail(409,'重试内容已变化，请重新发送');return {id:existing[0].id,duplicate:true};}
   const [[{n}]]=await c.execute('SELECT COUNT(*) n FROM user_chat_messages WHERE sender_id=? AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 MINUTE)',[id]);if(Number(n)>=30)fail(429,'发送太快，请稍后再试');
-  const [r]=await c.execute('INSERT INTO user_chat_messages(mode,pair_id,sender_id,client_id,body) VALUES (?,?,?,?,?)',[mode,pairId,id,client_id,body.trim()]);
+  const [r]=await c.execute('INSERT INTO user_chat_messages(mode,pair_id,sender_id,client_id,body,image_id) VALUES (?,?,?,?,?,?)',[mode,pairId,id,client_id,text,image]);
+  if(notifier){const [[me]]=await c.execute('SELECT username FROM accounts WHERE id=?',[id]);
+   // 同一会话 5 分钟内的多条消息合并成一条通知（用户要求：不刷屏）
+   await notifier.record(c,{account_id:a.other,kind:'chat',title:(me?.username||'对方')+' 发来新消息',body:text?text.slice(0,60):'[图片]',link:'/chat?mode='+mode+'&pair='+pairId,dedup_key:'chat:'+mode+':'+pairId+':'+notifier.chatBucket(now())});}
   return {id:r.insertId,notify:[id,a.other]};
  }));
+ app.post('/account/chat/:mode/:id/messages/:messageId/recall',authMiddleware,route(async(req,c)=>{
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),messageId=positive(req.params.messageId);
+  const [rows]=await c.execute('SELECT id,sender_id,deleted_at,created_at FROM user_chat_messages WHERE id=? AND mode=? AND pair_id=?',[messageId,mode,pairId]);
+  if(!rows.length)fail(404,'消息不存在');const m=rows[0];
+  if(m.sender_id!==id)fail(403,'只能撤回自己发送的消息');
+  if(m.deleted_at)return {msg:'消息已撤回'};
+  if(now().getTime()-new Date(m.created_at).getTime()>RECALL_MS)fail(409,'超过 2 分钟的消息无法撤回');
+  await c.execute('UPDATE user_chat_messages SET deleted_at=UTC_TIMESTAMP() WHERE id=? AND deleted_at IS NULL',[messageId]);return {msg:'已撤回',notify:[id,a.other]};
+ }));
+ app.delete('/account/chat/:mode/:id',authMiddleware,route(async(req,c)=>{
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);
+  await c.execute('INSERT INTO user_chat_hidden(mode,pair_id,account_id,hidden_at) VALUES (?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE hidden_at=UTC_TIMESTAMP()',[mode,pairId,id]);
+  return {msg:'已从你的列表移除；对方发来新消息后会重新出现'};
+ }));
  app.post('/account/chat/:mode/:id/read',authMiddleware,route(async(req,c)=>{
-  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id);await access(c,id,mode,pairId);const last=positive(req.body?.last_id);
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);const last=positive(req.body?.last_id);
   const [m]=await c.execute('SELECT id FROM user_chat_messages WHERE mode=? AND pair_id=? AND id=?',[mode,pairId,last]);if(!m.length)fail(400,'已读位置无效');
   await c.execute('INSERT INTO user_chat_reads(mode,pair_id,account_id,last_read) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE last_read=GREATEST(last_read,VALUES(last_read))',[mode,pairId,id,last]);return {notify:[id,a.other]};
  }));
  app.post('/account/chat/:mode/:id/exchange',authMiddleware,route(async(req,c)=>{
-  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId),{wechat,consent}=req.body||{};
-  if(consent!==true||typeof wechat!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{5,31}$/.test(wechat))fail(400,'请填写6–32位有效微信号，并同意双方申请后互相展示');
-  const state=await exchange(c,id,mode,pairId,a.p);if(state.exchanged)return {exchange:state,msg:'你们已交换微信'};
-  await c.execute('INSERT INTO user_chat_exchange(mode,pair_id,account_id,wechat) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE wechat=VALUES(wechat),consented_at=UTC_TIMESTAMP()',[mode,pairId,id,wechat]);
-  const updated=await exchange(c,id,mode,pairId,a.p);if(updated.exchanged)await c.execute('INSERT IGNORE INTO user_chat_contact_events(mode,pair_id) VALUES (?,?)',[mode,pairId]);return {exchange:updated,msg:'申请已记录，双方同意后互相展示微信',notify:[id,a.other]};
+  const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);
+  const {consent}=req.body||{},wechat=req.body?.wechat,value=req.body?.value;
+  const methods=(()=>{try{return require('./survey-schema').current('deep').contacts.methods;}catch(e){return ['微信','QQ','小红书','邮箱','其他'];}})();
+  const channel=typeof req.body?.channel==='string'&&req.body.channel?req.body.channel:(wechat?'微信':'');
+  if(consent!==true||!methods.includes(channel))fail(400,'请选择联系方式并同意双方申请后互相展示');
+  const text=typeof value==='string'?value.trim():(wechat||'').trim();
+  if(!text)fail(400,'请填写联系方式');
+  if(channel==='微信'&&!/^[A-Za-z0-9][A-Za-z0-9_-]{5,31}$/.test(text))fail(400,'请填写6–32位有效微信号，并同意双方申请后互相展示');
+  if(channel!=='微信'&&(text.length>100||[...text].some(ch=>ch.codePointAt(0)<32)))fail(400,'联系方式需为 1–100 字，且不含换行等控制字符');
+  const state=await exchange(c,id,mode,pairId,a.p);if(state.exchanged)return {exchange:state,msg:'你们已交换联系方式'};
+  await c.execute('INSERT INTO user_chat_exchange(mode,pair_id,account_id,wechat,channel) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE wechat=VALUES(wechat),channel=VALUES(channel),consented_at=UTC_TIMESTAMP()',[mode,pairId,id,text,channel]);
+  const updated=await exchange(c,id,mode,pairId,a.p);if(updated.exchanged)await c.execute('INSERT IGNORE INTO user_chat_contact_events(mode,pair_id) VALUES (?,?)',[mode,pairId]);
+  if(notifier){const link='/chat?mode='+mode+'&pair='+pairId;
+   if(updated.exchanged)for(const who of [id,a.other])await notifier.record(c,{account_id:who,kind:'exchange',title:'联系方式已互换',body:'双方都同意交换联系方式了，可在会话内查看。',link,dedup_key:'exchange:done:'+mode+':'+pairId+':'+who});
+   else await notifier.record(c,{account_id:a.other,kind:'exchange',title:'对方申请交换联系方式',body:'自愿选择是否接受；双方都同意后才会互相展示。',link,dedup_key:'exchange:ask:'+mode+':'+pairId+':'+id});}
+  return {exchange:updated,msg:'申请已记录，双方同意后互相展示',notify:[id,a.other]};
  }));
  app.delete('/account/chat/:mode/:id/exchange',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);
@@ -89,5 +156,5 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
   wss.on('connection',ws=>{let identity=null,busy=false;const timeout=setTimeout(()=>ws.close(1008,'请登录'),5000);ws.on('error',()=>{});ws.on('message',async raw=>{if(identity||busy)return ws.close(1008,'不支持的操作');busy=true;try{const msg=JSON.parse(raw),decoded=verifyToken(msg.token);if(msg.type!=='auth'||!decoded)throw Error();const [r]=await(await getPool()).execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);if(!r.length||ws.readyState!==1)throw Error();if((sockets.get(decoded.account_id)?.size||0)>=3)throw Error();identity=decoded;ws.token=msg.token;ws.alive=true;clearTimeout(timeout);if(!sockets.has(identity.account_id))sockets.set(identity.account_id,new Set());sockets.get(identity.account_id).add(ws);ws.send('{"type":"ready"}');}catch{ws.close(1008,'登录失效');}});ws.on('pong',()=>{ws.alive=true;});ws.on('close',()=>{clearTimeout(timeout);if(identity){const set=sockets.get(identity.account_id);set?.delete(ws);if(!set?.size)sockets.delete(identity.account_id);}});});
   const timer=setInterval(()=>{for(const ws of wss.clients){if(!ws.token)continue;if(!verifyToken(ws.token)||!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000);timer.unref();wss.on('close',()=>clearInterval(timer));return wss;
  }
- return {ensureSchema,attach,access};
+ return {ensureSchema,attach,access,notify};
 };

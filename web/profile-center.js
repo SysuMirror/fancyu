@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 function requireLogin(){if(window.__loginRedirecting)return;window.__loginRedirecting=true;localStorage.removeItem('token');localStorage.removeItem('user');location.replace('/login?redirect=/profile');}
 function getAuthHeaders(){return {Authorization:'Bearer '+authToken};}
 async function read(path){const r=await fetch(API_URL+'/account/'+path,{headers:getAuthHeaders()});const d=await r.json();if(r.status===401||d.code===401){requireLogin();throw Error('请重新登录');}if(!r.ok||d.code!==200)throw Error(d.msg||'暂时无法读取');return d;}
-function renderProfile(){if(!currentUser)return;const name=currentUser.nickname||currentUser.username||'用户';$('profileName').textContent=name;$('profileAvatar').textContent=name.charAt(0).toUpperCase();const email=currentUser.email||'';const at=email.lastIndexOf('@');$('profileEmail').textContent=at>0?email.slice(0,1)+'***'+email.slice(at):'未设置邮箱';}
+function renderProfile(){if(!currentUser)return;const name=currentUser.nickname||currentUser.username||'用户';$('profileName').textContent=name;const av=$("profileAvatar"),letter=name.charAt(0).toUpperCase();av.textContent=letter;const old=av.querySelector("img");if(old)old.remove();if(currentUser.avatar){const img=document.createElement("img");img.alt="头像";img.setAttribute("data-auth-img",currentUser.avatar);av.append(img);if(window.fancyuAuthImages)window.fancyuAuthImages(av);}const email=currentUser.email||'';const at=email.lastIndexOf('@');$('profileEmail').textContent=at>0?email.slice(0,1)+'***'+email.slice(at):'未设置邮箱';const ce=$('contactEmailValue');if(ce)ce.textContent=currentUser.contact_email||'未设置';}
 function setBadge(id,text,tone='neutral'){const e=$(id);e.textContent=text;e.className='badge '+tone;}
 function setLink(id,text,href){const e=$(id);e.textContent=text;e.href=href;}
 function setCard(key,{status,tone,detail,progress,action,href}){setBadge(key+'Status',status,tone);$(key+'Detail').textContent=detail;$(key+'Progress').textContent=progress;setLink(key+'Action',action+' →',href);}
@@ -36,6 +36,7 @@ function openModal(id){previousFocus=document.activeElement;$(id).classList.add(
 function closeModal(id){$(id).classList.remove('show');document.body.classList.remove('modal-open');$(id).querySelectorAll('input[type=password]').forEach(e=>e.value='');previousFocus?.focus();}
 function openNicknameModal(){$('nicknameInput').value=currentUser?.nickname||currentUser?.username||'';openModal('nicknameModal');}
 function openPasswordModal(){openModal('passwordModal');}
+function openContactEmailModal(){$('contactEmailInput').value=currentUser?.contact_email||'';openModal('contactEmailModal');}
 function openDeleteModal(){openModal('deleteModal');}
 document.querySelectorAll('.modal-mask').forEach(mask=>mask.addEventListener('click',e=>{if(e.target===mask)closeModal(mask.id);}));
 document.addEventListener('keydown',e=>{const m=document.querySelector('.modal-mask.show');if(!m)return;if(e.key==='Escape'){e.preventDefault();closeModal(m.id);}if(e.key==='Tab'){const els=[...m.querySelectorAll('input,button,a[href]')].filter(x=>!x.disabled);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});

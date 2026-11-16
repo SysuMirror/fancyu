@@ -135,6 +135,7 @@ async function loadRooms() {
     p.textContent = '暂无会话。配对双方同意后即可开始聊天。';
     box.append(p);
   }
+  renderArchived(j.archived);
   if (current && !rooms.some(r => key(r) === key(current))) {
     disable('连接已结束、被屏蔽或当前不可访问。');
     return;
@@ -147,6 +148,36 @@ async function loadRooms() {
   }
 }
 
+/* ---------- 历史连接（只读归档） ---------- */
+function renderArchived(list) {
+  const box = $('archived');
+  if (!box) return;
+  box.replaceChildren();
+  if (!list || !list.length) { box.hidden = true; return; }
+  const h = document.createElement('h2');
+  h.textContent = '历史连接';
+  const hint = document.createElement('p');
+  hint.className = 'muted room-hint';
+  hint.textContent = '已结束的连接只作记录，不能再聊天。';
+  box.append(h, hint);
+  for (const a of list) {
+    const el = document.createElement('div');
+    el.className = 'room archived';
+    const name = document.createElement('span');
+    name.className = 'room-name';
+    const mode = document.createElement('span');
+    mode.className = 'room-mode';
+    mode.textContent = ' · ' + (LABELS[a.mode] || a.mode);
+    name.append(document.createTextNode(a.name || '对方'), mode);
+    const preview = document.createElement('span');
+    preview.className = 'room-preview';
+    preview.textContent = (a.reason || '已结束') + (a.ended_at ? ' · ' + new Date(a.ended_at).toLocaleDateString('zh-CN') : '');
+    el.append(name, preview);
+    box.append(el);
+  }
+  box.hidden = false;
+}
+
 /* ---------- 会话切换 ---------- */
 function setView(view) { document.body.dataset.view = view; }
 async function select(room) {
@@ -156,7 +187,8 @@ async function select(room) {
   $('message').value = ''; autoGrow(); updateCounter();
   $('name').textContent = room.name;
   $('mode').textContent = LABELS[room.mode] || room.mode;
-  for (const id of ['exchange', 'block', 'closeRoom']) $(id).hidden = false;
+  renderPeer(null);
+  for (const id of ['exchange', 'block', 'closeRoom', 'hideRoom']) $(id).hidden = false;
   $('message').disabled = $('send').disabled = false;
   $('notice').textContent = '';
   setView('room');
@@ -172,10 +204,44 @@ function disable(text) {
   $('name').textContent = '会话不可用';
   $('mode').textContent = '';
   $('exchangeStatus').hidden = true;
-  for (const id of ['exchange', 'block', 'closeRoom', 'older']) $(id).hidden = true;
+  renderPeer(null);
+  for (const id of ['exchange', 'block', 'closeRoom', 'hideRoom', 'older']) $(id).hidden = true;
   $('message').disabled = $('send').disabled = true;
   setView('list');
   $('notice').textContent = text;
+}
+
+/* ---------- 对方资料卡（会话内展示，来自三线 publicData） ---------- */
+function renderPeer(peer) {
+  const box = $('peer');
+  if (!box) return;
+  box.replaceChildren();
+  if (!peer) { box.hidden = true; return; }
+  const avatar = document.createElement('span');
+  avatar.className = 'peer-avatar';
+  avatar.textContent = (peer.name || '友').slice(0, 1);
+  if (peer.avatar) {
+    const im = document.createElement('img');
+    im.alt = ''; im.loading = 'lazy';
+    im.setAttribute('data-auth-img', peer.avatar);
+    avatar.append(im);
+  }
+  const info = document.createElement('div');
+  const name = document.createElement('b');
+  name.textContent = peer.name || '';
+  info.append(name);
+  const facts = [peer.campus, peer.college, peer.hometown].filter(Boolean).join(' · ');
+  const line = peer.bio || (peer.tags && peer.tags.length ? peer.tags.join(' · ') : peer.interests) || '';
+  const note = [facts, line].filter(Boolean).join('；');
+  if (note) {
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = note;
+    info.append(p);
+  }
+  box.append(avatar, info);
+  box.hidden = false;
+  if (window.fancyuAuthImages) window.fancyuAuthImages(box);
 }
 
 /* ---------- 消息渲染（分组 + 日期分隔 + 相对时间） ---------- */
@@ -230,7 +296,25 @@ function buildMsgEl(m, d, groupStart, groupEnd) {
   body.className = 'msg-body';
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.textContent = m.body;
+  if (m.recalled) {
+    bubble.classList.add('recalled');
+    bubble.textContent = m.mine ? '你撤回了一条消息' : '对方撤回了一条消息';
+  } else if (m.image) {
+    const im = document.createElement('img');
+    im.className = 'bubble-image';
+    im.alt = '图片消息';
+    im.loading = 'lazy';
+    im.setAttribute('data-auth-img', m.image);
+    bubble.append(im);
+    if (m.body) {
+      const t = document.createElement('p');
+      t.className = 'bubble-text';
+      t.textContent = m.body;
+      bubble.append(t);
+    }
+  } else {
+    bubble.textContent = m.body;
+  }
   body.append(bubble);
 
   if (groupEnd) {
@@ -246,6 +330,14 @@ function buildMsgEl(m, d, groupStart, groupEnd) {
       read.className = 'read';
       read.textContent = m.id <= otherLastRead ? '已读' : '未读';
       meta.append(read);
+    }
+    if (m.mine && m.id && !m.recalled && !m.pending && (Date.now() - d.getTime() < 120000)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'recall-message';
+      btn.textContent = '撤回';
+      btn.onclick = () => recall(m.id);
+      meta.append(btn);
     }
     if (m.failed) {
       const retry = document.createElement('button');
@@ -300,6 +392,7 @@ async function refresh(reset = false) {
     msgs.sort((a, b) => a.id - b.id);
     if (j.other_last_read !== undefined) otherLastRead = Number(j.other_last_read) || otherLastRead;
     if (reset || !msgs.length) hasMoreOlder = !!j.more;
+    renderPeer(j.peer);
     showExchange(j.exchange);
     renderAll();
     await markRead();
@@ -329,6 +422,64 @@ $('older').onclick = async () => {
     area.scrollTop += area.scrollHeight - height; // 保持视口位置
   } catch (e) { $('notice').textContent = e.message; }
 };
+
+async function recall(id) {
+  if (!current) return;
+  try {
+    const j = await api(prefix() + '/messages/' + id + '/recall', 'POST', {});
+    const m = msgsById.get(id);
+    if (m) { m.recalled = true; m.body = ''; m.image = null; }
+    renderAll();
+    toast(j.msg || '已撤回');
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------- 图片消息 ---------- */
+const MAX_IMAGE = 5 * 1024 * 1024;
+$('pickImage').onclick = () => { if (current) $('imageFile').click(); };
+$('imageFile').onchange = () => {
+  const f = $('imageFile').files[0];
+  $('imageFile').value = '';
+  if (f) uploadImage(f);
+};
+async function uploadImage(file) {
+  if (!current) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { toast('只支持 JPEG / PNG / WebP 图片'); return; }
+  if (file.size > MAX_IMAGE) { toast('图片过大（上限 5MB）'); return; }
+  const selected = key(current);
+  $('notice').textContent = '正在上传图片…';
+  try {
+    const r = await fetch('/api/account/uploads?scope=chat&mode=' + encodeURIComponent(current.mode)
+      + '&pair_id=' + current.pair_id, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': file.type },
+      body: file
+    });
+    const j = await r.json();
+    if (!r.ok || j.code !== 200) throw Error(j.msg || '图片上传失败');
+    $('notice').textContent = '';
+    const note = $('message').value.trim();
+    if (note) { $('message').value = ''; autoGrow(); updateCounter(); }
+    if (!current || key(current) !== selected) return;
+    await sendImage(j.id, note);
+  } catch (e) { $('notice').textContent = e.message; }
+}
+async function sendImage(imageId, body) {
+  if (!current) return;
+  const selected = key(current);
+  $('notice').textContent = '';
+  try {
+    const j = await api(prefix() + '/messages', 'POST', { body, client_id: crypto.randomUUID(), image_id: imageId });
+    if (!current || key(current) !== selected) return;
+    if (!msgsById.has(j.id)) {
+      const m = { id: j.id, body: body || '', image: '/api/account/uploads/' + imageId, mine: true, created_at: new Date().toISOString() };
+      msgsById.set(j.id, m); msgs.push(m); msgs.sort((a, b) => a.id - b.id);
+    }
+    renderAll();
+    $('messages').scrollTop = $('messages').scrollHeight;
+    await markRead();
+  } catch (e) { $('notice').textContent = e.message; }
+}
 
 /* ---------- 乐观发送 ---------- */
 function autoGrow() {
@@ -392,18 +543,18 @@ $('message').addEventListener('keydown', e => {
   $('composer').requestSubmit();
 });
 
-/* ---------- 交换微信 ---------- */
+/* ---------- 交换联系方式 ---------- */
 function showExchange(s) {
   exchangeState = s;
   const box = $('exchangeStatus');
   box.replaceChildren();
   box.hidden = false;
-  box.textContent = s.exchanged ? '双方已同意交换，对方微信：' + s.wechat
-    : s.requested ? '你已申请交换微信，等待对方同意。'
-    : s.incoming ? '对方申请交换微信，你可以自愿选择是否接受。'
-    : '可以先聊一聊，双方愿意后再交换微信。';
+  box.textContent = s.exchanged ? '双方已同意交换，对方' + (s.channel || '微信') + '：' + (s.value || '')
+    : s.requested ? '你已申请交换联系方式，等待对方同意。'
+    : s.incoming ? '对方申请交换联系方式，你可以自愿选择是否接受。'
+    : '可以先聊一聊，双方愿意后再交换联系方式。';
   $('exchange').hidden = !!s.exchanged;
-  $('exchange').textContent = s.incoming ? '同意并填写微信' : s.requested ? '修改申请' : '申请交换微信';
+  $('exchange').textContent = s.incoming ? '同意并填写联系方式' : s.requested ? '修改申请' : '申请交换联系方式';
   if (s.requested && !s.exchanged) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -416,18 +567,30 @@ function showExchange(s) {
   }
 }
 $('exchange').onclick = () => {
+  $('exchangeChannel').value = exchangeState?.mine_channel || '微信';
   $('wechat').value = ''; $('consent').checked = false;
+  syncExchangeField();
   $('exchangeDialog').showModal();
 };
+function syncExchangeField() {
+  const ch = $('exchangeChannel').value;
+  $('wechatLabel').textContent = ch === '微信' ? '你的微信号' : '你的' + ch;
+  $('wechatHint').hidden = ch !== '微信';
+  $('wechat').placeholder = ch === '微信' ? '6–32 位字母数字' : '可填 1–100 字，例如账号或邮箱';
+}
+$('exchangeChannel').onchange = syncExchangeField;
 $('cancelExchange').onclick = () => $('exchangeDialog').close();
 $('exchangeForm').onsubmit = async e => {
   e.preventDefault();
   if (!current) return;
   const button = $('confirmExchange');
+  const channel = $('exchangeChannel').value, value = $('wechat').value.trim();
+  if (!value) { toast('请填写' + (channel === '微信' ? '微信号' : channel)); return; }
+  if (channel === '微信' && !/^[A-Za-z0-9][A-Za-z0-9_-]{5,31}$/.test(value)) { toast('请填写 6–32 位有效微信号'); return; }
   button.disabled = true;
   try {
     const j = await api(prefix() + '/exchange', 'POST',
-      { wechat: $('wechat').value.trim(), consent: $('consent').checked });
+      { channel, value, consent: $('consent').checked });
     $('exchangeDialog').close();
     await refresh();
     toast(j.msg || '已提交');
@@ -470,6 +633,15 @@ $('confirmForm').onsubmit = async e => {
   confirmAction = null;
   $('confirmDialog').close();
   if (!action || !current) return;
+  if (action === 'hide') {
+    try {
+      const j = await api(prefix(), 'DELETE');
+      await loadRooms();
+      setView('list');
+      toast(j.msg || '已隐藏');
+    } catch (err) { toast(err.message); }
+    return;
+  }
   try {
     const r = await fetch('/api/account/' + BASES[current.mode] + '/pairs/' + current.pair_id + '/' + action, {
       method: 'POST',
@@ -483,6 +655,8 @@ $('confirmForm').onsubmit = async e => {
     toast(j.msg);
   } catch (err) { toast(err.message); }
 };
+$('hideRoom').onclick = () => askConfirm('隐藏会话',
+  '仅从你的列表中移除；对方发来新消息后会重新出现。确认隐藏吗？', 'hide');
 $('closeRoom').onclick = () => askConfirm('结束会话',
   '结束后不能继续发送或查看此会话，确认结束吗？', 'close');
 $('block').onclick = () => askConfirm('屏蔽对方',

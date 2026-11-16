@@ -39,4 +39,12 @@ function score(a,b){
  const main=x.item==='都行'||y.item==='都行'?.7:item(x.item)===item(y.item)?1:0;
  return Math.round(20*main+30*times+15*similarity(x.freq,y.freq)+25*extra+(t.online?10:10*(x.campus===y.campus?1:.5)));
 }
-module.exports={weekKey,validateCard,compatible,score,get MAX(){return sch().MAX;}};
+// 待回应推荐的有效期：该批次周一 00:00 起满一周（次周一 00:00，北京时间）失效。
+// 对应 housekeeping 的 `week_key<>当前周` 驱逐规则。
+function weekDeadline(key){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(key||'')))return null;
+ const d=new Date(key+'T00:00:00+08:00');if(isNaN(d))return null;
+ d.setUTCDate(d.getUTCDate()+7);
+ return new Date(+d+28800000).toISOString().slice(0,10)+'T00:00:00+08:00';
+}
+module.exports={weekKey,weekDeadline,validateCard,compatible,score,get MAX(){return sch().MAX;}};

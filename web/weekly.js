@@ -2,7 +2,10 @@
 let schema=window.WeeklySchema;const $=id=>document.getElementById(id),token=localStorage.getItem('token');
 let answers={},important=[],section=0,dirty=false,saving=false;
 const surveyMetrics=window.createSurveyMetrics('love',()=>token);
-const DRAFT_KEY='weeklyDraft';let draftTimer=null,serverState=null;
+function tokenAccountId(t){try{const s=String(t||'').split('.')[1];if(!s)return null;const j=JSON.parse(atob(s.replace(/-/g,'+').replace(/_/g,'/')));return Number.isInteger(j.account_id)?j.account_id:null;}catch(e){return null;}}
+const ACCOUNT_ID=tokenAccountId(token);
+// 草稿按账号隔离：同一浏览器换账号登录时不会把上一位用户的答案带出来。
+const DRAFT_KEY=ACCOUNT_ID?'weeklyDraft:'+ACCOUNT_ID:'weeklyDraft';let draftTimer=null,serverState=null;
 function saveDraftNow(){const payload={answers:read(),important,ts:Date.now()};try{localStorage.setItem(DRAFT_KEY,JSON.stringify(payload));}catch(e){}syncDraftServer(payload);}
 function syncDraftServer(payload){if(!token)return;try{fetch('/api/account/weekly-draft',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({answers:payload.answers,important:payload.important}),keepalive:true}).catch(()=>{});}catch(e){}}
 function clearDraft(){clearTimeout(draftTimer);try{localStorage.removeItem(DRAFT_KEY);}catch(e){}hideDraftBanner();if(token){try{fetch('/api/account/weekly-draft',{method:'DELETE',headers:{Authorization:'Bearer '+token},keepalive:true}).catch(()=>{});}catch(e){}}}

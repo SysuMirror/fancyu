@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="zh-CN" data-ui="campus">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><script src="/auth-image.js?v=1" defer></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>站内聊天 | FancyU · 中意你</title>
 <link rel="stylesheet" href="home.css?v=chat1">
 <link rel="stylesheet" href="campus-ui.css?v=20261114a">
-<link rel="stylesheet" href="chat.css?v=20261115a">
-<script src="auth-session.js"></script>
-<script src="chat.js?v=20261115a" defer></script>
-<meta name="description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="站内聊天 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/chat"><meta name="twitter:card" content="summary_large_image"></head>
+<link rel="stylesheet" href="chat.css?v=20261116b">
+<script src="auth-session.js?v=20261116a"></script>
+<script src="chat.js?v=20261116a" defer></script>
+<meta name="description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=1" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="站内聊天 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/chat"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="chat">
 <div id="offlineBar" class="offline-bar" role="alert" hidden>连接已断开，正在重连…… 消息会在恢复后自动补收。</div>
 <header class="chat-header">
@@ -21,6 +21,7 @@
     <h1>我的聊天 <span id="unread" class="unread-total"></span></h1>
     <p class="muted room-hint">双方同意认识后，就可以在这里聊天。</p>
     <div id="rooms"></div>
+    <div id="archived" class="archive" hidden></div>
   </aside>
   <section class="conversation" aria-label="聊天会话">
     <div class="conversation-head">
@@ -30,11 +31,13 @@
         <p id="mode" class="muted">选择左侧会话</p>
       </div>
       <div class="chat-actions">
-        <button id="exchange" type="button" hidden>申请交换微信</button>
+        <button id="exchange" type="button" hidden>申请交换联系方式</button>
         <button id="closeRoom" type="button" hidden>结束会话</button>
+        <button id="hideRoom" type="button" hidden>隐藏</button>
         <button id="block" type="button" class="danger" hidden>屏蔽</button>
       </div>
     </div>
+    <div id="peer" class="peer-card" hidden></div>
     <div id="exchangeStatus" class="exchange-status" hidden></div>
     <p class="chat-notice">保护个人隐私，不轻信转账或外部链接。聊天记录不向后台 AI 开放；举报时管理员可查看被举报消息及前文。</p>
     <div id="messages" role="log" aria-label="消息记录" tabindex="0">
@@ -44,6 +47,8 @@
     <form id="composer">
       <label class="sr-only" for="message">消息内容</label>
       <div class="composer-row">
+        <button class="icon-button" id="pickImage" type="button" aria-label="发送图片" title="发送图片">🖼️</button>
+        <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp" hidden>
         <textarea id="message" rows="1" maxlength="2000" enterkeyhint="send"
           placeholder="说声你好吧（Enter 发送，Shift+Enter 换行）" disabled></textarea>
         <button class="primary send" id="send" type="submit" disabled>发送</button>
@@ -59,13 +64,18 @@
 <dialog id="exchangeDialog" class="page-dialog">
   <form id="exchangeForm" method="dialog">
     <div class="dialog-heading">
-      <h2>自愿交换微信</h2>
+      <h2>自愿交换联系方式</h2>
       <button type="button" id="cancelExchange" class="close" aria-label="关闭">×</button>
     </div>
     <p>双方各自填写并同意后，才会互相展示。对方同意前可撤回申请；已经看到的信息无法收回。</p>
-    <label for="wechat">你的微信号</label>
-    <input id="wechat" maxlength="32" required pattern="[A-Za-z0-9][A-Za-z0-9_\-]{5,31}" autocomplete="off">
-    <label class="consent"><input id="consent" type="checkbox" required>我同意双方申请后向对方展示我的微信号。</label>
+    <label for="exchangeChannel">联系方式</label>
+    <select id="exchangeChannel">
+      <option>微信</option><option>QQ</option><option>小红书</option><option>邮箱</option><option>其他</option>
+    </select>
+    <label for="wechat" id="wechatLabel">你的微信号</label>
+    <input id="wechat" maxlength="100" required autocomplete="off">
+    <p class="muted" id="wechatHint">微信号需为 6–32 位字母数字（可含 _ 和 -）。</p>
+    <label class="consent"><input id="consent" type="checkbox" required>我同意双方申请后向对方展示我的联系方式。</label>
     <button class="primary" id="confirmExchange" type="submit">确认申请</button>
   </form>
 </dialog>

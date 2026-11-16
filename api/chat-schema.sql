@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS user_chat_messages (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  mode VARCHAR(12) NOT NULL,pair_id BIGINT UNSIGNED NOT NULL,
  sender_id INT NOT NULL,client_id VARCHAR(64) NOT NULL,body VARCHAR(2000) NOT NULL,
+ image_id BIGINT UNSIGNED NULL,deleted_at DATETIME NULL,
  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  UNIQUE KEY dedup(mode,pair_id,sender_id,client_id),
  INDEX history(mode,pair_id,id),INDEX sender_rate(sender_id,created_at),
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS user_chat_reads (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS user_chat_exchange (
  mode VARCHAR(12) NOT NULL,pair_id BIGINT UNSIGNED NOT NULL,account_id INT NOT NULL,
- wechat VARCHAR(32) NOT NULL,consented_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ wechat VARCHAR(100) NOT NULL,channel VARCHAR(12) NOT NULL DEFAULT '微信',consented_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY(mode,pair_id,account_id),
  FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -31,3 +32,9 @@ CREATE TABLE IF NOT EXISTS user_chat_contact_events (
  PRIMARY KEY(mode,pair_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS user_chat_meta (id INT PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS user_chat_hidden (
+ mode VARCHAR(12) NOT NULL,pair_id BIGINT UNSIGNED NOT NULL,account_id INT NOT NULL,
+ hidden_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(mode,pair_id,account_id),
+ FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4; /* 仅对自己隐藏会话；对方有新消息后重新出现 */

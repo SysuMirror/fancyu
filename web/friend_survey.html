@@ -47,6 +47,10 @@
         .card:hover { box-shadow: var(--shadow-hover); }
         .card-label { font-family: 'Noto Sans SC', sans-serif; font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .card-label .required-mark { color: var(--sysu-red); font-size: 12px; }
+        /* 校验定位：标出缺失的必填题，避免"请填写所有必填项"的猜谜 */
+        .card.field-missing { box-shadow: 0 0 0 2px var(--sysu-red), var(--shadow-hover); animation: fieldMissingPulse 1.3s ease 2; }
+        @keyframes fieldMissingPulse { 0%, 100% { box-shadow: 0 0 0 2px var(--sysu-red), var(--shadow-hover); } 50% { box-shadow: 0 0 0 6px rgba(158, 45, 48, 0.14), var(--shadow-hover); } }
+        @media (prefers-reduced-motion: reduce) { .card.field-missing { animation: none; } }
         .sub-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
         .input-wrapper { flex: 1; }
         .input-field { width: 100%; padding: 14px 0; font-size: 16px; font-family: 'Noto Sans SC', sans-serif; border: none; border-bottom: 2px solid var(--border-soft); background: transparent; outline: none; transition: border-color 0.3s ease; color: var(--text-primary); }
@@ -460,11 +464,11 @@
         }
         select[data-field="grade"] { color-scheme: light; }
     </style>
-<script src="academic-fields.js"></script><script src="deep-schema.js?v=20261112a"></script><script src="auth-session.js"></script>
+<script src="academic-fields.js"></script><script src="deep-schema.js?v=20261112a"></script><script src="auth-session.js?v=20261116a"></script>
 <script src="survey-metrics.js?v=20261111"></script>
 <script src="matching-verification.js" defer></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-<meta name="description" content="交友问卷：告诉我们你想认识怎样的朋友。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="交友问卷 | FancyU · 中意你"><meta property="og:description" content="交友问卷：告诉我们你想认识怎样的朋友。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/friend_survey"><meta name="twitter:card" content="summary_large_image"></head>
+<meta name="description" content="交友问卷：告诉我们你想认识怎样的朋友。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=1" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="交友问卷 | FancyU · 中意你"><meta property="og:description" content="交友问卷：告诉我们你想认识怎样的朋友。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/friend_survey"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="form">
 <div class="container">
     <div class="header">
@@ -1481,6 +1485,7 @@ function requireLogin() {
         const valueInput = document.getElementById('contactValueAdd');
         const addBtn = document.getElementById('contactAddBtn');
         const entriesContainer = document.getElementById('contactEntries');
+        if (entriesContainer) entriesContainer.dataset.field = 'contact_entries';
 
         let contactEntries = formData.contact_entries || [];
 
@@ -1602,19 +1607,41 @@ function requireLogin() {
         }
     }
 
+    // 找到某个字段的题面文案，用于把"请填写所有必填项"变成具体的"还差哪一题"。
+    function fieldLabelOf(field) {
+        const items = (SCHEMA.cards[currentStep - 1] || []).flatMap(c => c.items || []);
+        const hit = items.find(it => it.key === field);
+        return (hit && (hit.label || hit.placeholder)) || field;
+    }
+
+    // 把用户带到缺失的那一题：滚动过去、高亮、并聚焦第一个可填控件。
+    function revealField(field) {
+        const nodes = [...document.querySelectorAll('[data-field]')];
+        const node = nodes.find(n => n.dataset.field === field);
+        if (!node) return;
+        const card = node.closest('.card') || node;
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('field-missing');
+        setTimeout(() => card.classList.remove('field-missing'), 2800);
+        const target = card.querySelector('input:not([type=hidden]), select, textarea, button.option, button.tag');
+        if (target && typeof target.focus === 'function') target.focus({ preventScroll: true });
+    }
+
     function validateCurrentStep() {
         const required = [...(stepRequiredFields[currentStep] || [])];
         for (const field of required) {
             const value = formData[field];
             if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && !value.trim())) {
-                showToast('请填写所有必填项', true);
+                showToast('还差一题：「' + fieldLabelOf(field) + '」，已为你定位到该题。', true);
+                revealField(field);
                 return false;
             }
         }
         if (currentStep === TOTAL_STEPS) {
             const entries = formData.contact_entries || [];
             if (entries.length === 0) {
-                showToast('请至少添加一种联系方式', true);
+                showToast('请至少添加一种联系方式，已为你定位到该题。', true);
+                revealField('contact_entries');
                 return false;
             }
         }

@@ -1,0 +1,14 @@
+/* 通知中心页面增量样式（复用 campus-ui.css / weekly-match.css 的卡片与按钮） */
+.notif-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.notif{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid #e7e7dd}
+.notif:last-child{border-bottom:0}
+.notif-icon{flex:0 0 auto;width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#eceee4;font-size:15px}
+.notif-body{flex:1;min-width:0}
+.notif-body b{display:block;font-size:15px}
+.notif-body p{margin:2px 0 0;color:#55726a;font-size:13px;line-height:1.5}
+.notif-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+.notif-meta time{color:#8b9a92;font-size:12px}
+.notif.open .notif-body b{font-weight:700}
+.notif.unread b::after{content:'';display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:999px;background:#a6372d;vertical-align:middle}
+.notif a.notif-link{color:#265a48;font-size:13px;font-weight:600;text-decoration:none}
+.muted.small{font-size:12px}

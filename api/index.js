@@ -744,14 +744,21 @@ app.post('/account/bind', async (req, res) => {
 
 // Personal showcase retired; account management stays available.
 app.use('/account/profile',(req,res)=>res.status(410).set('Cache-Control','no-store').json({code:410,msg:'个人主页功能已下线'}));
+// 通知中心 + Web Push：各业务模块在事务里只写 user_notifications，出网推送统一由 notify 的 tick 排水。
+const chatRef={}; // 延后拿到 chat 的 WebSocket 广播函数（构造顺序在后）
+const notify=require('./notify')(app,{getPool,authMiddleware,refresh:ids=>{try{chatRef.notify&&chatRef.notify(ids);}catch(e){/* 广播失败不影响主流程 */}}});
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
-const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly});
+const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly,notify});
 weeklyMatch.start();
-const friends = require('./friends')(app,{getPool,authMiddleware,daily,studentVerification,getBuddy:()=>buddyMatch,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
-const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,observe:analytics.observe});
+const friends = require('./friends')(app,{getPool,authMiddleware,daily,notify,studentVerification,getBuddy:()=>buddyMatch,observe:analytics.observe,invalidateWeekly:(c,a,b)=>weeklyMatch.invalidatePair(c,a,b)});
+const buddyMatch=require('./buddy-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,friends,notify,observe:analytics.observe});
 buddyMatch.start();
-const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
-const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken});
+const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,notify,prepare:async()=>{await friends.ensureSchema();await ensurePreferencesTable(await getPool());},saveLegacy:saveFriendSurveyData,invalidateOthers:async(c,a,b)=>{await weeklyMatch.invalidatePair(c,a,b);await c.execute("UPDATE daily_pairs SET status='blocked',low_wechat=NULL,high_wechat=NULL WHERE low_id=? AND high_id=?",[Math.min(a,b),Math.max(a,b)]);await c.execute("UPDATE friend_card_pairs SET status='blocked',a_wechat=NULL,b_wechat=NULL WHERE (a_id=? AND b_id=?) OR (a_id=? AND b_id=?)",[a,b,b,a]);await c.execute('DELETE FROM match_history WHERE (account_id=? AND match_account_id=?) OR (account_id=? AND match_account_id=?)',[a,b,b,a]);}});
+// 私有上传（头像 / 聊天图片）：文件落 .private/uploads，读取走 /api/account/* 鉴权。
+// 先于 chat 构造，聊天发图要拿它校验图片归属。
+const uploads=require('./uploads')(app,{getPool,authMiddleware});
+const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken,uploads,notify});
+chatRef.notify=userChat.notify;
 const deepDraft=require('./deep-draft')(app,{getPool,authMiddleware});
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
 const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
@@ -775,6 +782,7 @@ app.get('/account/me', authMiddleware, async (req, res) => {
         const prefs = await getAccountPreferences(pool, account.id);
         await daily.ensureSchema();
         const studentVerified=await studentVerification.verified(pool,account.id);
+        const avatar=await require('./avatar-url')(pool,account.id);
 
         return res.json({
             code: 200,
@@ -787,6 +795,7 @@ app.get('/account/me', authMiddleware, async (req, res) => {
                 join_matching: studentVerified && !!prefs?.join_matching,
                 join_friend_matching: studentVerified && !!prefs?.join_friend_matching,
                 contact_email: contactEmail,
+                avatar,
                 serials
             }
         });
@@ -2037,6 +2046,9 @@ app.use((req, res, next) => {
     let p; try { p = decodeURIComponent(req.path); } catch (e) { return res.status(400).end(); }
     if (/^\/(all_users)(\/|\.html)?$/i.test(p)) return res.status(403).send('请通过已授权的资料页面访问');
     if (/^\/(daily|homepage)(\.html)?$/i.test(p)) return res.status(410).set('Cache-Control','no-store').send('该功能已下线，请返回首页。');
+    // 旧序列号流程整体下线（/bind /modify /query /update /dashboard）：
+    // 用「每周配对 / 深度交友 / 约个搭子」+ 个人中心取代。可逆：删掉本行即恢复。
+    if (/^\/(bind|modify|query|update|dashboard)(\.html)?$/i.test(p)) return res.status(410).set('Cache-Control','no-store').send('旧的序列号流程已下线，请使用「每周恋爱配对 / 深度交友 / 约个搭子」，账号信息在 <a href="/profile">个人中心</a> 管理。');
 
     // 二级页面路由表：'<一级>/<二级>' → web 下的真实文件名
     const PAGES2 = {
@@ -2068,12 +2080,15 @@ app.use((req, res, next) => {
 app.use(express.static(WEB_DIR));
 app.use((req, res) => {
     if (req.method === 'GET' && !req.path.startsWith('/account') && !req.path.startsWith('/admin') && !req.path.startsWith('/api') && !req.path.startsWith('/llm')) {
+        // 未知页面：给品牌化的 404 页（不再是「404 + 首页」那种把错地址伪装成成功的做法）。
+        const notFound = path.join(WEB_DIR, '404.html');
+        if (require('fs').existsSync(notFound)) return res.status(404).sendFile(notFound);
         return res.status(404).sendFile(path.join(WEB_DIR, 'index.html'));
     }
     return res.json({ code: 404, msg: 'Not Found' });
 });
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
-(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Chat startup failed:',e.code||e.name);process.exit(1);});
+(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
 
 console.log('Function instance started successfully');

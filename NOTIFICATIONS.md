@@ -1,0 +1,21 @@
+# In-site notifications, Web Push and installable PWA
+
+The notification centre is the main delivery channel; Web Push is a best-effort enhancement on top of it. Nothing here changes matching, publishing or verification semantics: the release gate still requires administrator confirmation, and its reminder only warns.
+
+User entry: `/notifications` (linked from the bell that every user page shows while signed in, and from the mobile tab bar). REST endpoints, all under `/api/account/`: `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read`, `POST /notifications/read-all`, `GET /push/vapid`, `POST /push/subscribe`, `POST /push/unsubscribe`. Notification rows are per account; `kind` is one of `match`, `chat`, `exchange`, `deadline`, `batch`.
+
+Business modules never send anything over the network inside a database transaction. They only insert a row through `record()` in their own transaction; a 60-second scheduler tick in `api/notify.js` drains rows whose `push_sent_at IS NULL` and performs the actual `web-push` delivery. Duplicate suppression uses `UNIQUE(account_id, dedup_key)`: the same match publication, batch miss, deadline reminder or exchange event is stored once per account. New-message notifications are bucketed into five-minute windows per conversation (`chat:<mode>:<pair>:<bucket>`), so an active chat produces at most one notification per window. Rows older than 20 minutes that were never pushed are marked as handled instead of being delivered, so an outage does not cause a burst of stale pushes on restart.
+
+Push delivery failures are contained: `404`/`410` endpoints are deleted, other errors increment `fail_count`, and subscriptions with `fail_count >= 5` are skipped. A missing or unreadable `web-push` install degrades to in-site notifications only; the API reports `enabled: false` from `GET /account/push/vapid` and the page says so plainly. Delivery to a real device depends on Google/Apple push services and school/browser policy; the in-site centre is the authoritative record of what was sent.
+
+VAPID keys are generated once on first start and persisted at `.private/vapid.json` (mode 0600, inside the persistent data directory, excluded from Git). Only the public key is ever exposed; regeneration invalidates every existing subscription and is therefore not routine maintenance. Back up that file with the rest of `.private`.
+
+iPhone and iPad require iOS 16.4 or newer **and** the site added to the home screen from Safari; push does not work in a plain Safari tab. Desktop and Android browsers work in a normal tab after the user grants permission. Permission is requested only from the button in `/notifications`, never on page load.
+
+PWA: `web/manifest.webmanifest` (standalone display, `theme_color #faf9f5`, maskable icon) plus `web/sw.js` and `web/pwa.js`. The service worker only provides an offline fallback page, stale-while-revalidate caching for same-origin static assets, and push display. It deliberately bypasses `/api/`, `/account/`, `/admin/`, `/oauth/`, `/llm/`, `/socket.io/` and all cross-origin or non-GET requests, so authenticated data and chat traffic are never cached. A notification is suppressed when the user already has the target page visible.
+
+Removing the service worker is intentionally possible: opening `/sw.js?kill` makes the registered worker delete its caches and unregister itself, then the head snippet on each page can be dropped. Until that happens, a redeployed `sw.js` is what existing clients will run; plan rollbacks accordingly, because a registered worker cannot be removed by the server alone.
+
+Storage: uploaded avatars and chat images live under `.private/uploads/<account_id>/<date>/`, served only through authenticated `/api/account/` routes with an ownership (and, for chat images, connected-pair) check. `.private` is a hostPath volume: on a single-node deployment this is durable across pod restarts, but the images are lost if the pod is scheduled elsewhere and do not survive node loss. Database backups alone do not capture them; back up the directory too.
+
+Schema initialization only adds tables (`user_notifications`, `user_push_subscriptions`) and additive columns; rollback of the code leaves harmless unused tables, and no notification or subscription row is a prerequisite for the matching flows.

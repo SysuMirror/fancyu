@@ -1,0 +1,23 @@
+{
+  "name": "FancyU · 中意你",
+  "short_name": "中意你",
+  "description": "校园恋爱交友平台：每周恋爱配对、深度交友、约个搭子。",
+  "lang": "zh-CN",
+  "start_url": "/?from=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#faf9f5",
+  "theme_color": "#faf9f5",
+  "icons": [
+    { "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "站内聊天", "url": "/chat" },
+    { "name": "恋爱配对", "url": "/weekly-match" },
+    { "name": "通知中心", "url": "/notifications" }
+  ]
+}

@@ -60,6 +60,34 @@
         }
     }
 
+    async function saveContactEmail(btn) {
+        const email = (document.getElementById('contactEmailInput').value || '').trim();
+        if (!email) { showToast('请输入联系邮箱', true); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('邮箱格式不正确', true); return; }
+        busy(btn, '保存中…');
+        try {
+            const res = await fetch(`${API_URL}/account/change-contact-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ contact_email: email })
+            });
+            const result = await res.json();
+            if (result.code === 200) {
+                if (currentUser) { currentUser.contact_email = email; localStorage.setItem('user', JSON.stringify(currentUser)); }
+                const v = document.getElementById('contactEmailValue');
+                if (v) v.textContent = email;
+                showToast('联系邮箱修改成功');
+                closeModal('contactEmailModal');
+            } else {
+                showToast(result.msg || '修改失败', true);
+            }
+        } catch (err) {
+            showToast('网络异常', true);
+        } finally {
+            idle(btn);
+        }
+    }
+
     async function deleteAccount(btn) {
         const pwd = document.getElementById('deletePassword').value;
         if (!pwd) { showToast('请输入密码', true); return; }
@@ -105,3 +133,31 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
+
+    function pickAvatar() {
+        document.getElementById("avatarFile").click();
+    }
+
+    async function uploadAvatar(file) {
+        if (!file) return;
+        if (["image/jpeg", "image/png", "image/webp"].indexOf(file.type) < 0) { showToast("只支持 JPEG / PNG / WebP 图片", true); return; }
+        if (file.size > 5 * 1024 * 1024) { showToast("图片过大（上限 5MB）", true); return; }
+        try {
+            const res = await fetch(API_URL + "/account/avatar", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": file.type }, getAuthHeaders()),
+                body: file
+            });
+            const result = await res.json().catch(() => ({}));
+            if (res.ok && result.code === 200) {
+                if (currentUser) currentUser.avatar = result.url || "";
+                localStorage.setItem("user", JSON.stringify(currentUser || {}));
+                showToast("头像已更新");
+                renderProfile();
+            } else {
+                showToast(result.msg || "上传失败", true);
+            }
+        } catch (err) {
+            showToast("网络异常", true);
+        }
+    }

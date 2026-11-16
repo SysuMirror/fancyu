@@ -134,3 +134,31 @@ body{height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;over
 .archive{margin-top:18px;padding-top:12px;border-top:1px solid var(--border,#e6e3dc)}
 .archive h2{font-size:14px;margin:0 0 6px;color:var(--text-secondary,#6b6b6b);font-weight:600}
 .room.archived{cursor:default;opacity:.85}
+
+/* ---------- 在线状态 / 正在输入 ---------- */
+.presence{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+.presence.online::before,.presence.typing::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--green,#2f7d4f)}
+.presence.online{color:var(--green,#2f7d4f)}
+.presence.typing::before{background:var(--muted)}
+.presence.offline{color:var(--muted);opacity:.8}
+
+/* ---------- 搜索聊天记录 ---------- */
+.room-panel #chatSearch{width:100%;margin:4px 0 12px;min-height:44px;padding:0 12px;border:1px solid var(--line,#e6e3dc);border-radius:var(--radius-sm,10px);background:var(--card,#fff);color:var(--ink);font:inherit;font-size:14px}
+.room-panel #chatSearch:focus{outline:2px solid var(--green,#2f7d4f);outline-offset:1px}
+.search-results{margin:0 0 10px}
+.search-empty{font-size:13px;padding:6px 2px;margin:0}
+.search-hit{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:10px 12px;margin:0 0 8px;border:1px solid var(--line-hair);border-radius:var(--radius-sm,10px);background:var(--card,#fff);color:var(--ink);cursor:pointer}
+.search-hit:hover{border-color:var(--green,#2f7d4f);background:var(--card-grad,var(--card))}
+.search-hit-head{font-size:12px;color:var(--muted)}
+.search-hit-snippet{font-size:14px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.search-hit-time{font-size:11px;color:var(--muted)}
+
+/* ---------- 破冰话题 ---------- */
+.icebreakers{padding:10px 14px;border-bottom:1px solid var(--line-hair);background:var(--green-soft,#eef5ee)}
+.ice-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.ice-head strong{font-size:13px;font-weight:650}
+.ice-head .text-button{border:0;background:none;color:var(--green,#2f7d4f);font-size:13px;cursor:pointer;min-height:auto;padding:2px 4px}
+.ice-list{display:flex;flex-wrap:wrap;gap:8px}
+.ice-topic{text-align:left;padding:8px 12px;border:1px solid var(--line,#e0dcd4);border-radius:var(--radius-pill,999px);background:var(--card,#fff);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;cursor:pointer}
+.ice-topic:hover{border-color:var(--green,#2f7d4f);color:var(--green,#2f7d4f)}
+@media (max-width:700px){.ice-list{flex-direction:column}.ice-topic{width:100%}}

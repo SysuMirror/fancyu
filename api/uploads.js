@@ -10,6 +10,21 @@ const ROOT = path.join(__dirname, '..', '.private', 'uploads');
 const MAX_BYTES = 5 * 1024 * 1024;
 const MIME_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const TABLES = { love: 'weekly_match_pairs', deep: 'deep_pairs', buddy: 'friend_card_pairs' };
+// 每账号配额：磁盘是 hostPath 共享的，没有上限的话单个账号就能把节点写满。
+const QUOTA_BYTES = 100 * 1024 * 1024;
+const QUOTA_COUNT = 300;
+// 简易上传限流（进程内，够用；单进程部署）。
+const RATE_MAX = 20, RATE_WINDOW = 5 * 60 * 1000;
+const hits = new Map();
+function rateOk(accountId) {
+    const now = Date.now();
+    const arr = (hits.get(accountId) || []).filter(t => now - t < RATE_WINDOW);
+    if (arr.length >= RATE_MAX) { hits.set(accountId, arr); return false; }
+    arr.push(now);
+    hits.set(accountId, arr);
+    if (hits.size > 2000) for (const [k, v] of hits) if (!v.some(t => now - t < RATE_WINDOW)) hits.delete(k);
+    return true;
+}
 
 const fail = (status, msg) => { throw Object.assign(Error(msg), { status }); };
 const positive = x => { const n = Number(x); if (!Number.isSafeInteger(n) || n < 1) fail(400, '编号无效'); return n; };
@@ -50,9 +65,13 @@ module.exports = function (app, { getPool, authMiddleware }) {
     };
 
     async function store(c, accountId, scope, buf, mode, pairId) {
+        if (!rateOk(accountId)) fail(429, '上传太频繁了，请稍后再试');
         const mime = sniff(buf);
         if (!mime) fail(400, '只支持 JPEG / PNG / WebP 图片');
         if (buf.length > MAX_BYTES) fail(413, '图片过大（上限 5MB）');
+        const [[q]] = await c.execute('SELECT COUNT(*) AS n, COALESCE(SUM(bytes),0) AS used FROM user_uploads WHERE account_id=?', [accountId]);
+        if (Number(q.n) >= QUOTA_COUNT) fail(413, `图片数量已达上限（${QUOTA_COUNT} 张），请先删除一些再上传`);
+        if (Number(q.used) + buf.length > QUOTA_BYTES) fail(413, '存储空间已满（上限 100MB），请先删除一些图片');
         const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const dir = path.join(ROOT, String(accountId), day);
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 });

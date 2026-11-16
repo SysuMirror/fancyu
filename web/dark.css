@@ -1,0 +1,36 @@
+/* 深色模式（可选）。只在 <html data-theme="dark"> 时生效 —— 浅色主题一分一毫都不受影响。
+   由 auth-session.js 尽早设置 data-theme 并注入本文件（显式选择优先，其次跟随系统）。 */
+html[data-theme="dark"]{color-scheme:dark;background:#101614}
+html[data-theme="dark"] body{background:radial-gradient(ellipse at 5% 30%,#2a3a3355,transparent 26%),#101614!important;color:#e8f0ea}
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,.page-title,.section-title,.profile-name,.modal-title,.modal-title *,.brand,.brand-text,.logo,.page-heading h1,.card-heading h3){color:#e8f0ea!important;-webkit-text-fill-color:#e8f0ea}
+html[data-theme="dark"] :is(p,li,dd,dt,label,.desc,.intro,.hint,.sub,.foot,.muted,.section-note,.room-preview,.char-count,.profile-email,.profile-school,small){color:#c3d3c9}
+html[data-theme="dark"] a{color:#8fd0af}
+html[data-theme="dark"] a:hover{color:#b6e5cd}
+/* 面：卡片 / 面板 / 弹窗 / 列表容器 */
+html[data-theme="dark"] :is(.card,.question,.verify-card,.prof,.deep,.info-box,.profile-card,.stat-card,.chart-card,.filters,.ov-box,.maintenance-card,.entry button,.participation,.settings,.identity,.modal-content,.modal,.detail-box,.login-box,.sheet,.success-content,.room-panel,.conversation,.peer-card,.archive,.panel,.app-card,.room,.card-row,.page-dialog,.chat-card){background:#1a2320!important;border-color:#2c3a34!important;color:#e8f0ea}
+html[data-theme="dark"] :is(.intro,.notice,.page-hint,.schedule>div,.account-info,.legacy-note,.match-contact,.ov-metric,.empty,.exchange-status,.icebreakers,.search-results){background:#22302b!important;color:#c3d3c9!important;border-color:#2c3a34!important}
+/* 表头 / 底栏 / 输入 */
+html[data-theme="dark"] :is(.site-header,.topbar,.header,.bottom-bar,.toolbar,.chat-header,.composer,.conversation-head,.room-panel h1){background:#141d1a!important;border-color:#26332e!important;color:#e8f0ea}
+html[data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]):not([type="submit"]),select,textarea){background:#151d1a!important;color:#e8f0ea!important;border-color:#38473f!important;-webkit-text-fill-color:#e8f0ea}
+html[data-theme="dark"] :is(input,textarea)::placeholder{color:#7d9187!important;-webkit-text-fill-color:#7d9187}
+html[data-theme="dark"] select option{background:#151d1a!important;color:#e8f0ea!important}
+/* 按钮与胶囊 */
+html[data-theme="dark"] :is(button,.btn,.modal-btn,.action,.secondary-link,.retry,.icon-button,.room){background:#1f2a26;color:#e8f0ea;border-color:#3b4a43}
+html[data-theme="dark"] :is(button,.btn,.modal-btn,.action):hover:not(:disabled){background:#27352f;color:#fff}
+html[data-theme="dark"] :is(button.primary,.btn-primary,.save,.next-btn,.success-btn,.ov-primary,.send-btn){background:linear-gradient(130deg,#3f8f6b,#2f7255);color:#fff;border:0}
+html[data-theme="dark"] :is(.tag,.chips span,.badge,.selected-sub-tag,.tag-on,.profile-school,.step-dot){background:#22302b;color:#c3d3c9;border-color:#38473f}
+html[data-theme="dark"] :is(.option-btn,.tag-btn,.category-tag,.opt,.no-preference-btn,.option){background:#1f2a26;color:#c3d3c9;border-color:#38473f}
+html[data-theme="dark"] :is(.option-btn.selected,.tag-btn.selected,.category-tag.selected,.opt[aria-pressed="true"],.pill.on,.tab.active,nav button[aria-current="true"]){background:#3f8f6b;color:#08110d;border-color:#3f8f6b}
+/* 底部导航（tabbar.js 注入的内联样式，靠选择器权重压过） */
+html[data-theme="dark"] .tabbar{background:#141d1af2!important;border-top-color:#26332e!important;box-shadow:0 -2px 12px #00000040}
+html[data-theme="dark"] .tabbar a{color:#9db3a8}
+html[data-theme="dark"] .tabbar a.active{color:#8fd0af}
+/* 反馈 */
+html[data-theme="dark"] .toast{background:#e8f0ea;color:#0d1512}
+html[data-theme="dark"] :is(.modal-mask,.modal-overlay,.detail-overlay,.mask,:is(.page-dialog)::backdrop){background:#00000099}
+html[data-theme="dark"] :is(.danger,.danger-link,.modal-btn.danger,.error,.err,.msg.error,.required-mark){color:#ff9c8f}
+html[data-theme="dark"] :is(button.danger,.modal-btn.danger,.btn-danger){background:#3a1f1c;color:#ff9c8f;border-color:#5c332c}
+html[data-theme="dark"] .msg.error{background:#3a1f1c;color:#ff9c8f;border-color:#5c332c}
+html[data-theme="dark"] :is(.msg.success,.badge.success){background:#1f3a2c;color:#9fe0bd;border-color:#2f5a44}
+html[data-theme="dark"] .badge.warning{background:#3a2f1f;color:#ffcfa8;border-color:#5a4a2e}
+html[data-theme="dark"] img{background:#151d1a}

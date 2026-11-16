@@ -12,3 +12,10 @@
 .notif.unread b::after{content:'';display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:999px;background:#a6372d;vertical-align:middle}
 .notif a.notif-link{color:#265a48;font-size:13px;font-weight:600;text-decoration:none}
 .muted.small{font-size:12px}
+
+/* 通知偏好开关（2026-11-16） */
+.prefs{display:grid;gap:4px;margin-top:10px}
+.pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line-hair,#dedfd6);cursor:pointer}
+.pref-row:last-child{border-bottom:0}
+.pref-text{font-size:15px;color:var(--text,#073b32)}
+.pref-row input[type="checkbox"]{width:22px;height:22px;min-height:22px;accent-color:#265a48;cursor:pointer}

@@ -6,10 +6,10 @@
 <title>通知中心 | FancyU · 中意你</title>
 <link rel="stylesheet" href="weekly-match.css?v=20261115a">
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-<link rel="stylesheet" href="notifications.css?v=20261116a">
-<script src="auth-session.js?v=20261116a"></script>
-<script src="chat-badge.js?v=1" defer></script>
-<script src="notifications.js?v=20261116a" defer></script>
+<link rel="stylesheet" href="notifications.css?v=20261116b">
+<script src="auth-session.js?v=20261116b"></script>
+<script src="chat-badge.js?v=20261116b" defer></script>
+<script src="notifications.js?v=20261116b" defer></script>
 <meta name="description" content="FancyU · 中意你 通知中心：配对结果、新消息、联系方式与截止提醒。">
 <!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="通知中心 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 通知中心：配对结果、新消息、联系方式与截止提醒。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/notifications"><meta name="twitter:card" content="summary_large_image"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><script src="/pwa.js?v=1" defer></script></head>
 <body data-ui="campus" data-page="notifications">
@@ -23,6 +23,11 @@
   <button type="button" id="pushToggle" hidden disabled>开启系统通知</button>
   <p class="muted small">iPhone 需要先把「中意你」添加到主屏（Safari 分享 → 添加到主屏幕），再从主屏图标打开本页才能收到推送。</p>
 </section>
+<section class="card" id="prefCard">
+  <h2>通知偏好</h2>
+  <p class="muted small">关掉的类别不会再推送到这台设备，但依然会出现在下面的通知中心里。</p>
+  <div id="prefs" class="prefs"><p class="muted">正在读取…</p></div>
+</section>
 <section class="card">
   <div class="notif-head"><h2>全部通知</h2><button type="button" id="readAll" class="text-button">全部标为已读</button></div>
   <div id="list" aria-live="polite"><p class="muted">正在读取…</p></div>
@@ -30,6 +35,6 @@
 </section>
 </main>
 <div class="toast" id="toast" role="status" hidden></div>
-<script defer src="/tabbar.js?v=20261114a"></script>
+<script defer src="/tabbar.js?v=20261116b"></script>
 </body>
 </html>

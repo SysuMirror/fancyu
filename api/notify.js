@@ -126,33 +126,91 @@ module.exports = function (app, { getPool, authMiddleware, now = () => new Date(
         return { msg: '已关闭浏览器通知' };
     }));
 
+    /* ---------- 通知偏好（只影响浏览器推送；站内通知中心始终完整） ---------- */
+    app.get('/account/notification-prefs', authMiddleware, route(async (req, c) => {
+        const [rows] = await c.execute('SELECT kind,enabled FROM user_notification_prefs WHERE account_id=?', [req.account.account_id]);
+        const saved = new Map(rows.map(r => [r.kind, !!r.enabled]));
+        // 没存过的视为开启：新用户不该"默认收不到"
+        return { prefs: KINDS.map(kind => ({ kind, enabled: saved.has(kind) ? saved.get(kind) : true })) };
+    }));
+
+    app.post('/account/notification-prefs', authMiddleware, route(async (req, c) => {
+        const id = req.account.account_id, items = Array.isArray(req.body?.prefs) ? req.body.prefs.slice(0, 20) : [];
+        if (!items.length) fail(400, '请提供要保存的通知偏好');
+        let n = 0;
+        for (const it of items) {
+            const kind = String(it?.kind || '');
+            if (!KINDS.includes(kind)) continue;
+            await c.execute('INSERT INTO user_notification_prefs(account_id,kind,enabled) VALUES (?,?,?) ON DUPLICATE KEY UPDATE enabled=VALUES(enabled)', [id, kind, it.enabled ? 1 : 0]);
+            n++;
+        }
+        if (!n) fail(400, '通知偏好无效');
+        return { msg: '已保存通知偏好' };
+    }));
+
     /* ---------- 排水：出网推送（绝不在事务里） ---------- */
-    async function drain(c) {
-        const [rows] = await c.query(`SELECT id,account_id,kind,title,body,link,created_at FROM user_notifications
-            WHERE push_sent_at IS NULL AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE) ORDER BY id LIMIT 200`);
-        // 更早的历史积压不再补推，只做标记，避免上线后刷屏
-        await c.query('UPDATE user_notifications SET push_sent_at=UTC_TIMESTAMP() WHERE push_sent_at IS NULL AND created_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)');
+    // 排水分三段，网络 I/O 期间不持有数据库连接（池只有 10 条，一个卡死的推送端点会把它们耗光）：
+    //   ① 短连接取待推行 + 标记过期积压；② 无连接地出网；③ 短连接写回结果。
+    async function drain() {
+        const pool = await getPool();
+        let rows = [], c;
+        c = await pool.getConnection();
+        try {
+            [rows] = await c.query(`SELECT id,account_id,kind,title,body,link,created_at FROM user_notifications
+                WHERE push_sent_at IS NULL AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE) ORDER BY id LIMIT 200`);
+            // 更早的历史积压不再补推，只做标记，避免上线后刷屏
+            await c.query('UPDATE user_notifications SET push_sent_at=UTC_TIMESTAMP() WHERE push_sent_at IS NULL AND created_at<=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)');
+        } finally { c.release(); }
         if (!rows.length) return 0;
+
         const p = pushLib(), k = p && vapid();
+        const mark = rows.map(r => r.id);
+
+        // 订阅一次性取全（原来每行一次 SELECT，是 200 次往返）；顺带把「关掉推送」的账号×类型取出来。
+        const subsByAcc = new Map(), muted = new Set();
+        if (p && k) {
+            const ids = [...new Set(rows.map(r => r.account_id))];
+            const ph = ids.map(() => '?').join(',');
+            let sc = await pool.getConnection();
+            try {
+                const [subs] = await sc.query(`SELECT id,account_id,endpoint,p256dh,auth FROM user_push_subscriptions WHERE account_id IN (${ph}) AND fail_count<5`, ids);
+                for (const s of subs) { if (!subsByAcc.has(s.account_id)) subsByAcc.set(s.account_id, []); subsByAcc.get(s.account_id).push(s); }
+            } finally { sc.release(); }
+            try {
+                const [prefs] = await pool.query(`SELECT account_id,kind FROM user_notification_prefs WHERE enabled=0 AND account_id IN (${ph})`, ids);
+                for (const r of prefs) muted.add(r.account_id + ':' + r.kind);
+            } catch (e) { /* 偏好表还没建时按全开处理 */ }
+        }
+
         let sent = 0;
-        for (const n of rows) {
-            const [subs] = await c.execute('SELECT id,endpoint,p256dh,auth FROM user_push_subscriptions WHERE account_id=? AND fail_count<5', [n.account_id]);
-            if (!p || !k || !subs.length) { await c.execute('UPDATE user_notifications SET push_sent_at=UTC_TIMESTAMP() WHERE id=?', [n.id]); continue; }
-            const payload = JSON.stringify({ title: n.title, body: n.body, url: n.link || '/notifications', kind: n.kind, id: n.id });
-            for (const s of subs) {
-                try {
-                    await p.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload,
-                        { vapidDetails: { subject: process.env.VAPID_SUBJECT || 'mailto:zhongyinidate@163.com', publicKey: k.publicKey, privateKey: k.privateKey }, TTL: 86400 });
-                    await c.execute('UPDATE user_push_subscriptions SET last_ok=UTC_TIMESTAMP(),fail_count=0 WHERE id=?', [s.id]);
-                    sent++;
-                } catch (e) {
-                    const code = e.statusCode || e.status;
-                    if (code === 404 || code === 410) await c.execute('DELETE FROM user_push_subscriptions WHERE id=?', [s.id]);
-                    else await c.execute('UPDATE user_push_subscriptions SET fail_count=fail_count+1 WHERE id=?', [s.id]);
+        const ok = [], bad = [], dead = [];
+        if (p && k) {
+            for (const n of rows) {
+                if (muted.has(n.account_id + ':' + n.kind)) continue;   // 用户关掉了这类推送：只留在通知中心
+                const subs = subsByAcc.get(n.account_id) || [];
+                if (!subs.length) continue;
+                const payload = JSON.stringify({ title: n.title, body: n.body, url: n.link || '/notifications', kind: n.kind, id: n.id });
+                const details = { vapidDetails: { subject: process.env.VAPID_SUBJECT || 'mailto:zhongyinidate@163.com', publicKey: k.publicKey, privateKey: k.privateKey }, TTL: 86400, timeout: 10000 };
+                for (const s of subs) {
+                    try {
+                        await p.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, details);
+                        ok.push(s.id); sent++;
+                    } catch (e) {
+                        const code = e.statusCode || e.status;
+                        if (code === 404 || code === 410) dead.push(s.id);
+                        else bad.push(s.id);
+                    }
                 }
             }
-            await c.execute('UPDATE user_notifications SET push_sent_at=UTC_TIMESTAMP() WHERE id=?', [n.id]);
         }
+
+        c = await pool.getConnection();
+        try {
+            for (const id of dead) await c.execute('DELETE FROM user_push_subscriptions WHERE id=?', [id]);
+            for (const id of ok) await c.execute('UPDATE user_push_subscriptions SET last_ok=UTC_TIMESTAMP(),fail_count=0 WHERE id=?', [id]);
+            for (const id of bad) await c.execute('UPDATE user_push_subscriptions SET fail_count=fail_count+1 WHERE id=?', [id]);
+            await c.query(`UPDATE user_notifications SET push_sent_at=UTC_TIMESTAMP() WHERE id IN (${mark.map(() => '?').join(',')})`, mark);
+        } finally { c.release(); }
         return sent;
     }
 
@@ -198,7 +256,8 @@ module.exports = function (app, { getPool, authMiddleware, now = () => new Date(
         try {
             await ensureSchema();
             const c = await (await getPool()).getConnection();
-            try { await drain(c); await deadlines(c, now()); } finally { c.release(); }
+            try { await deadlines(c, now()); } finally { c.release(); }
+            await drain();          // drain 自管连接：出网期间不占用连接池
             await gate();
         } catch (e) { console.error('Notify scheduler:', e.status || e.code || e.name); }
         finally { running = false; }

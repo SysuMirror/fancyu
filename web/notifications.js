@@ -81,7 +81,47 @@
     list = list.map(n => (n.id === id ? { ...n, read: true } : n));
   });
 
+  /* 通知偏好：只影响「浏览器推送」，站内通知中心照记 */
+  async function loadPrefs() {
+    const box = $('prefs');
+    if (!box) return;
+    try {
+      const r = await fetch('/api/account/notification-prefs', { headers: { Authorization: 'Bearer ' + token } });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.code !== 200) throw Error(j.msg || '读取失败');
+      box.innerHTML = '';
+      for (const p of j.prefs || []) {
+        const k = KIND[p.kind] || KIND.match;
+        const row = document.createElement('label');
+        row.className = 'pref-row';
+        const text = document.createElement('span');
+        text.className = 'pref-text';
+        text.textContent = k.icon + ' ' + k.label;
+        const sw = document.createElement('input');
+        sw.type = 'checkbox'; sw.checked = !!p.enabled; sw.dataset.kind = p.kind;
+        sw.addEventListener('change', savePrefs);
+        row.append(text, sw);
+        box.append(row);
+      }
+      if (!box.children.length) box.innerHTML = '<p class="muted">没有可设置的通知类别。</p>';
+    } catch (e) { box.innerHTML = '<p class="error">' + esc(e.message) + '</p>'; }
+  }
+  let savingPrefs = false;
+  async function savePrefs() {
+    if (savingPrefs) return;
+    savingPrefs = true;
+    const prefs = [...document.querySelectorAll('#prefs input[data-kind]')].map(i => ({ kind: i.dataset.kind, enabled: i.checked }));
+    try {
+      const r = await fetch('/api/account/notification-prefs', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.code !== 200) throw Error(j.msg || '保存失败');
+      toast('通知偏好已保存');
+    } catch (e) { toast(e.message); }
+    finally { savingPrefs = false; }
+  }
+
   /* 从推送打开本页时，把目标会话/页面带上：/notifications?to=/chat?... */
+  loadPrefs();
   paintPush();
   load().catch(e => { $('list').innerHTML = '<p class="error">' + esc(e.message) + '</p>'; });
   setInterval(() => { if (!document.hidden) load().catch(() => {}); }, 60000);

@@ -70,6 +70,27 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
    }
   }rooms.sort((a,b)=>b.last_id-a.last_id);const history=require('./match-history');const archived=[];for(const mode of Object.keys(TABLES))for(const h of await history(c,id,mode,30))archived.push(h);archived.sort((a,b)=>String(b.ended_at||'').localeCompare(String(a.ended_at||'')));return {rooms,unread:rooms.reduce((n,r)=>n+r.unread,0),archived};
  }));
+ // 聊天内搜索：只搜「我参与且仍连接」的会话。三线各 UNION 一段，靠 JOIN 配对表把可见性收在 SQL 里。
+ app.get('/account/chat/search',authMiddleware,route(async(req,c)=>{
+  const id=req.account.account_id,q=String(req.query.q||'').trim();
+  if(q.length<1||q.length>40)fail(400,'请输入 1–40 字的搜索词');
+  // LIKE 里的 % 和 _ 必须转义，否则搜 "50%" 会变成通配
+  const like='%'+q.replace(/[\\%_]/g,ch=>'\\'+ch)+'%';
+  const parts=[],args=[];
+  for(const [mode,table]of Object.entries(TABLES)){
+   parts.push(`SELECT m.mode,m.pair_id,m.id,m.sender_id,m.body,LEFT(m.body,120) AS snippet,m.created_at FROM user_chat_messages m JOIN ${table} p ON p.id=m.pair_id AND (p.a_id=? OR p.b_id=?) WHERE m.mode=? AND m.deleted_at IS NULL AND m.image_id IS NULL AND p.status='connected' AND m.body LIKE ?`);
+   args.push(id,id,mode,like);
+  }
+  const [rows]=await c.execute(parts.join(' UNION ALL ')+' ORDER BY created_at DESC LIMIT 50',args);
+  const names=new Map();const results=[];
+  for(const r of rows){
+   const key=r.mode+':'+r.pair_id;
+   if(!names.has(key)){let n=null;try{const a=await access(c,id,r.mode,r.pair_id);n=a.name;}catch(e){names.set(key,null);continue;}names.set(key,n);}
+   const name=names.get(key);if(!name)continue;
+   results.push({mode:r.mode,pair_id:Number(r.pair_id),message_id:Number(r.id),name,snippet:String(r.snippet||''),created_at:r.created_at,mine:r.sender_id===id});
+  }
+  return {q,results,count:results.length};
+ }));
  app.get('/account/chat/:mode/:id',authMiddleware,route(async(req,c)=>{
   const id=req.account.account_id,mode=req.params.mode,pairId=positive(req.params.id),a=await access(c,id,mode,pairId);
   const after=req.query.after===undefined?null:Math.max(0,Number(req.query.after)),before=req.query.before===undefined?null:positive(req.query.before);
@@ -151,9 +172,63 @@ module.exports=function(app,{getPool,authMiddleware,adminAuthMiddleware,daily,ve
   const [rows]=await c.execute('SELECT id,sender_id,body,created_at FROM user_chat_messages WHERE mode=? AND pair_id=? AND id<=? ORDER BY id DESC LIMIT 11',[report.mode,report.pair_id,report.message_id]);
   fs.mkdirSync(path.join(__dirname,'../.private'),{recursive:true,mode:0o700});fs.appendFileSync(path.join(__dirname,'../.private/chat-review.jsonl'),JSON.stringify({at:now().toISOString(),admin:req.admin?.admin_account_id??req.admin?.username,complaint:positive(req.params.id)})+'\n',{mode:0o600});return {message_id:report.message_id,messages:rows.reverse()};
  }));
+ /* ---------- 在线 / 正在输入（房间 = 一次会话） ---------- */
+ // 进房间要过一次 access()（归属 + 连接状态 + 双方未被封禁），结果在 socket 上缓存 60s：
+ // 打字事件频率很高，不能每个按键都打库。
+ const rooms=new Map(); // key -> Set<ws>
+ function roomTell(key,fromAccount,payload){
+  const s=JSON.stringify(payload);
+  for(const ws of rooms.get(key)||[]){if(ws.identity.account_id===fromAccount)continue;if(ws.readyState===1&&ws.bufferedAmount<8192)ws.send(s);}
+ }
+ async function validateRoom(ws,mode,pairId){
+  const key=mode+':'+pairId,nowMs=Date.now(),hit=ws.rooms.get(key);
+  if(hit&&hit>nowMs)return key;
+  const c=await(await getPool()).getConnection();
+  try{await access(c,ws.identity.account_id,mode,pairId);}finally{c.release();}
+  ws.rooms.set(key,nowMs+60000);
+  return key;
+ }
+ async function roomMessage(ws,msg){
+  if(!Object.hasOwn(TABLES,msg.mode))return;
+  const pairId=Number(msg.pair_id);
+  if(!Number.isSafeInteger(pairId)||pairId<1)return;
+  let key;try{key=await validateRoom(ws,msg.mode,pairId);}catch(e){return;} // 不可访问的房间静默忽略
+  if(msg.type==='typing'){roomTell(key,ws.identity.account_id,{type:'typing',key});return;}
+  const leave=msg.online===false;
+  let set=rooms.get(key);
+  if(!set){if(leave)return;set=new Set();rooms.set(key,set);} // 空房间里「离线」无事可做
+  const before=set.has(ws);
+  if(before===!leave)return;                       // 状态没变就不广播
+  if(leave)set.delete(ws);else set.add(ws);
+  if(!set.size)rooms.delete(key);
+  roomTell(key,ws.identity.account_id,{type:'presence',key,online:!leave});
+  // 新加入者拿一次快照：否则对方「早就开着」时我看不到他在线
+  if(!leave&&ws.readyState===1){try{ws.send(JSON.stringify({type:'presence-self',key,peer_online:set.size>1}));}catch(e){}}
+ }
+ function leaveAllRooms(ws){
+  for(const key of [...ws.rooms.keys()]){const set=rooms.get(key);if(!set)continue;
+   if(set.delete(ws))roomTell(key,ws.identity.account_id,{type:'presence',key,online:false});
+   if(!set.size)rooms.delete(key);}
+ }
  function attach(server){const {WebSocketServer}=require('ws'),wss=new WebSocketServer({noServer:true,maxPayload:8192,perMessageDeflate:false});
   server.on('upgrade',(req,socket,head)=>{if(req.url!=='/api/chat/socket')return socket.destroy();const origin=req.headers.origin;try{if(origin&&new URL(origin).host!==req.headers.host)return socket.destroy();}catch{return socket.destroy();}if(wss.clients.size>=500)return socket.destroy();wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws));});
-  wss.on('connection',ws=>{let identity=null,busy=false;const timeout=setTimeout(()=>ws.close(1008,'请登录'),5000);ws.on('error',()=>{});ws.on('message',async raw=>{if(identity||busy)return ws.close(1008,'不支持的操作');busy=true;try{const msg=JSON.parse(raw),decoded=verifyToken(msg.token);if(msg.type!=='auth'||!decoded)throw Error();const [r]=await(await getPool()).execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);if(!r.length||ws.readyState!==1)throw Error();if((sockets.get(decoded.account_id)?.size||0)>=3)throw Error();identity=decoded;ws.token=msg.token;ws.alive=true;clearTimeout(timeout);if(!sockets.has(identity.account_id))sockets.set(identity.account_id,new Set());sockets.get(identity.account_id).add(ws);ws.send('{"type":"ready"}');}catch{ws.close(1008,'登录失效');}});ws.on('pong',()=>{ws.alive=true;});ws.on('close',()=>{clearTimeout(timeout);if(identity){const set=sockets.get(identity.account_id);set?.delete(ws);if(!set?.size)sockets.delete(identity.account_id);}});});
+  wss.on('connection',ws=>{let identity=null,busy=false;ws.rooms=new Map();const timeout=setTimeout(()=>ws.close(1008,'请登录'),5000);ws.on('error',()=>{});
+  ws.on('message',async raw=>{if(busy)return;let msg;try{msg=JSON.parse(raw);}catch{return ws.close(1008,'消息格式无效');}
+   if(!identity){
+    if(msg.type!=='auth')return ws.close(1008,'不支持的操作');
+    busy=true;
+    try{const decoded=verifyToken(msg.token);if(!decoded)throw Error();const [r]=await(await getPool()).execute('SELECT id FROM accounts WHERE id=?',[decoded.account_id]);if(!r.length||ws.readyState!==1)throw Error();if((sockets.get(decoded.account_id)?.size||0)>=3)throw Error();identity=decoded;ws.token=msg.token;ws.alive=true;clearTimeout(timeout);if(!sockets.has(identity.account_id))sockets.set(identity.account_id,new Set());sockets.get(identity.account_id).add(ws);ws.send('{"type":"ready"}');}
+    catch{ws.close(1008,'登录失效');}finally{busy=false;}
+    return;
+   }
+   // 已认证：白名单只放「在线状态 / 正在输入」，其余一律断开（避免这条通道变成通用消息总线）
+   busy=true;
+   try{if(msg.type==='presence'||msg.type==='typing')await roomMessage(ws,msg);else ws.close(1008,'不支持的操作');}
+   catch(e){/* 单条事件失败不影响连接 */}
+   finally{busy=false;}
+  });
+  ws.on('pong',()=>{ws.alive=true;});
+  ws.on('close',()=>{clearTimeout(timeout);if(identity){leaveAllRooms(ws);const set=sockets.get(identity.account_id);set?.delete(ws);if(!set?.size)sockets.delete(identity.account_id);}});});
   const timer=setInterval(()=>{for(const ws of wss.clients){if(!ws.token)continue;if(!verifyToken(ws.token)||!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000);timer.unref();wss.on('close',()=>clearInterval(timer));return wss;
  }
  return {ensureSchema,attach,access,notify};

@@ -42,4 +42,56 @@ document.querySelectorAll('.modal-mask').forEach(mask=>mask.addEventListener('cl
 document.addEventListener('keydown',e=>{const m=document.querySelector('.modal-mask.show');if(!m)return;if(e.key==='Escape'){e.preventDefault();closeModal(m.id);}if(e.key==='Tab'){const els=[...m.querySelectorAll('input,button,a[href]')].filter(x=>!x.disabled);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 document.querySelectorAll('[data-retry]').forEach(b=>b.addEventListener('click',()=>loadCard(b.dataset.retry)));
 $('logout').addEventListener('click',()=>{localStorage.removeItem('token');localStorage.removeItem('user');location.href='/';});
-if(!authToken)requireLogin();else{loadIdentity();loadVerification();Object.keys(loaders).forEach(loadCard);}
+/* ---------- 资料完善度引导 ---------- */
+function profileToast(msg,isError){const el=$('toast');if(!el)return;el.textContent=msg;el.className=isError?'toast show error':'toast show';setTimeout(()=>el.classList.remove('show'),3000);}
+async function loadGuide(){
+  const retry=$('guideRetry'),list=$('guideList');
+  retry.hidden=true;
+  try{
+    const d=await read('profile-guide');
+    $('guidePercent').textContent='已完成 '+d.done+'/'+d.total+'（'+d.percent+'%）';
+    $('guideBar').style.width=d.percent+'%';
+    $('guideBarWrap').setAttribute('aria-valuenow',String(d.percent));
+    list.replaceChildren();
+    (d.items||[]).forEach(it=>{
+      const li=document.createElement('li');li.className=it.done?'done':'todo';
+      const mark=document.createElement('span');mark.className='guide-mark';mark.textContent=it.done?'✓':'○';mark.setAttribute('aria-hidden','true');
+      const text=document.createElement('span');text.className='guide-text';
+      const b=document.createElement('b');b.textContent=it.label;
+      const hint=document.createElement('span');hint.className='muted';hint.textContent=it.done?'已完成':it.hint;
+      text.append(b,hint);li.append(mark,text);
+      if(!it.done){const a=document.createElement('a');a.className='guide-go';a.href=it.link;a.textContent='去完成 →';li.append(a);}
+      list.append(li);
+    });
+  }catch(e){
+    if(window.__loginRedirecting)return;
+    $('guidePercent').textContent='读取失败';$('guideBar').style.width='0%';retry.hidden=false;
+  }
+}
+/* ---------- 邀请好友 ---------- */
+let inviteInfo=null;
+async function loadInvite(){
+  try{
+    const d=await read('invite');inviteInfo=d;
+    $('inviteCount').textContent=d.invited>0?('已邀请 '+d.invited+' 人'):'去邀请';
+    $('inviteCode').textContent=d.invite_code||'—';
+    $('inviteStat').textContent=d.invited>0?('已成功邀请 '+d.invited+' 位同学'):'还没有人通过你的邀请注册';
+  }catch(e){$('inviteCount').textContent='去邀请';}
+}
+function openInviteModal(){openModal('inviteModal');}
+function copyInviteLink(){
+  const link=inviteInfo&&inviteInfo.link?location.origin+inviteInfo.link:'';
+  if(!link){profileToast('邀请信息还没读取到，请稍后重试',true);return;}
+  const ok=()=>profileToast('邀请链接已复制，发给同学即可');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(ok,()=>window.prompt('复制这条链接发给同学：',link));}
+  else window.prompt('复制这条链接发给同学：',link);
+}
+/* ---------- 深色模式开关 ---------- */
+function themeLabel(){const saved=(()=>{try{return localStorage.getItem('fancyu-theme')||'';}catch(e){return '';}})();return saved==='dark'?'已开启':saved==='light'?'已关闭':'跟随系统';}
+function renderThemeState(){const el=$('themeState');if(el)el.textContent=themeLabel();}
+function toggleTheme(){if(!window.fancyuSetTheme)return;window.fancyuSetTheme(!window.fancyuTheme());renderThemeState();}
+if($('inviteEntry'))$('inviteEntry').addEventListener('click',openInviteModal);
+if($('themeToggle'))$('themeToggle').addEventListener('click',toggleTheme);
+if($('guideRetry'))$('guideRetry').addEventListener('click',loadGuide);
+renderThemeState();
+if(!authToken)requireLogin();else{loadIdentity();loadVerification();Object.keys(loaders).forEach(loadCard);loadGuide();loadInvite();}

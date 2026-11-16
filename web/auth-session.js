@@ -1,4 +1,23 @@
 (() => {
+    /* 深色模式：显式选择优先，否则跟随系统。尽早写到 <html> 上，避免深色用户看到闪白。 */
+    const themeSaved=(()=>{try{return localStorage.getItem('fancyu-theme')||'';}catch(e){return '';}})();
+    const themeDark=themeSaved?themeSaved==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme=themeDark?'dark':'light';
+    const loadDarkCss=()=>{
+        if(document.getElementById('fancyuDarkCss'))return;
+        const l=document.createElement('link');
+        l.id='fancyuDarkCss';l.rel='stylesheet';l.href='/dark.css?v=20261116b';
+        document.head.appendChild(l);
+    };
+    if(themeDark)loadDarkCss();
+    // 页面上的「深色模式」开关调这两个
+    window.fancyuTheme=()=>document.documentElement.dataset.theme==='dark';
+    window.fancyuSetTheme=dark=>{
+        try{localStorage.setItem('fancyu-theme',dark?'dark':'light');}catch(e){}
+        document.documentElement.dataset.theme=dark?'dark':'light';
+        if(dark)loadDarkCss();
+        document.dispatchEvent(new CustomEvent('fancyu:theme',{detail:{dark:!!dark}}));
+    };
     const token=localStorage.getItem('token');
     if(token) {try {const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));if(p.security_version!==2||p.exp*1000<Date.now())throw Error();}
         catch(e){localStorage.removeItem('token');localStorage.removeItem('user');}}

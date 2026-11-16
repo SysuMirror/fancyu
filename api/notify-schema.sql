@@ -27,3 +27,12 @@ CREATE TABLE IF NOT EXISTS user_push_subscriptions (
  INDEX owner(account_id),
  FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/* 关掉的只是「浏览器推送」，站内通知中心仍然照记 */
+CREATE TABLE IF NOT EXISTS user_notification_prefs (
+ account_id INT NOT NULL,
+ kind VARCHAR(24) NOT NULL,
+ enabled TINYINT(1) NOT NULL DEFAULT 1,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(account_id,kind),
+ FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

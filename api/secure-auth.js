@@ -1,13 +1,14 @@
 'use strict';
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-module.exports = function(app, { getPool, generateToken, authMiddleware, transporter, emailConfigured, from, ensureSchema, secret }) {
+module.exports = function(app, { getPool, generateToken, authMiddleware, transporter, emailConfigured, from, ensureSchema, secret, clientIp }) {
     const validEmail = x => typeof x === 'string' && /^[^\s@]+@(?:mail[23]?\.)?sysu\.edu\.cn$/.test(x);
     const digest = (email, purpose, code) => crypto.createHmac('sha256', secret).update(email + ':' + purpose + ':' + code).digest('hex');
     const wrap = fn => async (req,res,next) => { try { await ensureSchema(); await fn(req,res,next); } catch(e) { console.error('Secure auth:',e.code || e.name); if (!res.headersSent) res.status(503).json({code:503,msg:'服务暂时不可用，请稍后重试'}); } };
     const attempts = new Map();
     function limit(req,res,next) {
-        const key = req.socket.remoteAddress;
+        // 反代后面 socket 地址是同一个中继 IP，会造成全站共用一个额度；优先用可信客户端 IP。
+        const key = (typeof clientIp === 'function' ? clientIp(req) : '') || req.socket.remoteAddress;
         const now = Date.now();
         if (attempts.size > 5000) for (const [k,v] of attempts) if (now-v.start > 600000) attempts.delete(k);
         let v=attempts.get(key);
@@ -67,7 +68,16 @@ module.exports = function(app, { getPool, generateToken, authMiddleware, transpo
         let r;
         try { r=await pool.execute('INSERT INTO accounts(email,username,password_hash,email_verified) VALUES (?,?,?,TRUE)',[email,username,await bcrypt.hash(b.password,10)]); }
         catch(e){ if(e.code==='ER_DUP_ENTRY') return res.status(409).json({code:409,msg:'邮箱或用户名已被使用'}); throw e; }
-        await markVerified(r.insertId,email);const a={id:r.insertId,email,username};res.json({code:200,token:generateToken(a),user:{account_id:a.id,email,username},msg:'注册成功'});
+        await markVerified(r.insertId,email);
+        // 邀请关系（可选）：带上有效邀请码就记一笔；列缺失/码写错都绝不能影响注册主流程
+        const inviteCode=String(b.invite||'').trim().toUpperCase();
+        if(/^[A-Z0-9]{6,12}$/.test(inviteCode)){
+            try{
+                const [inv]=await pool.execute('SELECT id FROM accounts WHERE invite_code=? LIMIT 1',[inviteCode]);
+                if(inv.length&&Number(inv[0].id)!==Number(r.insertId))await pool.execute('UPDATE accounts SET invited_by=? WHERE id=? AND invited_by IS NULL',[inv[0].id,r.insertId]);
+            }catch(e){if(!/Unknown column/i.test(e.message||''))console.error('Invite link:',e.code||e.name);}
+        }
+        const a={id:r.insertId,email,username};res.json({code:200,token:generateToken(a),user:{account_id:a.id,email,username},msg:'注册成功'});
     }));
     app.post('/account/reset-password',limit,wrap(async(req,res)=>{
         const b=req.body||{};const email=String(b.email||'').trim().toLowerCase();

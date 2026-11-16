@@ -80,6 +80,177 @@ async function api(path = '', method = 'GET', body) {
 const key = r => r.mode + '/' + r.pair_id;
 const prefix = () => '/' + key(current);
 
+/* ---------- 轻量实时通道：在线 / 正在输入（纯提示，失败静默） ---------- */
+let joinedKey = null;          // 我已经「进」了哪个房间（服务端据此判断在线）
+let peerOnline = null;         // true / false / null(未知)
+let peerTypingUntil = 0, typingSentAt = 0, typingClearTimer = null;
+function wsSend(obj) { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); } catch (e) { /* 通道不可用就算了 */ } }
+function roomKeyArgs(k) { const i = k.indexOf('/'); return { mode: k.slice(0, i), pair_id: Number(k.slice(i + 1)) }; }
+function paintPresence() {
+  const el = $('presence'); if (!el) return;
+  if (!current || !joinedKey || document.body.dataset.view !== 'room') { el.hidden = true; return; }
+  const typing = Date.now() < peerTypingUntil;
+  const text = typing ? '对方正在输入…'
+    : peerOnline === true ? '对方在线'
+    : peerOnline === false ? '对方当前不在线' : '';
+  el.textContent = text;
+  el.hidden = !text;
+  el.classList.toggle('typing', typing);
+  el.classList.toggle('online', !typing && peerOnline === true);
+  el.classList.toggle('offline', !typing && peerOnline === false);
+}
+function joinRoom(room) {
+  if (!room) return;
+  const k = key(room);
+  if (joinedKey === k) return;
+  leaveRoom();
+  joinedKey = k; peerOnline = null; peerTypingUntil = 0;
+  wsSend({ type: 'presence', mode: room.mode, pair_id: room.pair_id, online: true });
+  paintPresence();
+}
+function leaveRoom() {
+  if (!joinedKey) return;
+  wsSend({ type: 'presence', ...roomKeyArgs(joinedKey), online: false });
+  joinedKey = null; peerOnline = null; peerTypingUntil = 0;
+  paintPresence();
+}
+function pingTyping() {
+  if (!joinedKey || !current) return;
+  const now = Date.now();
+  if (now - typingSentAt < 3000) return;   // 3 秒内不重复上报，避免每键一包
+  typingSentAt = now;
+  wsSend({ type: 'typing', ...roomKeyArgs(joinedKey) });
+}
+function peerTyping() {
+  peerTypingUntil = Date.now() + 4000;
+  paintPresence();
+  clearTimeout(typingClearTimer);
+  typingClearTimer = setTimeout(paintPresence, 4200);
+}
+
+/* ---------- 破冰话题（只在空白会话里出现） ---------- */
+let iceKey = null, iceRound = 0;
+function useTopic(text) {
+  const t = $('message'); if (!t || t.disabled) return;
+  t.value = text; autoGrow(); updateCounter(); t.focus();
+}
+function renderIcebreakers(topics, round) {
+  const box = $('icebreakers'); if (!box) return;
+  box.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'ice-head';
+  const title = document.createElement('strong');
+  title.textContent = '第一次开口？试试这些';
+  const swap = document.createElement('button');
+  swap.type = 'button'; swap.className = 'text-button'; swap.textContent = '换一批';
+  swap.onclick = () => { iceRound = (round + 1) % 10; loadIcebreakers(iceRound); };
+  head.append(title, swap);
+  const list = document.createElement('div');
+  list.className = 'ice-list';
+  for (const t of topics) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'ice-topic'; b.textContent = t;
+    b.onclick = () => useTopic(t);
+    list.append(b);
+  }
+  box.append(head, list);
+  box.hidden = false;
+  iceKey = current ? key(current) : null;
+}
+async function loadIcebreakers(round) {
+  const box = $('icebreakers'); if (!box || !current) return;
+  const selected = key(current);
+  try {
+    const j = await api(prefix() + '/icebreakers?round=' + round);
+    if (!current || key(current) !== selected || msgs.length) return;
+    if (!j.topics || !j.topics.length) { box.hidden = true; return; }
+    renderIcebreakers(j.topics, j.round || 0);
+  } catch (e) { box.hidden = true; }   // 话题只是锦上添花，拿不到就不显示
+}
+function maybeIcebreakers() {
+  const box = $('icebreakers'); if (!box) return;
+  if (!current || msgs.length) { box.hidden = true; return; }
+  if (iceKey === key(current)) { box.hidden = false; return; }
+  box.hidden = true;                   // 先藏起，拿到话题再显示，避免闪烁
+  loadIcebreakers(iceRound);
+}
+
+/* ---------- 搜索聊天记录 ---------- */
+let searchTimer = null, searchSeq = 0;
+function clearSearch() {
+  const box = $('searchResults'), input = $('chatSearch');
+  if (box) { box.replaceChildren(); box.hidden = true; }
+  if (input) input.value = '';
+  $('rooms').hidden = false;
+  $('archived').hidden = !$('archived').querySelector('.room');
+}
+function renderSearchResults(j) {
+  const box = $('searchResults'); if (!box) return;
+  box.replaceChildren();
+  if (!j.results.length) {
+    const p = document.createElement('p');
+    p.className = 'muted search-empty';
+    p.textContent = '没有找到相关消息。';
+    box.append(p);
+  } else {
+    const hint = document.createElement('p');
+    hint.className = 'muted search-empty';
+    hint.textContent = '共 ' + j.count + ' 条，点一条跳到该会话。';
+    box.append(hint);
+  }
+  for (const r of j.results) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'search-hit';
+    const head = document.createElement('span');
+    head.className = 'search-hit-head';
+    head.textContent = (r.name || '对方') + ' · ' + (LABELS[r.mode] || r.mode);
+    const snip = document.createElement('span');
+    snip.className = 'search-hit-snippet';
+    snip.textContent = (r.mine ? '我：' : '') + (r.snippet || '');
+    const t = document.createElement('time');
+    t.className = 'search-hit-time';
+    t.textContent = relTime(new Date(r.created_at));
+    b.append(head, snip, t);
+    b.onclick = () => {
+      const k = r.mode + '/' + r.pair_id;
+      const room = rooms.find(x => key(x) === k) || { mode: r.mode, pair_id: r.pair_id, name: r.name };
+      clearSearch();
+      select(room);
+    };
+    box.append(b);
+  }
+  box.hidden = false;
+  $('rooms').hidden = true;
+  $('archived').hidden = true;
+}
+async function runSearch(q) {
+  const seq = ++searchSeq;
+  const box = $('searchResults');
+  try {
+    const j = await api('/search?q=' + encodeURIComponent(q));
+    if (seq !== searchSeq) return;      // 已经输入了更新的词，丢弃旧结果
+    renderSearchResults(j);
+  } catch (e) {
+    if (seq !== searchSeq) return;
+    box.replaceChildren();
+    const p = document.createElement('p');
+    p.className = 'error search-empty';
+    p.textContent = e.message;
+    box.append(p);
+    box.hidden = false;
+    $('rooms').hidden = true;
+  }
+}
+$('chatSearch').addEventListener('input', () => {
+  const q = $('chatSearch').value.trim();
+  clearTimeout(searchTimer);
+  if (!q) { searchSeq++; clearSearch(); return; }
+  searchTimer = setTimeout(() => runSearch(q), 300);
+});
+$('chatSearch').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); searchSeq++; clearSearch(); }
+});
+
 /* ---------- 会话列表：增量更新 ---------- */
 const roomEls = new Map(); // key -> {el, name, mode, preview, badge}
 
@@ -191,16 +362,20 @@ async function select(room) {
   for (const id of ['exchange', 'block', 'closeRoom', 'hideRoom']) $(id).hidden = false;
   $('message').disabled = $('send').disabled = false;
   $('notice').textContent = '';
+  joinRoom(room);
   setView('room');
+  paintPresence();
   history.replaceState(null, '', '?mode=' + room.mode + '&pair=' + room.pair_id);
   for (const entry of roomEls.values()) entry.el.classList.remove('active');
   roomEls.get(key(room))?.el.classList.add('active');
   await refresh(true);
 }
 function disable(text) {
+  leaveRoom();
   current = null;
   msgs = []; msgsById.clear(); pendingMsgs = [];
   renderAll();
+  $('icebreakers').hidden = true;
   $('name').textContent = '会话不可用';
   $('mode').textContent = '';
   $('exchangeStatus').hidden = true;
@@ -395,6 +570,7 @@ async function refresh(reset = false) {
     renderPeer(j.peer);
     showExchange(j.exchange);
     renderAll();
+    maybeIcebreakers();
     await markRead();
   } catch (e) {
     if ([403, 404, 409].includes(e.status)) disable(e.message);
@@ -498,6 +674,7 @@ async function send() {
   if (!body || !current) return;
   const client_id = crypto.randomUUID();
   pendingMsgs.push({ client_id, body, created_at: new Date().toISOString() });
+  $('icebreakers').hidden = true;   // 已经开口了，破冰话题退场
   renderAll();
   $('messages').scrollTop = $('messages').scrollHeight;
   if ($('message').value.trim() === body) $('message').value = '';
@@ -535,7 +712,7 @@ async function retryPending(client_id) {
 
 /* ---------- 输入交互 ---------- */
 $('composer').onsubmit = e => { e.preventDefault(); send(); };
-$('message').addEventListener('input', () => { autoGrow(); updateCounter(); });
+$('message').addEventListener('input', () => { autoGrow(); updateCounter(); pingTyping(); });
 $('message').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.shiftKey) return;
   if (isMobile()) return; // 移动端：Enter 换行，发送交给按钮
@@ -689,9 +866,20 @@ function connect() {
       if (j.type === 'ready') {
         wsRetry = 0; everConnected = true; setOffline(false);
         if (wasOffline) { wasOffline = false; toast('已恢复实时连接'); }
+        // 断线重连后服务器不知道我在哪个房间，重报一次在线
+        if (joinedKey) { peerOnline = null; wsSend({ type: 'presence', ...roomKeyArgs(joinedKey), online: true }); paintPresence(); }
         schedule();
       }
       if (j.type === 'refresh') schedule();
+      if (j.type === 'presence-self' && joinedKey && j.key === joinedKey) {
+        peerOnline = !!j.peer_online; paintPresence();     // 对方早就开着会话时，这次快照才看得到
+      }
+      if (j.type === 'presence' && joinedKey && j.key === joinedKey) {
+        peerOnline = !!j.online;
+        if (!j.online) peerTypingUntil = 0;
+        paintPresence();
+      }
+      if (j.type === 'typing' && joinedKey && j.key === joinedKey) peerTyping();
     } catch { /* 忽略非 JSON 帧 */ }
   };
   ws.onerror = () => {};
@@ -711,7 +899,7 @@ function roomsFailed(msg) {
   p.textContent = msg;
   box.append(p);
 }
-$('backToList').onclick = () => setView('list');
+$('backToList').onclick = () => { setView('list'); leaveRoom(); };
 setInterval(() => {
   if (!document.hidden) {
     loadRooms().catch(() => {});

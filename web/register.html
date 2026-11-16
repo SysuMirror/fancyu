@@ -434,9 +434,9 @@
             cursor: default;
         }
     </style>
-<script src="auth-session.js?v=20261116a"></script>
+<script src="auth-session.js?v=20261116b"></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
-<meta name="description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=1" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="注册 | FancyU · 中意你"><meta property="og:description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/register"><meta name="twitter:card" content="summary_large_image"></head>
+<meta name="description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=20261116b" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="注册 | FancyU · 中意你"><meta property="og:description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/register"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="auth">
     <div class="bg-pattern"></div>
 
@@ -842,7 +842,9 @@
                 const res = await fetch(API_BASE + '/account/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, code, password, username, nickname: username })
+                    body: JSON.stringify({ email, code, password, username, nickname: username,
+                        // 从 ?invite= 带过来的邀请码：后端记录邀请关系，无效/缺失都不影响注册
+                        invite: new URLSearchParams(window.location.search).get('invite') || '' })
                 });
 
                 const data = await res.json();
@@ -855,8 +857,8 @@
                     showMsg('注册成功，正在跳转...', 'success');
                     setTimeout(() => {
                         const redirect = new URLSearchParams(window.location.search).get('redirect') || '/';
-                        const safeRedirect = /^[a-zA-Z0-9_-]+\.html$/.test(redirect) ? redirect : '/';
-                        window.location.href = safeRedirect;
+                        // 与 login 同一把校验器：只认站内已知一级页（clean URL），防开放重定向
+                        window.location.href = window.fancyuSafeRedirect ? window.fancyuSafeRedirect(redirect) : '/';
                     }, 1000);
                 } else {
                     showMsg(data.msg, 'error');

@@ -20,6 +20,74 @@ app.use((req, res, next) => {
     next();
 });
 
+// ===== 安全响应头：在浏览器侧兜住 XSS 升级与点击劫持 =====
+// 页面仍使用内联事件处理器（onclick=…），故 script-src 必须保留 'unsafe-inline'；
+// 但外部域脚本被禁止，配合 nosniff 可以挡掉「注入 <script src=//evil>」这类升级路径。
+// 站点字体全部走本地栈（已移除两处 Google Fonts 引用），故外部源一律不放行：
+// connect-src 收紧到 'self' 之后，即便有人注入脚本也没有可用的外发通道。
+const CSP = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "img-src 'self' data: blob:",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: wss:",   // 聊天用同源 WebSocket（部分浏览器不把 ws:// 算进 'self'）
+    "form-action 'self'",
+    "manifest-src 'self'"
+].join('; ');
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', CSP);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // HSTS 只在 HTTPS 下才有意义（本站由前置代理终止 TLS，所以看 X-Forwarded-Proto）。
+    if (req.secure || String(req.headers['x-forwarded-proto'] || '') === 'https') res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+    next();
+});
+
+// ===== gzip：JSON 响应 =====
+// 没有引 compression 包（pod 里装包流程复杂），用内置 zlib 只对 JSON 做同步压缩：
+// 接口体积普遍几 KB~几十 KB，压完通常小 70%+，对手机端首屏意义明显。
+const zlib = require('zlib');
+function gzipOk(req) { return /\bgzip\b/.test(String(req.headers['accept-encoding'] || '')); }
+app.use((req, res, next) => {
+    const can = gzipOk(req);
+    const json = res.json.bind(res);
+    res.json = function (body) {
+        if (!can || res.headersSent || res.getHeader('Content-Encoding')) return json(body);
+        let buf;
+        try { buf = Buffer.from(JSON.stringify(body)); } catch (e) { return json(body); }
+        if (buf.length < 512) return json(body);           // 小响应压了反而更大
+        try { buf = zlib.gzipSync(buf); } catch (e) { return json(body); }
+        res.setHeader('Content-Encoding', 'gzip');
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Length', String(buf.length));
+        res.setHeader('Vary', 'Accept-Encoding');
+        return res.end(buf);
+    };
+    next();
+});
+
+// ===== 客户端 IP（限流键）=====
+// 只信 X-Forwarded-For 的「最后一跳」：它由本站前置代理追加，客户端伪造不到末位。
+// 以前直接用整串 XFF 当键，攻击者每次换一个值就能把限流键打散（/admin/login 实测可无限重试）。
+function isIpLike(v) {
+    if (!v) return false;
+    v = String(v).trim();
+    return v.length > 0 && v.length <= 45 && /^[0-9a-fA-F:.]+$/.test(v) && /[0-9a-fA-F]/.test(v);
+}
+function trustedIp(req) {
+    const raw = req.headers['x-forwarded-for'];
+    let ip = '';
+    if (typeof raw === 'string' && raw.length) { const parts = raw.split(','); ip = parts[parts.length - 1]; }
+    ip = String(ip || '').trim().replace(/^::ffff:/, '');
+    if (!isIpLike(ip)) ip = String((req.socket && req.socket.remoteAddress) || '').trim().replace(/^::ffff:/, '');
+    return isIpLike(ip) ? ip.toLowerCase() : 'unknown';
+}
+
 // 站点图标：优先返回 web/favicon.ico（品牌绿叶标），文件缺失时回退空白图标。
 app.get('/favicon.ico', (req, res) => {
     res.setHeader('Content-Type', 'image/x-icon');
@@ -49,11 +117,18 @@ const SMTP_PASSWORD = process.env.SMTP_PASSWORD || '';
 const SMTP_HOST = process.env.SMTP_HOST || 'smtpdm.aliyun.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sysudate';
+// 必须由环境注入：以前兜底成字面量 'sysudate'，一旦某次部署漏注入就等于签名密钥公开，
+// 任何人都能伪造任意 account_id 的 token（账号接管）。缺失/过短一律拒绝启动。
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = '30d';
 
 if (!MYSQL_HOST || !MYSQL_USER || !MYSQL_PASSWORD) {
     console.error('❌ 缺少必需的环境变量: MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD');
+    throw new Error('Missing required environment variables');
+}
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    console.error('❌ JWT_SECRET 缺失或过短（至少 32 字符），拒绝启动：它一旦退化为公开常量即可被伪造登录');
     throw new Error('Missing required environment variables');
 }
 
@@ -623,7 +698,7 @@ const daily = require('./daily')(app, {getPool,authMiddleware,adminAuthMiddlewar
     await analytics.ensureSchema();
     await ensureMatchHistoryTable(pool);await ensureComplaintTable(pool);
 }});
-const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,
+const secureAuth = require('./secure-auth')(app, {getPool,generateToken,authMiddleware,transporter,clientIp:trustedIp,
     emailConfigured:!!SMTP_PASSWORD,from:FROM_ALIAS+' <'+ACCOUNT_NAME+'>',ensureSchema:daily.ensureSchema,secret:JWT_SECRET});
 
 const studentVerification = require('./verification-guard')(app,{getPool,ensureSchema:daily.ensureSchema,authMiddleware});
@@ -633,7 +708,7 @@ const studentVerification = require('./verification-guard')(app,{getPool,ensureS
 // 供 bind 页面「验证序列号」这一步使用（原先前端用一次假的 /account/bind 探测，既会误判又会占用限流额度）。
 app.post('/account/bind/check', async (req, res) => {
     const { serial_number, email } = req.body || {};
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const clientIp = trustedIp(req);
 
     try {
         if (!checkRateLimit(clientIp, 'bindcheck', 10, 60000)) {
@@ -670,7 +745,7 @@ app.post('/account/bind/check', async (req, res) => {
 
 app.post('/account/bind', async (req, res) => {
     const { serial_number, email, code, password, username } = req.body;
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const clientIp = trustedIp(req);
 
     try {
         if (!checkRateLimit(clientIp, 'bind', 5, 60000)) {
@@ -757,8 +832,15 @@ const deepMatch=require('./deep-match')(app,{getPool,authMiddleware,adminAuthMid
 // 私有上传（头像 / 聊天图片）：文件落 .private/uploads，读取走 /api/account/* 鉴权。
 // 先于 chat 构造，聊天发图要拿它校验图片归属。
 const uploads=require('./uploads')(app,{getPool,authMiddleware});
+const perf=require('./perf')({getPool});
+// 邀请码：列是加法迁移，注册时带上 ?invite= 即记录邀请关系。
+const invite=require('./invite')(app,{getPool,authMiddleware});
+// 资料完善度引导：只读检查，各模块表缺失时该项算未完成。
+const profileGuide=require('./profile-guide')(app,{getPool,authMiddleware});
 const userChat=require('./chat')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,verifyToken,uploads,notify});
 chatRef.notify=userChat.notify;
+// 破冰话题：复用 chat 的 access() 做可见性判定（不属于我的会话拿不到话题）。
+require('./icebreakers')(app,{getPool,authMiddleware,access:userChat.access});
 const deepDraft=require('./deep-draft')(app,{getPool,authMiddleware});
 // 通用支付接入：价格在本应用后台自定义，下单→小程序支付→签名回调发货。小程序无需改动。
 const pay = require('./pay')(app, {getPool, authMiddleware, adminAuthMiddleware});
@@ -919,6 +1001,10 @@ app.post('/account/delete', authMiddleware, async (req, res) => {
 // 检查用户名是否可用
 app.get('/account/check-username', async (req, res) => {
     try {
+        // 免登录 + 可枚举用户名，必须限流，否则能被拿来批量探测账号是否存在。
+        if (!checkRateLimit(trustedIp(req), 'check-username', 20, 60000)) {
+            return res.json({ code: 429, msg: '操作过于频繁，请稍后再试' });
+        }
         const { username } = req.query;
         if (!username) return res.json({ code: 400, msg: '用户名不能为空' });
         if (username.length < 2) return res.json({ code: 200, available: false, msg: '用户名至少2个字符' });
@@ -1225,26 +1311,29 @@ const LOGIN_MAX_ATTEMPTS = 3;
 const LOGIN_WINDOW_MS = 60 * 1000;
 
 function rateLimitMiddleware(req, res, next) {
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
-    const record = loginAttempts.get(ip);
+    // 双维度限流：只按 IP 的话，换代理或伪造就绕过了；账号维度才是真正拦住爆破的那层。
+    const user = String((req.body && req.body.username) || '').slice(0, 40).toLowerCase();
+    const keys = ['admin-ip:' + trustedIp(req)];
+    if (user) keys.push('admin-user:' + user);
 
-    if (!record) {
-        loginAttempts.set(ip, { count: 1, firstAttempt: now });
-        return next();
+    // 键含请求头，以前只增不减；被持续扫描会一直吃内存。超过阈值就顺手清过期的。
+    if (loginAttempts.size > 500) {
+        for (const [k, r] of loginAttempts) if (now - r.firstAttempt > LOGIN_WINDOW_MS) loginAttempts.delete(k);
     }
 
-    if (now - record.firstAttempt > LOGIN_WINDOW_MS) {
-        loginAttempts.set(ip, { count: 1, firstAttempt: now });
-        return next();
+    for (const k of keys) {
+        const r = loginAttempts.get(k);
+        if (r && now - r.firstAttempt <= LOGIN_WINDOW_MS && r.count >= LOGIN_MAX_ATTEMPTS) {
+            const waitTime = Math.ceil((LOGIN_WINDOW_MS - (now - r.firstAttempt)) / 1000);
+            return res.json({ code: 429, msg: `登录过于频繁，请 ${waitTime} 秒后重试` });
+        }
     }
-
-    if (record.count >= LOGIN_MAX_ATTEMPTS) {
-        const waitTime = Math.ceil((LOGIN_WINDOW_MS - (now - record.firstAttempt)) / 1000);
-        return res.json({ code: 429, msg: `登录过于频繁，请 ${waitTime} 秒后重试` });
+    for (const k of keys) {
+        const r = loginAttempts.get(k);
+        if (!r || now - r.firstAttempt > LOGIN_WINDOW_MS) loginAttempts.set(k, { count: 1, firstAttempt: now });
+        else r.count++;
     }
-
-    record.count++;
     next();
 }
 
@@ -1625,7 +1714,7 @@ app.get('/', async (req, res) => {
         // 部署补丁: 根路径返回首页
         return res.sendFile(path.join(WEB_DIR, 'index.html'));
     }
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const clientIp = trustedIp(req);
 
     try {
         if (action === 'generateSerial') {
@@ -1749,7 +1838,7 @@ app.get('/', async (req, res) => {
 
 app.post('/', async (req, res) => {
     const { action, email, code, serial, source, data } = req.body;
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const clientIp = trustedIp(req);
 
     try {
         if (action === 'verifyMatch') {
@@ -1960,11 +2049,20 @@ async function ensureComplaintTable(pool) {
     }
 }
 
-app.post('/api/complaint', async (req, res) => {
+// 注意：index.js 顶部会把 /api 前缀剥掉，所以这里只能注册 /complaint（写 /api/complaint 永远匹配不上）。
+app.post('/complaint', async (req, res) => {
     try {
-        const { target_type, target_id, reason, description, contact_email } = req.body;
-        if (!reason) {
+        // 未登录也能提交（会留联系邮箱），但必须限流，否则就是一个匿名刷库的口子。
+        if (!checkRateLimit(trustedIp(req), 'complaint', 5, 600000)) {
+            return res.json({ code: 429, msg: '提交过于频繁，请稍后再试' });
+        }
+        const clip = (v, n) => (v == null ? null : String(v).slice(0, n));
+        const { target_type, target_id, reason, description, contact_email } = req.body || {};
+        if (!reason || !String(reason).trim()) {
             return res.json({ code: 400, msg: '请填写投诉原因' });
+        }
+        if (String(reason).length > 100 || String(description || '').length > 2000 || String(contact_email || '').length > 120) {
+            return res.json({ code: 400, msg: '内容过长' });
         }
         const pool = await getPool();
         await ensureComplaintTable(pool);
@@ -1980,7 +2078,7 @@ app.post('/api/complaint', async (req, res) => {
         await pool.execute(
             `INSERT INTO complaints (reporter_account_id, reporter_email, target_type, target_id, reason, description, contact_email)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [reporterAccountId, null, target_type || 'other', target_id || null, reason, description || null, contact_email || null]
+            [reporterAccountId, null, clip(target_type || 'other', 30), clip(target_id, 64), clip(reason, 100), clip(description, 2000), clip(contact_email, 120)]
         );
         return res.json({ code: 200, msg: '投诉已提交，我们会尽快处理' });
     } catch (error) {
@@ -2077,7 +2175,44 @@ app.use((req, res, next) => {
     if (file.startsWith(WEB_DIR + path.sep) && require('fs').existsSync(file)) return res.sendFile(file);
     next();
 });
-app.use(express.static(WEB_DIR));
+// 静态资源：文本类（html/css/js/json/svg/webmanifest）走 gzip + 长缓存；其余交给 express.static。
+// HTML 用 no-cache（每次协商，避免发版后拿到旧页面），资源用 ?v= 版本号，故可以放心长缓存。
+const STATIC_TEXT_EXT = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8' };
+const gzCache = new Map();                 // abs+mtime+size → gzip buffer（有界，超了整体清空）
+const staticMw = express.static(WEB_DIR, {
+    setHeaders: (res, file) => res.setHeader('Cache-Control', /\.html?$/i.test(file) ? 'no-cache' : 'public, max-age=604800')
+});
+app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return staticMw(req, res, next);
+    if (!gzipOk(req)) return staticMw(req, res, next);
+    let p; try { p = decodeURIComponent(req.path); } catch (e) { return staticMw(req, res, next); }
+    const ext = path.extname(p).toLowerCase();
+    const type = STATIC_TEXT_EXT[ext];
+    if (!type) return staticMw(req, res, next);
+    const abs = path.join(WEB_DIR, p);
+    if (!abs.startsWith(WEB_DIR + path.sep)) return staticMw(req, res, next);
+    try {
+        const st = require('fs').statSync(abs);
+        if (!st.isFile()) return staticMw(req, res, next);
+        const etag = 'W/"' + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
+        res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=604800');
+        res.setHeader('Vary', 'Accept-Encoding');
+        res.setHeader('ETag', etag);
+        if (req.headers['if-none-match'] === etag) { res.statusCode = 304; return res.end(); }
+        const key = abs + ':' + st.mtimeMs + ':' + st.size;
+        let gz = gzCache.get(key);
+        if (!gz) {
+            gz = zlib.gzipSync(require('fs').readFileSync(abs));
+            if (gzCache.size > 200) gzCache.clear();
+            gzCache.set(key, gz);
+        }
+        res.setHeader('Content-Encoding', 'gzip');
+        res.setHeader('Content-Type', type);
+        res.setHeader('Content-Length', String(gz.length));
+        return res.end(req.method === 'HEAD' ? undefined : gz);
+    } catch (e) { return staticMw(req, res, next); }
+});
+app.use(staticMw);
 app.use((req, res) => {
     if (req.method === 'GET' && !req.path.startsWith('/account') && !req.path.startsWith('/admin') && !req.path.startsWith('/api') && !req.path.startsWith('/llm')) {
         // 未知页面：给品牌化的 404 页（不再是「404 + 首页」那种把错地址伪装成成功的做法）。
@@ -2089,6 +2224,6 @@ app.use((req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
-(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
+(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();await invite.ensureSchema();await perf.ensureIndexes();notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
 
 console.log('Function instance started successfully');

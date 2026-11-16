@@ -21,7 +21,7 @@
     { href: '/', label: '首页', match: function (p) { return p === '/' || p === '/index.html'; }, icon: '<path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1Z"/>' },
     { href: '/weekly-match', label: '配对', match: function (p) { return p.indexOf('/weekly-match') === 0 || p === '/survey'; }, icon: '<path d="M12 21s-7.5-4.6-9.3-9A5.4 5.4 0 0 1 12 6.3 5.4 5.4 0 0 1 21.3 12c-1.8 4.4-9.3 9-9.3 9Z"/>' },
     { href: '/chat', label: '消息', match: function (p) { return p.indexOf('/chat') === 0; }, icon: '<path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7l-5 4V6a2 2 0 0 1 2-2Z"/>', badge: true },
-    { href: '/profile', label: '我的', match: function (p) { return p.indexOf('/profile') === 0 || p.indexOf('/dashboard') === 0; }, icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6Z"/>' }
+    { href: '/profile', label: '我的', match: function (p) { return p.indexOf('/profile') === 0; }, icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6Z"/>' }
   ];
 
   function renderBadge(n) {
@@ -33,6 +33,8 @@
 
   function fetchUnread() {
     if (!TOKEN()) return;
+    // chat-badge.js 在同页时是唯一轮询者：这里只消费它广播的未读数，别重复请求。
+    if (window.__fancyuBadgeProvider) return;
     fetch('/api/account/chat', { headers: { Authorization: 'Bearer ' + TOKEN() } })
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
       .then(function (d) {
@@ -68,9 +70,14 @@
     var cached = 0;
     try { cached = parseInt(localStorage.getItem('tabbarUnread') || '0', 10) || 0; } catch (e) {}
     renderBadge(cached);
-    fetchUnread();
-    setInterval(fetchUnread, 30000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) fetchUnread(); });
+    if (window.__fancyuBadgeProvider) {
+      // 未读数由 chat-badge.js 广播（含它自己 30s 轮询与 focus 刷新）
+      window.addEventListener('fancyu:unread', function (e) { renderBadge((e.detail && e.detail.unread) | 0); });
+    } else {
+      fetchUnread();
+      setInterval(fetchUnread, 30000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) fetchUnread(); });
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);

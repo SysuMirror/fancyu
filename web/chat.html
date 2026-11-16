@@ -6,10 +6,10 @@
 <title>站内聊天 | FancyU · 中意你</title>
 <link rel="stylesheet" href="home.css?v=chat1">
 <link rel="stylesheet" href="campus-ui.css?v=20261114a">
-<link rel="stylesheet" href="chat.css?v=20261116b">
-<script src="auth-session.js?v=20261116a"></script>
-<script src="chat.js?v=20261116a" defer></script>
-<meta name="description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=1" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="站内聊天 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/chat"><meta name="twitter:card" content="summary_large_image"></head>
+<link rel="stylesheet" href="chat.css?v=20261116c">
+<script src="auth-session.js?v=20261116b"></script>
+<script src="chat.js?v=20261116c" defer></script>
+<meta name="description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=20261116b" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="站内聊天 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 站内聊天：在双方同意后开始交流。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/chat"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="chat">
 <div id="offlineBar" class="offline-bar" role="alert" hidden>连接已断开，正在重连…… 消息会在恢复后自动补收。</div>
 <header class="chat-header">
@@ -20,6 +20,9 @@
   <aside class="room-panel" aria-label="会话列表">
     <h1>我的聊天 <span id="unread" class="unread-total"></span></h1>
     <p class="muted room-hint">双方同意认识后，就可以在这里聊天。</p>
+    <label class="sr-only" for="chatSearch">搜索聊天记录</label>
+    <input id="chatSearch" type="search" placeholder="搜索聊天记录" autocomplete="off" enterkeyhint="search">
+    <div id="searchResults" class="search-results" hidden></div>
     <div id="rooms"></div>
     <div id="archived" class="archive" hidden></div>
   </aside>
@@ -29,6 +32,7 @@
       <div class="head-title">
         <h2 id="name">从一句你好开始</h2>
         <p id="mode" class="muted">选择左侧会话</p>
+        <p id="presence" class="presence" hidden></p>
       </div>
       <div class="chat-actions">
         <button id="exchange" type="button" hidden>申请交换联系方式</button>
@@ -38,6 +42,7 @@
       </div>
     </div>
     <div id="peer" class="peer-card" hidden></div>
+    <div id="icebreakers" class="icebreakers" hidden></div>
     <div id="exchangeStatus" class="exchange-status" hidden></div>
     <p class="chat-notice">保护个人隐私，不轻信转账或外部链接。聊天记录不向后台 AI 开放；举报时管理员可查看被举报消息及前文。</p>
     <div id="messages" role="log" aria-label="消息记录" tabindex="0">
@@ -111,6 +116,6 @@
 </dialog>
 
 <div id="toast" class="toast" role="status" hidden></div>
-<script defer src="/tabbar.js?v=20261114a"></script>
+<script defer src="/tabbar.js?v=20261116b"></script>
 </body>
 </html>

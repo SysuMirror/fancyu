@@ -7,7 +7,7 @@
     
 <link rel="stylesheet" href="/campus-ui.css?v=20261112a">
 <link rel="stylesheet" href="/admin-overview.css?v=20261113c">
-<link rel="stylesheet" href="/admin-ui.css?v=20261113d">
+<link rel="stylesheet" href="/admin-ui.css?v=20261116a">
 <meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
 <body data-ui="campus" data-page="admin">
 
@@ -45,28 +45,69 @@
         </div>
         <div class="panel" id="panelUsers">
             <div class="filters">
-                <input type="text" class="search-input" id="searchInput" placeholder="搜索账号/昵称/序列号/邮箱...">
-                <select id="filterSex"><option value="">全部性别</option><option value="男">男</option><option value="女">女</option></select>
-                <select id="filterCampus"><option value="">全部校区</option><option value="南校园">南校园</option><option value="东校园">东校园</option><option value="北校园">北校园</option><option value="珠海">珠海</option><option value="深圳">深圳</option></select>
-                <select id="filterGrade"><option value="">全部年级</option><option value="大一">大一</option><option value="大二">大二</option><option value="大三">大三</option><option value="大四">大四</option><option value="研一">研一</option><option value="研二">研二</option><option value="研三">研三</option><option value="博士">博士</option></select>
-                <select id="filterMatching"><option value="">匹配状态</option><option value="1">参与匹配</option><option value="0">未参与</option></select>
-                <button onclick="loadUsers(1)">筛选</button>
-                <span class="count" id="totalCount"></span>
+                <div class="filter-row">
+                    <input type="text" class="search-input" id="searchInput" placeholder="搜索账号/昵称/序列号/邮箱...">
+                    <select id="filterSex"><option value="">全部性别</option><option value="男">男</option><option value="女">女</option></select>
+                    <select id="filterCampus"><option value="">全部校区</option><option value="南校园">南校园</option><option value="东校园">东校园</option><option value="北校园">北校园</option><option value="珠海">珠海</option><option value="深圳">深圳</option></select>
+                    <select id="filterGrade"><option value="">全部年级</option><option value="大一">大一</option><option value="大二">大二</option><option value="大三">大三</option><option value="大四">大四</option><option value="研一">研一</option><option value="研二">研二</option><option value="研三">研三</option><option value="博士">博士</option></select>
+                    <select id="filterMatching"><option value="">恋爱匹配</option><option value="1">参与匹配</option><option value="0">未参与</option></select>
+                    <select id="filterFriendMatching"><option value="">深度交友</option><option value="1">已参与</option><option value="0">未参与</option></select>
+                    <select id="filterStudentVerified"><option value="">学邮验证</option><option value="1">已通过</option><option value="0">未通过</option></select>
+                    <select id="filterEmailVerified"><option value="">邮箱验证</option><option value="1">已验证</option><option value="0">未验证</option></select>
+                    <button class="btn-sm" onclick="loadUsers(1)">筛选</button>
+                    <button class="btn-sm" onclick="resetFilters()">重置</button>
+                    <button class="btn-sm" id="colPickerBtn" type="button" onclick="toggleColPicker(event)">显示列 ▾</button>
+                    <button class="btn-sm" type="button" onclick="exportUsersCsv()">导出 CSV</button>
+                    <select id="pageSizeSelect" title="每页条数"><option value="20">20 条/页</option><option value="50">50 条/页</option><option value="100">100 条/页</option><option value="200">200 条/页</option></select>
+                    <span class="count" id="totalCount"></span>
+                </div>
+                <div class="filter-row">
+                    <select id="filterLove"><option value="">恋爱问卷</option><option value="1">已填写</option><option value="0">未填写</option></select>
+                    <select id="filterDeep"><option value="">深度交友问卷</option><option value="1">已填写</option><option value="0">未填写</option></select>
+                    <select id="filterBuddy"><option value="">搭子卡</option><option value="1">有</option><option value="0">无</option></select>
+                    <select id="filterActive">
+                        <option value="">活跃度</option>
+                        <option value="1">发过消息</option>
+                        <option value="2">有恋爱配对</option>
+                        <option value="3">有深度交友配对</option>
+                        <option value="4">有搭子配对</option>
+                        <option value="5">已有个人主页</option>
+                        <option value="6">从未登录</option>
+                    </select>
+                    <span class="date-range">
+                        <label for="regFrom">注册</label>
+                        <input type="date" id="regFrom"><span class="tilde">~</span><input type="date" id="regTo">
+                        <button class="btn-mini" type="button" data-quick="reg" data-days="7">近7天</button>
+                        <button class="btn-mini" type="button" data-quick="reg" data-days="30">近30天</button>
+                        <button class="btn-mini" type="button" data-quick="reg" data-days="90">近90天</button>
+                    </span>
+                    <span class="date-range">
+                        <label for="loginFrom">最近登录</label>
+                        <input type="date" id="loginFrom"><span class="tilde">~</span><input type="date" id="loginTo">
+                        <button class="btn-mini" type="button" data-quick="login" data-days="7">近7天</button>
+                        <button class="btn-mini" type="button" data-quick="login" data-days="30">近30天</button>
+                        <button class="btn-mini" type="button" data-quick="login" data-days="90">近90天</button>
+                    </span>
+                </div>
+                <div class="filter-row">
+                    <div id="condList" class="cond-list"></div>
+                    <button class="btn-sm" type="button" onclick="addCondition()">+ 添加筛选条件</button>
+                    <span class="hint">可对任意字段精确筛选（最多 12 条）</span>
+                </div>
+                <div class="col-picker" id="colPicker" hidden>
+                    <div class="col-picker-head"><strong>表格显示哪些列</strong><button class="btn-mini" type="button" onclick="closeColPicker()" aria-label="关闭">×</button></div>
+                    <div class="col-picker-body" id="colPickerBody"></div>
+                    <div class="col-picker-foot">
+                        <button class="btn-mini" type="button" onclick="setAllColumns(true)">全选</button>
+                        <button class="btn-mini" type="button" onclick="setAllColumns(false)">全不选</button>
+                        <button class="btn-mini" type="button" onclick="resetColumns()">恢复默认</button>
+                    </div>
+                </div>
             </div>
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr>
-                            <th onclick="sortBy('nickname')">昵称 <span class="sort-arrow" id="sort-nickname"></span></th>
-                            <th onclick="sortBy('sex')">性别 <span class="sort-arrow" id="sort-sex"></span></th>
-                            <th onclick="sortBy('campus')">校区 <span class="sort-arrow" id="sort-campus"></span></th>
-                            <th onclick="sortBy('grade')">年级 <span class="sort-arrow" id="sort-grade"></span></th>
-                            <th onclick="sortBy('height')">身高 <span class="sort-arrow" id="sort-height"></span></th>
-                            <th>MBTI</th>
-                            <th onclick="sortBy('created_at')">注册时间 <span class="sort-arrow" id="sort-created_at"></span></th>
-                            <th>匹配</th>
-                            <th>操作</th>
-                        </tr>
+                        <tr id="userHeadRow"></tr>
                     </thead>
                     <tbody id="userTableBody"></tbody>
                 </table>
@@ -217,66 +258,215 @@ function switchTab(tab) {
 
 async function loadStats() { return window.loadOperationsStats(); }
 
-async function loadUsers(page) {
-    currentPage = page;
-    var search = document.getElementById('searchInput').value.trim();
-    var sex = document.getElementById('filterSex').value;
-    var campus = document.getElementById('filterCampus').value;
-    var grade = document.getElementById('filterGrade').value;
-    var joinMatching = document.getElementById('filterMatching').value;
+/* ================= 用户表格：列定义（一处定义，表头 / 单元格 / 导出共用） ================= */
+// 联系方式类列默认显示（本页仅管理员可见；AI 助手那条路径仍按原规则脱敏）
+var USER_COLUMNS = [
+    { key: 'account_id', label: '账号ID', sortable: true, sortKey: 'account_id', text: function (u) { return u.account_id ? String(u.account_id) : ''; } },
+    { key: 'nickname', label: '昵称', sortable: true, defaultOn: true, render: function (u) { return escHtml(u.nickname || u.account_username || '-'); } },
+    { key: 'account_username', label: '账号名', render: function (u) { return escHtml(u.account_username || '-'); } },
+    { key: 'sex', label: '性别', sortable: true, defaultOn: true, render: function (u) { return u.sex === '男' ? '<span class="tag tag-male">男</span>' : u.sex === '女' ? '<span class="tag tag-female">女</span>' : '-'; } },
+    { key: 'campus', label: '校区', sortable: true, defaultOn: true, render: function (u) { return escHtml(u.campus || '-'); } },
+    { key: 'grade', label: '年级', sortable: true, defaultOn: true, render: function (u) { return escHtml(u.grade || '-'); } },
+    { key: 'major', label: '专业', sortable: true, render: function (u) { return escHtml(u.major || '-'); } },
+    { key: 'school', label: '学校', render: function (u) { return escHtml(u.school || u.account_school || u.my_school || '-'); } },
+    { key: 'height', label: '身高', sortable: true, render: function (u) { return u.height ? escHtml(String(u.height)) + ' cm' : '-'; } },
+    { key: 'mbti', label: 'MBTI', render: function (u) { return escHtml(u.mbti || '-'); } },
+    { key: 'email', label: '邮箱', sortable: true, defaultOn: true, render: function (u) { return escHtml(u.email || u.contact_email || '-'); } },
+    { key: 'wechat', label: '微信', defaultOn: true, render: function (u) { return escHtml(u.wechat || '-'); } },
+    { key: 'phone', label: '手机', defaultOn: true, render: function (u) { return escHtml(u.phone || '-'); } },
+    { key: 'student_verified', label: '学邮验证', sortable: true, defaultOn: true, render: function (u) { return u.student_verified ? '<span class="tag tag-on">已验证</span>' : '<span class="tag tag-off">未验证</span>'; } },
+    { key: 'email_verified', label: '邮箱验证', sortable: true, render: function (u) { return u.email_verified == 1 ? '<span class="tag tag-on">已验证</span>' : '<span class="tag tag-off">未验证</span>'; } },
+    { key: 'has_love', label: '恋爱问卷', sortable: true, defaultOn: true, render: function (u) { return u.has_love ? '<span class="tag tag-on">已填</span>' : '<span class="tag tag-off">未填</span>'; } },
+    { key: 'has_deep', label: '深度交友问卷', sortable: true, defaultOn: true, render: function (u) { return u.has_deep ? '<span class="tag tag-on">已填</span>' : (u.has_legacy_deep ? '<span class="tag tag-warn">旧版</span>' : '<span class="tag tag-off">未填</span>'); } },
+    { key: 'buddy_count', label: '搭子卡', sortable: true, render: function (u) { var n = Number(u.buddy_count || 0); return n ? '<span class="tag tag-on">' + n + '</span>' : '<span class="tag tag-off">无</span>'; } },
+    { key: 'has_chat', label: '发过消息', sortable: true, render: function (u) { return u.has_chat ? '<span class="tag tag-on">是</span>' : '<span class="tag tag-off">否</span>'; } },
+    { key: 'love_pair_count', label: '恋爱配对', sortable: true, render: function (u) { return String(Number(u.love_pair_count || 0)); } },
+    { key: 'deep_pair_count', label: '深度配对', sortable: true, render: function (u) { return String(Number(u.deep_pair_count || 0)); } },
+    { key: 'join_matching', label: '恋爱匹配', defaultOn: true, render: function (u) { return u.join_matching == 1 ? '<span class="tag tag-on">参与</span>' : '<span class="tag tag-off">未参与</span>'; } },
+    { key: 'created_at', label: '注册时间', sortable: true, defaultOn: true, render: function (u) { return u.created_at ? escHtml(String(u.created_at).slice(0, 10)) : '-'; } },
+    { key: 'last_login_at', label: '最近登录', sortable: true, render: function (u) { return u.last_login_at ? escHtml(String(u.last_login_at).slice(0, 16)) : '<span class="muted">从未登录</span>'; } },
+    { key: 'actions', label: '操作', always: true }
+];
 
-    var params = 'page=' + page + '&pageSize=20&sort=' + currentSort + '&order=' + currentOrder;
-    if (search) params += '&search=' + encodeURIComponent(search);
-    if (sex) params += '&sex=' + encodeURIComponent(sex);
-    if (campus) params += '&campus=' + encodeURIComponent(campus);
-    if (grade) params += '&grade=' + encodeURIComponent(grade);
-    if (joinMatching) params += '&join_matching=' + encodeURIComponent(joinMatching);
+var USER_COLS_KEY = 'fancyu-admin-user-columns';
+var USER_PAGE_KEY = 'fancyu-admin-user-pagesize';
+var PAGE_SIZES = [20, 50, 100, 200];
+var lastLoadedRows = [];
 
+function defaultColumnKeys() {
+    return USER_COLUMNS.filter(function (c) { return c.defaultOn || c.always; }).map(function (c) { return c.key; });
+}
+
+function visibleColumnKeys() {
+    var def = defaultColumnKeys();
     try {
-        var res = await fetch(API + '/admin/users?' + params, { headers: getAdminHeaders() });
-        var result = await res.json();
-        if (result.code !== 200) return;
+        var raw = localStorage.getItem(USER_COLS_KEY);
+        if (!raw) return def;
+        var o = JSON.parse(raw);
+        if (!o || o.v !== 1 || !Array.isArray(o.visible)) return def;
+        var keys = o.visible.filter(function (k) { return USER_COLUMNS.some(function (c) { return c.key === k; }); });
+        USER_COLUMNS.forEach(function (c) { if (c.always && keys.indexOf(c.key) < 0) keys.push(c.key); });
+        return keys.length ? keys : def;
+    } catch (e) { return def; }
+}
 
-        var data = result.data;
-        var total = result.total;
-        var pageSize = result.pageSize;
-        document.getElementById('totalCount').textContent = '共 ' + total + ' 条';
-        var totalPages = Math.ceil(total / pageSize);
+function saveVisibleColumns(keys) {
+    try { localStorage.setItem(USER_COLS_KEY, JSON.stringify({ v: 1, visible: keys })); } catch (e) { /* 隐私模式等：忽略 */ }
+}
 
-        var tbody = document.getElementById('userTableBody');
-        tbody.innerHTML = '';
-        data.forEach(function(u) {
-            var tagSex = u.sex === '男' ? '<span class="tag tag-male">男</span>' : u.sex === '女' ? '<span class="tag tag-female">女</span>' : '-';
-            var tagMatch = u.join_matching == 1 ? '<span class="tag tag-on">参与</span>' : '<span class="tag tag-off">未参与</span>';
-            var serial = escHtml(u.serial_number || '');
-            var detailKey = serial || ('account-' + Number(u.account_id));
-            var materialButtons = '';
-            if(u.account_id){
-                var aid=Number(u.account_id);
-                materialButtons = ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'love\')" '+(!u.has_love&&!serial?'disabled':'')+'>恋爱问卷'+(!u.has_love&&!serial?'（未填写）':'')+'</button>'
-                + ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'deep\')" '+(!u.has_deep&&!u.has_legacy_deep?'disabled':'')+'>深度交友问卷'+(!u.has_deep&&!u.has_legacy_deep?'（未填写）':'')+'</button>'
-                + ' <button class="btn-sm" onclick="viewMaterials('+aid+',\'cards\')" '+(!u.buddy_count?'disabled':'')+'>搭子卡（'+Number(u.buddy_count||0)+'）</button>';
-                if(!u.has_love&&serial)materialButtons=materialButtons.replace('viewMaterials('+aid+',\'love\')','viewDetail(\''+serial+'\')');
-            }
+function getPageSize() {
+    try {
+        var v = parseInt(localStorage.getItem(USER_PAGE_KEY), 10);
+        if (PAGE_SIZES.indexOf(v) >= 0) return v;
+    } catch (e) { /* ignore */ }
+    return 20;
+}
 
-            tbody.innerHTML += '<tr><td>' + escHtml(u.nickname || '-') + '</td><td>' + tagSex + '</td><td>' + escHtml(u.campus || '-') + '</td><td>' + escHtml(u.grade || '-') + '</td><td>' + escHtml(u.height || '-') + '</td><td>' + escHtml(u.mbti || '-') + '</td><td>' + (u.created_at ? u.created_at.slice(0, 10) : '-') + '</td><td>' + tagMatch + '</td><td><button class="btn-sm" onclick="viewDetail(\'' + serial + '\')">基本资料</button>' + materialButtons + (serial ? ' <button class="btn-sm danger" onclick="deleteUser(\'' + serial + '\')">删除问卷</button>' : '') + '</td></tr>';
-        });
+function setPageSize(v) {
+    try { localStorage.setItem(USER_PAGE_KEY, String(v)); } catch (e) { /* ignore */ }
+}
 
-        var pagHtml = '';
-        if (totalPages <= 1) {
-            document.getElementById('pagination').innerHTML = '';
-            return;
+function escAttr(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+function renderUserHead() {
+    var keys = visibleColumnKeys();
+    var html = '';
+    USER_COLUMNS.forEach(function (c) {
+        if (keys.indexOf(c.key) < 0) return;
+        if (c.sortable) {
+            html += '<th class="th-sort" role="button" tabindex="0" data-sort="' + escAttr(c.sortKey || c.key) + '" data-colid="' + escAttr(c.key) + '">'
+                + escHtml(c.label) + ' <span class="sort-arrow" data-arrow="' + escAttr(c.sortKey || c.key) + '"></span></th>';
+        } else {
+            html += '<th data-colid="' + escAttr(c.key) + '">' + escHtml(c.label) + '</th>';
         }
-        pagHtml += '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage - 1) + ')">上一页</button>';
-        var start = Math.max(1, currentPage - 2);
-        var end = Math.min(totalPages, currentPage + 2);
-        if (start > 1) { pagHtml += '<button onclick="loadUsers(1)">1</button>'; if (start > 2) pagHtml += '<span style="color:#8ba397">...</span>'; }
-        for (var p = start; p <= end; p++) { pagHtml += '<button ' + (p === currentPage ? 'class="active"' : '') + ' onclick="loadUsers(' + p + ')">' + p + '</button>'; }
-        if (end < totalPages) { if (end < totalPages - 1) pagHtml += '<span style="color:#8ba397">...</span>'; pagHtml += '<button onclick="loadUsers(' + totalPages + ')">' + totalPages + '</button>'; }
-        pagHtml += '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage + 1) + ')">下一页</button>';
-        pagHtml += '<span class="page-info">第 ' + currentPage + ' / ' + totalPages + ' 页</span>';
-        document.getElementById('pagination').innerHTML = pagHtml;
-    } catch (e) { console.error(e); }
+    });
+    document.getElementById('userHeadRow').innerHTML = html;
+    updateSortArrows();
+}
+
+function updateSortArrows() {
+    var heads = document.querySelectorAll('#userHeadRow .sort-arrow');
+    Array.prototype.forEach.call(heads, function (el) {
+        el.textContent = el.dataset.arrow === currentSort ? (currentOrder === 'DESC' ? '↓' : '↑') : '';
+    });
+}
+
+// 单元格里的按钮一律走事件委托（不再把 serial 拼进 onclick 字符串）
+function rowActions(u) {
+    var serial = u.serial_number || '';
+    var aid = u.account_id ? Number(u.account_id) : 0;
+    var detailKey = serial || ('account-' + aid);
+    var html = '<button class="btn-sm" data-action="detail" data-serial="' + escAttr(detailKey) + '"'
+        + (aid ? ' data-account-id="' + aid + '"' : '') + '>完整资料</button>';
+    if (aid) {
+        html += ' <button class="btn-sm" data-action="materials" data-account-id="' + aid + '" data-kind="love"'
+            + (u.has_love || serial ? '' : ' disabled') + '>恋爱问卷' + (u.has_love || serial ? '' : '（未填写）') + '</button>';
+        html += ' <button class="btn-sm" data-action="materials" data-account-id="' + aid + '" data-kind="deep"'
+            + (u.has_deep || u.has_legacy_deep ? '' : ' disabled') + '>深度问卷' + (u.has_deep || u.has_legacy_deep ? '' : '（未填写）') + '</button>';
+        html += ' <button class="btn-sm" data-action="materials" data-account-id="' + aid + '" data-kind="cards"'
+            + (Number(u.buddy_count) ? '' : ' disabled') + '>搭子卡（' + Number(u.buddy_count || 0) + '）</button>';
+    }
+    if (serial) html += ' <button class="btn-sm danger" data-action="delete" data-serial="' + escAttr(serial) + '">删除问卷</button>';
+    return html;
+}
+
+function renderUserRow(u) {
+    var keys = visibleColumnKeys();
+    var html = '<tr>';
+    USER_COLUMNS.forEach(function (c) {
+        if (keys.indexOf(c.key) < 0) return;
+        if (c.key === 'actions') { html += '<td class="col-actions">' + rowActions(u) + '</td>'; return; }
+        var v = c.render ? c.render(u) : '-';
+        html += '<td data-colid="' + escAttr(c.key) + '">' + (v === null || v === undefined || v === '' ? '-' : v) + '</td>';
+    });
+    return html + '</tr>';
+}
+
+/* ================= 筛选条件 → 查询串 ================= */
+function filterValue(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+}
+
+function buildFilterParams(page) {
+    var p = new URLSearchParams();
+    p.set('page', String(page || 1));
+    p.set('pageSize', String(getPageSize()));
+    p.set('sort', currentSort);
+    p.set('order', currentOrder);
+
+    var search = filterValue('searchInput').trim();
+    if (search) p.set('search', search);
+
+    [['filterSex', 'sex'], ['filterCampus', 'campus'], ['filterGrade', 'grade'], ['filterMatching', 'join_matching']].forEach(function (pair) {
+        var v = filterValue(pair[0]);
+        if (v) p.set(pair[1], v);
+    });
+
+    [['filterStudentVerified', 'f_student_verified'], ['filterEmailVerified', 'f_email_verified'],
+     ['filterFriendMatching', 'f_join_friend_matching'], ['filterLove', 'f_has_love'],
+     ['filterDeep', 'f_has_deep'], ['filterBuddy', 'f_has_buddy_cards']].forEach(function (pair) {
+        var v = filterValue(pair[0]);
+        if (v) p.set(pair[1], v);
+    });
+
+    var active = filterValue('filterActive');
+    if (active === '1') p.set('f_has_chat', '1');
+    else if (active === '2') p.set('f_has_love_pair', '1');
+    else if (active === '3') p.set('f_has_deep_pair', '1');
+    else if (active === '4') p.set('f_has_buddy_pair', '1');
+    else if (active === '5') p.set('f_has_profile', '1');
+    else if (active === '6') p.set('f_has_login', '0');
+
+    var rf = filterValue('regFrom'), rt = filterValue('regTo');
+    if (rf) p.set('f_created_at__gte', rf);
+    if (rt) p.set('f_created_at__lte', rt);
+    var lf = filterValue('loginFrom'), lt = filterValue('loginTo');
+    if (lf) p.set('f_last_login_at__gte', lf);
+    if (lt) p.set('f_last_login_at__lte', lt);
+
+    collectConditions(p);
+    return p;
+}
+
+async function loadUsers(page) {
+    currentPage = page || 1;
+    if (!document.getElementById('userHeadRow').children.length) renderUserHead();
+    if (!FIELDS_CATALOG.length) loadFieldCatalog();
+    var qs = buildFilterParams(currentPage).toString();
+    try {
+        var res = await fetch(API + '/admin/users?' + qs, { headers: getAdminHeaders() });
+        var result = await res.json();
+        if (result.code !== 200) { if (result.code === 401) adminLogout(); return; }
+        var data = result.data || [];
+        var total = result.total || 0;
+        var pageSize = result.pageSize || 20;
+        lastLoadedRows = data;
+        document.getElementById('totalCount').textContent = '共 ' + total + ' 条';
+        var tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = data.length ? data.map(renderUserRow).join('')
+            : '<tr><td class="empty-row" colspan="' + visibleColumnKeys().length + '">没有符合条件的用户</td></tr>';
+        renderPagination(total, pageSize);
+    } catch (e) { console.error(e); toast('加载失败，请重试', true); }
+}
+
+function renderPagination(total, pageSize) {
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    var el = document.getElementById('pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    var html = '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage - 1) + ')">上一页</button>';
+    var start = Math.max(1, currentPage - 2);
+    var end = Math.min(totalPages, currentPage + 2);
+    if (start > 1) { html += '<button onclick="loadUsers(1)">1</button>'; if (start > 2) html += '<span style="color:#8ba397">...</span>'; }
+    for (var p = start; p <= end; p++) { html += '<button ' + (p === currentPage ? 'class="active"' : '') + ' onclick="loadUsers(' + p + ')">' + p + '</button>'; }
+    if (end < totalPages) { if (end < totalPages - 1) html += '<span style="color:#8ba397">...</span>'; html += '<button onclick="loadUsers(' + totalPages + ')">' + totalPages + '</button>'; }
+    html += '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="loadUsers(' + (currentPage + 1) + ')">下一页</button>';
+    html += '<span class="page-info">第 ' + currentPage + ' / ' + totalPages + ' 页</span>';
+    el.innerHTML = html;
 }
 
 function sortBy(field) {
@@ -286,67 +476,405 @@ function sortBy(field) {
         currentSort = field;
         currentOrder = 'DESC';
     }
-    document.querySelectorAll('.sort-arrow').forEach(function(el) { el.textContent = ''; });
-    document.getElementById('sort-' + field).textContent = currentOrder === 'DESC' ? '↓' : '↑';
+    updateSortArrows();
     loadUsers(1);
 }
 
-
-async function viewMaterials(id,kind){
- try{
- const r=await fetch(API+'/admin/accounts/'+id+'/materials',{headers:getAdminHeaders()});const d=await r.json();
- if(!r.ok||d.code!==200)throw Error(d.msg||'读取失败');
- const labels={sex:'性别',grade:'年级',major:'专业',hometown:'家乡',school:'学校',own_campus:'所在校区',campus:'校区',mbti:'MBTI',interests:'兴趣',self_description:'自我介绍',bio:'自我介绍',ideal_friend:'理想朋友',friend_goal:'交友目的',photos:'照片',display_self:'展示信息',contact_info:'联系方式',contact_entries:'联系方式',wechat:'微信',phone:'手机',email:'邮箱',gender:'性别',time:'时间',location:'地点',note:'补充说明',category:'分类',subcategories:'子分类',value:'内容',type:'类型',enabled:'是否开启',important:'重视的题目',version:'问卷版本',updated_at:'更新时间',answers:'问卷答案'};
- function fields(obj){if(obj===null||obj===undefined)return '未填写';if(Array.isArray(obj))return obj.map(x=>typeof x==='object'?fields(x):escHtml(String(x))).join('、');if(typeof obj!=='object')return escHtml(String(obj));return '<div class="detail-grid">'+Object.entries(obj).map(([k,v])=>'<div class="detail-field"><label>'+escHtml(labels[k]||k)+'</label><div class="val" style="white-space:pre-wrap;overflow-wrap:anywhere">'+fields(v)+'</div></div>').join('')+'</div>';}
- let title={love:'恋爱问卷',deep:'深度交友问卷',cards:'搭子卡'}[kind],body='';
- if(kind==='love'){
- if(d.love){const qs=window.WeeklySchema.questions;const answers=d.love.answers;body='<p>更新：'+escHtml(String(d.love.updated_at||''))+'</p>'+Object.entries(answers).map(([k,v])=>{const q=qs.find(q=>String(q.id)===k);return '<div class="detail-field"><label>'+escHtml(q?q.title:k)+'</label><div class="val">'+fields(v)+'</div></div>';}).join('')+'<h3>重点偏好</h3>'+fields(d.love.important);}else body='未填写恋爱问卷';
- }else if(kind==='deep')body=(d.deep_legacy?'<p>历史问卷，尚未重新保存新版偏好。</p>':'')+fields(d.deep);
- else body=d.cards.map(c=>{const t=window.FriendsSchema.TYPES[c.type];if(t){labels[t.main.key]=t.main.label;for(const x of t.extra||[])labels[x.key]=x.label;}return '<section class="detail-section"><h3>'+escHtml(t?t.name:c.type)+' · '+(c.enabled?'已开启':'已暂停')+'</h3>'+fields(c.data)+'</section>';}).join('')||'暂无搭子卡';
- document.getElementById('detailBox').innerHTML='<button class="close-btn" onclick="closeDetail()">×</button><h2>'+title+'</h2>'+body;
- document.getElementById('detailOverlay').classList.add('active');
- }catch(e){uiAlert({title:'读取失败',body:e.message||'请稍后重试'});}
+function resetFilters() {
+    ['searchInput', 'filterSex', 'filterCampus', 'filterGrade', 'filterMatching', 'filterFriendMatching',
+     'filterStudentVerified', 'filterEmailVerified', 'filterLove', 'filterDeep', 'filterBuddy', 'filterActive',
+     'regFrom', 'regTo', 'loginFrom', 'loginTo'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('condList').innerHTML = '';
+    loadUsers(1);
 }
 
-async function viewDetail(serial) {
+/* ================= 列选择器 ================= */
+function toggleColPicker(ev) {
+    if (ev) ev.stopPropagation();
+    var el = document.getElementById('colPicker');
+    if (el.hidden) openColPicker(); else closeColPicker();
+}
+
+function openColPicker() {
+    var keys = visibleColumnKeys();
+    document.getElementById('colPickerBody').innerHTML = USER_COLUMNS.filter(function (c) { return !c.always; }).map(function (c) {
+        return '<label class="col-opt"><input type="checkbox" data-col="' + escAttr(c.key) + '"'
+            + (keys.indexOf(c.key) >= 0 ? ' checked' : '') + '> <span>' + escHtml(c.label) + '</span></label>';
+    }).join('');
+    document.getElementById('colPicker').hidden = false;
+}
+
+function closeColPicker() { document.getElementById('colPicker').hidden = true; }
+
+function applyColPicker() {
+    var keys = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#colPickerBody input[data-col]'), function (cb) {
+        if (cb.checked) keys.push(cb.dataset.col);
+    });
+    USER_COLUMNS.forEach(function (c) { if (c.always && keys.indexOf(c.key) < 0) keys.push(c.key); });
+    saveVisibleColumns(keys);
+    renderUserHead();
+    var tbody = document.getElementById('userTableBody');
+    if (lastLoadedRows.length) tbody.innerHTML = lastLoadedRows.map(renderUserRow).join('');
+}
+
+function setAllColumns(on) {
+    Array.prototype.forEach.call(document.querySelectorAll('#colPickerBody input[data-col]'), function (cb) { cb.checked = !!on; });
+    applyColPicker();
+}
+
+function resetColumns() {
+    Array.prototype.forEach.call(document.querySelectorAll('#colPickerBody input[data-col]'), function (cb) {
+        var col = USER_COLUMNS.filter(function (c) { return c.key === cb.dataset.col; })[0];
+        cb.checked = !!(col && col.defaultOn);
+    });
+    applyColPicker();
+}
+
+/* ================= 通用条件构造器（产出 f_<字段>__<算子>） ================= */
+var FIELDS_CATALOG = [];
+var FIELDS_BY_KEY = {};
+var OP_LABELS = { eq: '等于', ne: '不等于', gte: '≥', lte: '≤', gt: '>', lt: '<', contains: '包含', in: '属于（逗号分隔）' };
+var FALLBACK_FIELDS = [
+    { key: 'nickname', label: '昵称', type: 'str', ops: ['eq', 'ne', 'contains', 'in'] },
+    { key: 'mbti', label: 'MBTI', type: 'str', ops: ['eq', 'ne', 'contains', 'in'] },
+    { key: 'height', label: '身高', type: 'num', ops: ['eq', 'gte', 'lte', 'gt', 'lt', 'in'] },
+    { key: 'created_at', label: '注册时间', type: 'date', ops: ['gte', 'lte', 'gt', 'lt'] },
+    { key: 'has_love', label: '已填恋爱问卷', type: 'bool', ops: ['eq'] }
+];
+
+function setFieldCatalog(fields) {
+    FIELDS_CATALOG = (Array.isArray(fields) && fields.length) ? fields : FALLBACK_FIELDS;
+    FIELDS_BY_KEY = {};
+    FIELDS_CATALOG.forEach(function (f) { FIELDS_BY_KEY[f.key] = f; });
+}
+
+async function loadFieldCatalog() {
     try {
-        var res = await fetch(API + '/admin/user/' + serial, { headers: getAdminHeaders() });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var result = await res.json();
-        if (result.code !== 200) { uiAlert({title:'获取失败',body:result.msg||'请稍后重试'}); return; }
-        var u = result.data;
-        var rawPhotos = u.photos;
-        var photos = [];
-        if (rawPhotos && typeof rawPhotos === 'string') {
-            try { photos = JSON.parse(rawPhotos.replace(/'/g, '"')).filter(function(p) { return p; }); }
-            catch(e) { photos = []; }
-        } else if (Array.isArray(rawPhotos)) {
-            photos = rawPhotos.filter(function(p) { return p; });
+        var res = await fetch(API + '/admin/users/fields', { headers: getAdminHeaders() });
+        var d = await res.json();
+        if (d && d.code === 200 && Array.isArray(d.fields)) setFieldCatalog(d.fields);
+    } catch (e) { /* 用兜底字段表 */ }
+    if (!FIELDS_CATALOG.length) setFieldCatalog(null);
+}
+
+setFieldCatalog(null);
+
+function addCondition(preset) {
+    var list = document.getElementById('condList');
+    if (list.children.length >= 12) { toast('最多添加 12 个自定义筛选条件', true); return; }
+    var row = document.createElement('div');
+    row.className = 'cond-row';
+    row.innerHTML = '<select class="cond-field" aria-label="筛选字段">'
+        + FIELDS_CATALOG.map(function (f) { return '<option value="' + escAttr(f.key) + '">' + escHtml(f.label) + '</option>'; }).join('')
+        + '</select><select class="cond-op" aria-label="筛选方式"></select><input class="cond-value" type="text" placeholder="值">'
+        + '<button class="btn-mini cond-del" type="button" title="删除这条条件" aria-label="删除">×</button>';
+    list.appendChild(row);
+    var fieldSel = row.querySelector('.cond-field');
+    if (preset && preset.field && FIELDS_BY_KEY[preset.field]) fieldSel.value = preset.field;
+    syncCondOps(row);
+    row.querySelector('.cond-del').addEventListener('click', function () { row.remove(); });
+    row.querySelector('.cond-value').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadUsers(1); });
+}
+
+function syncCondOps(row) {
+    var field = row.querySelector('.cond-field').value;
+    var meta = FIELDS_BY_KEY[field] || { type: 'str', ops: ['eq'] };
+    var ops = meta.ops || ['eq'];
+    row.querySelector('.cond-op').innerHTML = ops.map(function (o) {
+        return '<option value="' + escAttr(o) + '">' + escHtml(OP_LABELS[o] || o) + '</option>';
+    }).join('');
+    var val = row.querySelector('.cond-value');
+    if (meta.type === 'bool') { val.placeholder = '1=是 / 0=否'; }
+    else if (meta.type === 'date') { val.placeholder = '2026-01-01'; }
+    else if (meta.type === 'num') { val.placeholder = '数字'; }
+    else { val.placeholder = '值'; }
+}
+
+function collectConditions(p) {
+    Array.prototype.forEach.call(document.querySelectorAll('#condList .cond-row'), function (row) {
+        var field = row.querySelector('.cond-field').value;
+        var op = row.querySelector('.cond-op').value;
+        var val = row.querySelector('.cond-value').value;
+        if (!FIELDS_BY_KEY[field] || !val.trim()) return;
+        p.set('f_' + field + ((op && op !== 'eq') ? ('__' + op) : ''), val.trim());
+    });
+}
+
+/* ================= 导出 CSV（复用 admin-overview.js 的公式注入防护） ================= */
+function csvCell(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    if (/^[=+@\-\t\r]/.test(s)) s = "'" + s;           // 防表格公式注入
+    return '"' + s.replace(/"/g, '""') + '"';
+}
+
+function stripTags(html) {
+    var d = document.createElement('div');
+    d.innerHTML = String(html === null || html === undefined ? '' : html);
+    return d.textContent || '';
+}
+
+function csvValue(col, u) {
+    if (col.text) return col.text(u);
+    if (col.key === 'actions') return '';
+    var t = stripTags(col.render ? col.render(u) : '');
+    return t === '-' ? '' : t;
+}
+
+function exportUsersCsv() {
+    if (!lastLoadedRows.length) { toast('当前没有可导出的数据', true); return; }
+    var keys = visibleColumnKeys();
+    var cols = USER_COLUMNS.filter(function (c) { return c.key !== 'actions' && keys.indexOf(c.key) >= 0; });
+    var lines = [cols.map(function (c) { return csvCell(c.label); }).join(',')];
+    lastLoadedRows.forEach(function (u) {
+        lines.push(cols.map(function (c) { return csvCell(csvValue(c, u)); }).join(','));
+    });
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'FancyU-用户列表-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+
+/* ================= 详情弹窗：多源聚合 + 分块折叠 ================= */
+// 字段中文名表（问卷/搭子卡的 key 由 WeeklySchema / FriendsSchema 动态补充）
+var FIELD_LABELS = { sex: '性别', grade: '年级', major: '专业', hometown: '家乡', school: '学校', own_campus: '所在校区', campus: '校区', mbti: 'MBTI', interests: '兴趣', self_description: '自我介绍', bio: '自我介绍', ideal_friend: '理想朋友', friend_goal: '交友目的', photos: '照片', display_self: '展示信息', contact_info: '联系方式', contact_entries: '联系方式', wechat: '微信', phone: '手机', email: '邮箱', gender: '性别', time: '时间', location: '地点', note: '补充说明', category: '分类', subcategories: '子分类', value: '内容', type: '类型', enabled: '是否开启', important: '重视的题目', version: '问卷版本', updated_at: '更新时间', answers: '问卷答案' };
+
+function fieldsHtml(obj) {
+    if (obj === null || obj === undefined) return '未填写';
+    if (Array.isArray(obj)) return obj.map(function (x) { return typeof x === 'object' ? fieldsHtml(x) : escHtml(String(x)); }).join('、');
+    if (typeof obj !== 'object') return escHtml(String(obj));
+    return '<div class="detail-grid">' + Object.entries(obj).map(function (kv) {
+        return '<div class="detail-field"><label>' + escHtml(FIELD_LABELS[kv[0]] || kv[0]) + '</label><div class="val" style="white-space:pre-wrap;overflow-wrap:anywhere">' + fieldsHtml(kv[1]) + '</div></div>';
+    }).join('') + '</div>';
+}
+
+function loveHtml(d) {
+    if (!d || !d.love) return '<p class="muted">未填写恋爱问卷</p>';
+    var qs = (window.WeeklySchema && window.WeeklySchema.questions) || [];
+    var answers = d.love.answers || {};
+    return '<p class="muted">更新：' + escHtml(String(d.love.updated_at || '')) + '</p>' + Object.keys(answers).map(function (k) {
+        var q = qs.filter(function (x) { return String(x.id) === String(k); })[0];
+        return '<div class="detail-field"><label>' + escHtml(q ? q.title : k) + '</label><div class="val">' + fieldsHtml(answers[k]) + '</div></div>';
+    }).join('') + '<h4>重点偏好</h4>' + fieldsHtml(d.love.important);
+}
+
+function deepHtml(d) {
+    if (!d) return '<p class="muted">未填写深度交友问卷</p>';
+    return (d.deep_legacy ? '<p class="muted">历史问卷，尚未重新保存新版偏好。</p>' : '') + fieldsHtml(d.deep);
+}
+
+function cardsHtml(d) {
+    if (!d || !d.cards || !d.cards.length) return '<p class="muted">暂无搭子卡</p>';
+    return d.cards.map(function (c) {
+        var t = window.FriendsSchema && window.FriendsSchema.TYPES[c.type];
+        if (t) {
+            FIELD_LABELS[t.main.key] = t.main.label;
+            (t.extra || []).forEach(function (x) { FIELD_LABELS[x.key] = x.label; });
         }
-        var photoHtml = photos.map(function(p) { return '<img src="' + escHtml(p) + '" alt="用户照片" onclick="showImage(this.src)">'; }).join('');
-        var fields = [
-            ['账号 ID', u.account_id], ['邮箱验证', u.email_verified == 1 ? '已验证' : '未验证'], ['序列号', u.serial_number], ['昵称', u.nickname], ['性别', u.sex], ['校区', u.campus],
-            ['年级', u.grade], ['专业', u.major], ['身高', u.height ? u.height + ' cm' : '-'], ['体重', u.weight ? u.weight + ' kg' : '-'],
-            ['生日', u.birthday], ['星座', u.constellation], ['MBTI', u.mbti],
-            ['恋爱目的', u.relationship_goal], ['理想对象', u.ideal_partner],
-            ['自我介绍', u.self_description], ['微信号', u.wechat], ['手机号', u.phone],
-            ['邮箱', u.email], ['参与匹配', u.join_matching == 1 ? '是' : '否'],
-            ['注册时间', u.created_at ? u.created_at.slice(0, 19) : '-']
-        ];
-        var infoHtml = '<h2>' + escHtml(u.nickname || u.serial_number) + '</h2>';
-        infoHtml += '<div class="detail-section"><h3>基本信息</h3><div class="detail-grid">';
-        fields.forEach(function(f) {
-            if (f[1] !== null && f[1] !== undefined && f[1] !== '') {
-                infoHtml += '<div class="detail-field"><label>' + f[0] + '</label><div class="val">' + escHtml(String(f[1])) + '</div></div>';
-            }
-        });
-        infoHtml += '</div></div>';
-        if (photoHtml) {
-            infoHtml += '<div class="detail-section"><h3>照片</h3><div class="detail-photos">' + photoHtml + '</div></div>';
-        }
-        document.getElementById('detailBox').innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button>' + infoHtml;
+        return '<section class="detail-section"><h4>' + escHtml(t ? t.name : c.type) + ' · ' + (c.enabled ? '已开启' : '已暂停') + '</h4>' + fieldsHtml(c.data) + '</section>';
+    }).join('');
+}
+
+async function viewMaterials(id, kind) {
+    try {
+        const r = await fetch(API + '/admin/accounts/' + id + '/materials', { headers: getAdminHeaders() });
+        const d = await r.json();
+        if (!r.ok || d.code !== 200) throw Error(d.msg || '读取失败');
+        const title = { love: '恋爱问卷', deep: '深度交友问卷', cards: '搭子卡' }[kind] || '资料';
+        const body = kind === 'love' ? loveHtml(d) : kind === 'deep' ? deepHtml(d) : cardsHtml(d);
+        document.getElementById('detailBox').innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button><h2>' + title + '</h2>' + body;
         document.getElementById('detailOverlay').classList.add('active');
-    } catch (e) { console.error('viewDetail error:', e); uiAlert({title:'网络错误',body:'请重试'}); }
+    } catch (e) { uiAlert({ title: '读取失败', body: e.message || '请稍后重试' }); }
+}
+
+function fmtTime(v) { return v ? escHtml(String(v).slice(0, 19)) : ''; }
+
+function kvField(label, value) {
+    if (value === null || value === undefined || value === '') return '';
+    return '<div class="detail-field"><label>' + escHtml(label) + '</label><div class="val" style="white-space:pre-wrap;overflow-wrap:anywhere">' + escHtml(String(value)) + '</div></div>';
+}
+
+function gridOf(html) { return '<div class="detail-grid">' + html + '</div>'; }
+
+function detailSection(title, body, collapsed) {
+    if (collapsed) {
+        return '<section class="detail-section"><details><summary>' + escHtml(title) + '</summary><div class="detail-section-body">' + body + '</div></details></section>';
+    }
+    return '<section class="detail-section"><h3>' + escHtml(title) + '</h3>' + body + '</section>';
+}
+
+function pairSummary(list) {
+    if (!list || !list.length) return '无';
+    return list.map(function (x) { return (x.status || '未知') + ' × ' + x.c; }).join('，');
+}
+
+function photosFrom(rawPhotos) {
+    var photos = [];
+    if (rawPhotos && typeof rawPhotos === 'string') {
+        try { photos = JSON.parse(rawPhotos.replace(/'/g, '"')); } catch (e) { photos = []; }
+    } else if (Array.isArray(rawPhotos)) {
+        photos = rawPhotos;
+    }
+    return (photos || []).filter(function (p) { return p; });
+}
+
+function renderDetail(serial, accountId, u, mat, sum) {
+    var acct = (sum && sum.account) || {};
+    var name = u.nickname || u.account_username || acct.username || serial;
+    var html = '<button class="close-btn" onclick="closeDetail()">×</button>';
+    html += '<h2>' + escHtml(name) + '</h2>';
+    html += '<p class="detail-sub">' + escHtml((accountId ? '账号 #' + accountId : '无账号') + ' · 序列号 ' + (u.serial_number || serial)) + '</p>';
+
+    // 1 基本情况
+    html += detailSection('基本情况', gridOf(
+        kvField('账号 ID', accountId || u.account_id) + kvField('序列号', u.serial_number) + kvField('昵称', u.nickname) +
+        kvField('性别', u.sex) + kvField('性别（选择）', u.sex_choice) + kvField('期望性别', u.sex_prefer) +
+        kvField('年级', u.grade) + kvField('期望年级', u.grade_prefer) + kvField('校区', u.campus) +
+        kvField('专业', u.major) + kvField('身高', u.height ? u.height + ' cm' : '') + kvField('星座', u.constellation) +
+        kvField('MBTI', u.mbti) + kvField('家乡', u.hometown) + kvField('学校', u.school || u.account_school || u.my_school) +
+        kvField('恋爱目的', u.relationship_goal) + kvField('交友目的', u.friend_goal) +
+        kvField('自我介绍', u.self_description) + kvField('理想对象', u.ideal_description) + kvField('理想朋友', u.ideal_friend) +
+        kvField('兴趣', u.interests) + kvField('期望节奏', u.expect_quick) + kvField('补充要求', u.special_request)
+    ));
+
+    // 2 账号与验证
+    html += detailSection('账号与验证', gridOf(
+        kvField('账号名', u.account_username || acct.username) + kvField('登录邮箱', u.email || acct.email) +
+        kvField('邮箱验证', (u.email_verified == 1 || acct.email_verified == 1) ? '已验证' : '未验证') +
+        kvField('学邮验证', (sum && sum.student_verified) ? ('已验证 ' + (sum.student_verified.email || '') + (sum.student_verified.verified_at ? (' · ' + String(sum.student_verified.verified_at).slice(0, 19)) : '')) : '未验证') +
+        kvField('学校', u.school || u.account_school || acct.school) +
+        kvField('参与恋爱匹配', (u.join_matching == 1 || acct.join_matching == 1) ? '是' : '否') +
+        kvField('参与深度交友', (u.join_friend_matching == 1 || (sum && sum.prefs && sum.prefs.join_friend_matching == 1)) ? '是' : '否') +
+        kvField('邀请码', u.invite_code || acct.invite_code) + kvField('邀请人账号 ID', u.invited_by || acct.invited_by) +
+        kvField('注册时间', String(u.created_at || acct.created_at || '').slice(0, 19)) +
+        kvField('最近登录', u.last_login_at || acct.last_login_at ? String(u.last_login_at || acct.last_login_at).slice(0, 19) : '从未登录') +
+        kvField('资料更新时间', String(u.updated_at || '').slice(0, 19))
+    ));
+
+    // 3 联系方式（汇总需管理员显式点击，会落审计）
+    var contactBody = gridOf(
+        kvField('登录邮箱', u.email || acct.email) + kvField('联系邮箱', u.contact_email) +
+        kvField('微信', u.wechat) + kvField('手机', u.phone) + kvField('联系方式原文', u.contact_info) +
+        kvField('个人主页', sum && sum.profile ? [sum.profile.bio, sum.profile.tags].filter(Boolean).join(' · ') : '')
+    );
+    contactBody += accountId
+        ? '<p class="detail-actions"><button class="btn-sm" type="button" id="loadContactsBtn">查看全部联系方式（会记录审计）</button></p><div id="contactsBox"></div>'
+        : '<p class="muted">该用户还没有账号，无法查询汇总联系方式。</p>';
+    html += detailSection('联系方式', contactBody);
+
+    // 4~6 三线问卷 / 搭子卡
+    html += detailSection('恋爱问卷', loveHtml(mat), true);
+    html += detailSection('深度交友问卷', deepHtml(mat), true);
+    html += detailSection('搭子卡', cardsHtml(mat), true);
+
+    // 7 配对与聊天概要
+    html += detailSection('配对与聊天概要', gridOf(
+        kvField('恋爱配对', pairSummary(sum && sum.pairs && sum.pairs.love)) +
+        kvField('深度交友配对', pairSummary(sum && sum.pairs && sum.pairs.deep)) +
+        kvField('搭子配对', pairSummary(sum && sum.pairs && sum.pairs.buddy)) +
+        kvField('搭子卡数', sum ? sum.cards : '') +
+        kvField('已发消息数', sum && sum.chat ? sum.chat.sent : '') +
+        kvField('已交换联系方式', (sum && sum.chat && sum.chat.exchanges && sum.chat.exchanges.length)
+            ? sum.chat.exchanges.map(function (x) { return (x.channel || '站内') + '：' + (x.wechat || ''); }).join('，')
+            : '无')
+    ), true);
+
+    // 8 通知与上传
+    var notif = (sum && sum.notifications && sum.notifications.prefs && sum.notifications.prefs.length)
+        ? sum.notifications.prefs.map(function (x) { return (x.kind || '?') + '=' + (x.enabled ? '开' : '关'); }).join('，')
+        : '默认';
+    html += detailSection('通知与上传', gridOf(
+        kvField('通知偏好', notif) +
+        kvField('推送订阅数', sum ? sum.notifications.subscriptions : '') +
+        kvField('上传文件数', sum ? sum.uploads : '') +
+        kvField('主页简介', sum && sum.profile ? sum.profile.bio : '') +
+        kvField('主页标签', sum && sum.profile ? sum.profile.tags : '')
+    ), true);
+
+    // 9 照片
+    var photos = photosFrom(u.photos);
+    if (photos.length) {
+        var photoHtml = photos.map(function (p) { return '<img src="' + escAttr(p) + '" alt="用户照片" onclick="showImage(this.src)">'; }).join('');
+        html += detailSection('照片', '<div class="detail-photos">' + photoHtml + '</div>');
+    }
+    return html;
+}
+
+async function loadContactsInto(accountId) {
+    var btn = document.getElementById('loadContactsBtn');
+    var box = document.getElementById('contactsBox');
+    if (!box) return;
+    if (btn) { btn.disabled = true; btn.textContent = '读取中…'; }
+    try {
+        var res = await fetch(API + '/admin/accounts/' + accountId + '/contacts', { headers: getAdminHeaders() });
+        if (res.status === 401) { adminLogout(); return; }
+        var d = await res.json();
+        if (d && d.code === 200) {
+            var rows = d.contacts || [];
+            box.innerHTML = rows.length ? rows.map(contactLine).join('') : '<p class="muted">没有查到联系方式。</p>';
+        } else {
+            box.innerHTML = '<p class="muted">' + escHtml((d && d.msg) || '读取失败') + '</p>';
+        }
+    } catch (e) {
+        box.innerHTML = '<p class="muted">读取失败，请重试</p>';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '重新读取联系方式'; }
+}
+
+function contactLine(c) {
+    var parts = [];
+    Object.keys(c).forEach(function (k) {
+        if (k === '来源') return;
+        var v = c[k];
+        if (v === null || v === undefined || v === '') return;
+        if (typeof v === 'object') v = JSON.stringify(v);
+        parts.push(k + '：' + v);
+    });
+    return '<div class="detail-field"><label>' + escHtml(c['来源'] || '联系方式') + '</label><div class="val" style="overflow-wrap:anywhere">' + escHtml(parts.join(' · ')) + '</div></div>';
+}
+
+async function viewDetail(serial, accountId) {
+    serial = String(serial || '');
+    if (!accountId) {
+        var m = serial.match(/^account-(\d+)$/);
+        if (m) accountId = Number(m[1]);
+    }
+    var box = document.getElementById('detailBox');
+    box.innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button><h2>加载中…</h2>';
+    document.getElementById('detailOverlay').classList.add('active');
+    var H = getAdminHeaders();
+    function jget(url) {
+        return fetch(url, { headers: H }).then(function (r) {
+            if (r.status === 401) { adminLogout(); throw new Error('登录已过期，请重新登录'); }
+            return r.json().catch(function () { return null; });
+        }).then(function (d) {
+            if (d && d.code === 200) return d;
+            var e = new Error((d && d.msg) || '读取失败');
+            e.code = (d && d.code) || 0;
+            throw e;
+        });
+    }
+    try {
+        var all = await Promise.all([
+            jget(API + '/admin/user/' + encodeURIComponent(serial)),
+            accountId ? jget(API + '/admin/accounts/' + accountId + '/materials').catch(function () { return null; }) : Promise.resolve(null),
+            accountId ? jget(API + '/admin/accounts/' + accountId + '/summary').catch(function () { return null; }) : Promise.resolve(null)
+        ]);
+        box.innerHTML = renderDetail(serial, accountId, all[0].data || {}, all[1], all[2]);
+        var btn = document.getElementById('loadContactsBtn');
+        if (btn) btn.addEventListener('click', function () { loadContactsInto(accountId); });
+    } catch (e) {
+        box.innerHTML = '<button class="close-btn" onclick="closeDetail()">×</button><h2>读取失败</h2><p>' + escHtml(e.message || '请稍后重试') + '</p>';
+    }
 }
 
 function closeDetail() {
@@ -381,6 +909,83 @@ function escHtml(str) {
 
 var searchInput = document.getElementById('searchInput');
 if (searchInput) searchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') loadUsers(1); });
+
+/* ================= 用户面板：事件绑定（全部委托，无内联 onclick 拼串） ================= */
+(function () {
+    var tbody = document.getElementById('userTableBody');
+    if (tbody) {
+        tbody.addEventListener('click', function (e) {
+            var btn = e.target.closest ? e.target.closest('[data-action]') : null;
+            if (!btn) return;
+            var action = btn.dataset.action;
+            if (action === 'detail') viewDetail(btn.dataset.serial, btn.dataset.accountId ? Number(btn.dataset.accountId) : null);
+            else if (action === 'materials') viewMaterials(Number(btn.dataset.accountId), btn.dataset.kind);
+            else if (action === 'delete') deleteUser(btn.dataset.serial);
+        });
+    }
+
+    var headRow = document.getElementById('userHeadRow');
+    if (headRow) {
+        headRow.addEventListener('click', function (e) {
+            var th = e.target.closest ? e.target.closest('[data-sort]') : null;
+            if (th) sortBy(th.dataset.sort);
+        });
+        headRow.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var th = e.target.closest ? e.target.closest('[data-sort]') : null;
+            if (th) { e.preventDefault(); sortBy(th.dataset.sort); }
+        });
+    }
+
+    // 下拉/日期改变即刷新（第 1 页）
+    ['filterSex', 'filterCampus', 'filterGrade', 'filterMatching', 'filterFriendMatching', 'filterStudentVerified',
+     'filterEmailVerified', 'filterLove', 'filterDeep', 'filterBuddy', 'filterActive', 'regFrom', 'regTo', 'loginFrom', 'loginTo'
+    ].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', function () { loadUsers(1); });
+    });
+
+    // 「近 N 天」快捷区间
+    Array.prototype.forEach.call(document.querySelectorAll('.btn-mini[data-quick]'), function (btn) {
+        btn.addEventListener('click', function () {
+            var days = parseInt(btn.dataset.days, 10) || 7;
+            var to = new Date();
+            var from = new Date(to.getTime() - (days - 1) * 86400000);
+            var iso = function (d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+            if (btn.dataset.quick === 'reg') {
+                document.getElementById('regFrom').value = iso(from);
+                document.getElementById('regTo').value = iso(to);
+            } else {
+                document.getElementById('loginFrom').value = iso(from);
+                document.getElementById('loginTo').value = iso(to);
+            }
+            loadUsers(1);
+        });
+    });
+
+    // 列选择器：勾选即生效
+    var pickerBody = document.getElementById('colPickerBody');
+    if (pickerBody) pickerBody.addEventListener('change', applyColPicker);
+
+    // 点击浮层以外关闭
+    document.addEventListener('click', function (e) {
+        var picker = document.getElementById('colPicker');
+        if (!picker || picker.hidden) return;
+        if (picker.contains(e.target) || (e.target.id === 'colPickerBtn')) return;
+        closeColPicker();
+    });
+
+    // 每页条数：恢复上次选择
+    var sizeSel = document.getElementById('pageSizeSelect');
+    if (sizeSel) {
+        var ps = getPageSize();
+        sizeSel.value = String(ps);
+        sizeSel.addEventListener('change', function () {
+            setPageSize(parseInt(sizeSel.value, 10) || 20);
+            loadUsers(1);
+        });
+    }
+})();
 
 const LLM_API = API + '/llm/chat';
 let currentChatId = null;

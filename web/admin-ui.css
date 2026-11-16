@@ -322,3 +322,64 @@ body[data-page="admin"] .sv-main{max-width:none}
 
 /* 顶栏/导航为全宽条，去掉 UA 默认 body 外边距，避免两侧 8px 白边 */
 body[data-page="admin"]{margin:0}
+
+/* ===== 用户列表：筛选栏多行 / 列选择器 / 条件构造器 / 详情分块（2026-11-16） ===== */
+body[data-page="admin"] .filters{flex-direction:column;align-items:stretch;gap:10px;position:relative}
+body[data-page="admin"] .filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+body[data-page="admin"] .filters .count{margin-left:auto}
+
+/* 工具栏小按钮要压过 .filters button 的整块渐变样式 */
+body[data-page="admin"] .filters button.btn-sm,body[data-page="admin"] .filters button.btn-mini{padding:8px 14px;background:#fafcf9;color:var(--ink,#073b32);border:1px solid #cad8c8;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;min-height:44px}
+body[data-page="admin"] .filters button.btn-sm:hover,body[data-page="admin"] .filters button.btn-mini:hover{background:#e5ebdf;border-color:#265a48;color:var(--primary,#265a48)}
+body[data-page="admin"] .filters button.btn-mini{padding:6px 10px;font-size:11px;min-height:32px}
+
+body[data-page="admin"] .filters select#pageSizeSelect{min-width:110px}
+
+/* 日期区间 */
+body[data-page="admin"] .date-range{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px dashed #cad8c8;border-radius:12px;background:#f9faf4}
+body[data-page="admin"] .date-range label{font-size:12px;color:var(--muted,#55726a);font-weight:600}
+body[data-page="admin"] .date-range .tilde{color:#8ba397}
+body[data-page="admin"] .filters .date-range input[type="date"]{padding:6px 8px;min-height:34px;font-size:12px}
+
+/* 条件构造器 */
+body[data-page="admin"] .cond-list{display:flex;flex-direction:column;gap:8px;width:100%}
+body[data-page="admin"] .cond-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+body[data-page="admin"] .cond-row select{min-width:150px}
+body[data-page="admin"] .cond-row .cond-value{min-width:180px;flex:1}
+body[data-page="admin"] .cond-row .cond-del{color:var(--sysu-red,#a6372d);border-color:#dcb1aa}
+
+/* 列选择器浮层 */
+body[data-page="admin"] .col-picker{position:absolute;top:calc(100% + 8px);right:22px;z-index:40;width:min(520px,92vw);max-height:60vh;overflow:auto;background:#fcfdf9;border:1px solid #cad8c8;border-radius:16px;box-shadow:0 18px 40px #00362f26;padding:14px 16px}
+body[data-page="admin"] .col-picker-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--ink,#073b32)}
+body[data-page="admin"] .col-picker-body{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px}
+body[data-page="admin"] .col-opt{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink,#073b32);padding:6px 8px;border-radius:10px;cursor:pointer;min-height:36px}
+body[data-page="admin"] .col-opt:hover{background:#eef3ea}
+body[data-page="admin"] .col-opt input{min-height:auto;width:16px;height:16px}
+body[data-page="admin"] .col-picker-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;border-top:1px solid #dedfd6;padding-top:10px}
+
+/* 表格：可排序列 / 空态 */
+body[data-page="admin"] th.th-sort{cursor:pointer;user-select:none}
+body[data-page="admin"] th.th-sort:hover{color:var(--primary,#265a48)}
+body[data-page="admin"] .sort-arrow{font-size:11px;color:#265a48}
+body[data-page="admin"] .empty-row{text-align:center;color:var(--muted,#55726a);padding:28px 0!important}
+body[data-page="admin"] .tag-warn{background:#fdf3e0;color:#996b12}
+body[data-page="admin"] .muted{color:var(--muted,#55726a)}
+
+/* 详情弹窗：分块折叠 */
+body[data-page="admin"] .detail-sub{margin:-6px 0 18px;font-size:12px;color:var(--muted,#55726a)}
+body[data-page="admin"] .detail-section details{border:1px solid #dedfd6;border-radius:14px;padding:2px 14px;background:#fbfcf8}
+body[data-page="admin"] .detail-section summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:1px;color:var(--muted,#55726a);padding:12px 0;list-style:none}
+body[data-page="admin"] .detail-section summary::-webkit-details-marker{display:none}
+body[data-page="admin"] .detail-section summary::before{content:"▸";display:inline-block;width:14px;color:#265a48;transition:transform .15s}
+body[data-page="admin"] .detail-section details[open] summary::before{transform:rotate(90deg)}
+body[data-page="admin"] .detail-section-body{padding-bottom:14px}
+body[data-page="admin"] .detail-section h4{font-size:12px;color:var(--ink,#073b32);margin:10px 0 8px;font-weight:600}
+body[data-page="admin"] .detail-actions{margin:14px 0 4px}
+body[data-page="admin"] #contactsBox .detail-field{grid-column:1/-1}
+
+@media (max-width:760px){
+  body[data-page="admin"] .col-picker{right:0;left:0;width:auto}
+  body[data-page="admin"] .col-picker-body{grid-template-columns:1fr}
+  body[data-page="admin"] .cond-row select,body[data-page="admin"] .cond-row .cond-value{min-width:0;width:100%}
+  body[data-page="admin"] .date-range{width:100%}
+}

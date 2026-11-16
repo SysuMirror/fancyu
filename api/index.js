@@ -1346,42 +1346,38 @@ const adminAccounts = require('./admin-accounts')({getPool,secret:JWT_SECRET,leg
 function adminAuthMiddleware(req,res,next) { return adminAccounts.authorize(req,res,next); }
 app.post('/admin/login',rateLimitMiddleware,(req,res)=>adminAccounts.login(req,res));
 
+// 用户列表的字段白名单 / 筛选与排序编译器（纯模块，见 api/admin-users.js）
+const adminUsers = require('./admin-users');
+
+// 供前端「列选择 / 条件构造器」渲染的字段目录（单一口径，避免前后端漂移）
+app.get('/admin/users/fields', adminAuthMiddleware, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ code: 200, fields: adminUsers.fieldCatalog(), maxConcurrent: adminUsers.MAX_CONDS });
+});
+
+const USER_IDENTITY_SQL = `(SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id`;
+const USER_SELECT_SQL = `u.*, EXISTS(SELECT 1 FROM weekly_questionnaires w WHERE w.account_id=a.id) AS has_love, EXISTS(SELECT 1 FROM deep_surveys d WHERE d.account_id=a.id) AS has_deep, EXISTS(SELECT 1 FROM friend_survey f WHERE f.account_id=a.id) AS has_legacy_deep, (SELECT COUNT(*) FROM friend_cards c WHERE c.account_id=a.id AND c.deleted=0) AS buddy_count, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username, a.school AS account_school, a.last_login_at, a.invite_code, a.invited_by, EXISTS(SELECT 1 FROM verified_students v WHERE v.account_id=a.id) AS student_verified, EXISTS(SELECT 1 FROM account_profiles pf WHERE pf.account_id=a.id) AS has_profile, COALESCE((SELECT ap.join_friend_matching FROM account_preferences ap WHERE ap.account_id=a.id),0) AS join_friend_matching, (SELECT COUNT(*) FROM weekly_match_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS love_pair_count, (SELECT COUNT(*) FROM deep_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS deep_pair_count, (SELECT COUNT(*) FROM friend_card_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS buddy_pair_count, EXISTS(SELECT 1 FROM user_chat_messages m WHERE m.sender_id=a.id AND m.deleted_at IS NULL) AS has_chat, u.contact_email, u.contact_info`;
+
 app.get('/admin/users', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
-        const { page = 1, pageSize = 20, sort = 'created_at', order = 'DESC', search, sex, campus, grade, join_matching } = req.query;
-        const safePage = Math.max(1, parseInt(page) || 1);
-        const safeSize = Math.min(100, Math.max(1, parseInt(pageSize) || 20));
+        const safePage = adminUsers.clampPage(req.query.page);
+        const safeSize = adminUsers.clampPageSize(req.query.pageSize);
         const offset = (safePage - 1) * safeSize;
 
-        let where = ['1=1'];
-        let params = [];
+        // 旧参数（search/sex/campus/grade/join_matching）与通用参数（f_<字段>__<算子>）统一编译；
+        // 未在白名单内的字段/算子/非法值一律忽略，且全部走占位符。
+        const { where, params } = adminUsers.buildFilters(req.query);
+        const { expr: sortExpr, dir: sortOrder } = adminUsers.buildSort(req.query.sort, req.query.order);
 
-        if (search) {
-            where.push(`(COALESCE(u.nickname,a.username) LIKE ? OR u.serial_number LIKE ? OR COALESCE(a.email,u.email) LIKE ? OR u.contact_email LIKE ?)`);
-            const s = `%${search}%`;
-            params.push(s, s, s, s);
-        }
-        if (sex) { where.push(`u.sex = ?`); params.push(sex); }
-        if (campus) { where.push(`u.campus = ?`); params.push(campus); }
-        if (grade) { where.push(`u.grade = ?`); params.push(grade); }
-        if (join_matching !== undefined && join_matching !== '') {
-            where.push(`a.join_matching = ?`);
-            params.push(join_matching === 'true' || join_matching === '1' ? 1 : 0);
-        }
-
-        const allowedSorts = ['created_at', 'updated_at', 'nickname', 'sex', 'campus', 'grade', 'height'];
-        const sortField = allowedSorts.includes(sort) ? sort : 'created_at';
-        const sortOrder = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-        const countQuery = `SELECT COUNT(*) as total FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')}`;
+        const countQuery = `SELECT COUNT(*) as total FROM ${USER_IDENTITY_SQL} WHERE ${where.join(' AND ')}`;
         const [countResult] = await pool.execute(countQuery, params);
         const total = countResult[0].total;
 
-        const dataQuery = `SELECT u.*, EXISTS(SELECT 1 FROM weekly_questionnaires w WHERE w.account_id=a.id) AS has_love, EXISTS(SELECT 1 FROM deep_surveys d WHERE d.account_id=a.id) AS has_deep, EXISTS(SELECT 1 FROM friend_survey f WHERE f.account_id=a.id) AS has_legacy_deep, (SELECT COUNT(*) FROM friend_cards c WHERE c.account_id=a.id AND c.deleted=0) AS buddy_count, a.id AS account_id, COALESCE(u.nickname,a.username) AS nickname, COALESCE(a.email,u.email) AS email, COALESCE(a.created_at,u.created_at) AS created_at, a.email_verified, a.join_matching, a.username as account_username FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE ${where.join(' AND ')} ORDER BY ${sortField === 'created_at' ? 'COALESCE(a.created_at,u.created_at)' : sortField === 'nickname' ? 'COALESCE(u.nickname,a.username)' : 'u.'+sortField} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
+        const dataQuery = `SELECT ${USER_SELECT_SQL} FROM ${USER_IDENTITY_SQL} WHERE ${where.join(' AND ')} ORDER BY ${sortExpr} ${sortOrder} LIMIT ${safeSize} OFFSET ${offset}`;
         const [rows] = await pool.execute(dataQuery, params);
 
-        return res.json({ code: 200, data: rows, total, page: safePage, pageSize: safeSize });
+        return res.json({ code: 200, data: rows.map(adminUsers.extractContacts), total, page: safePage, pageSize: safeSize });
     } catch (error) {
         console.error('Admin Users Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
@@ -1392,12 +1388,27 @@ app.get('/admin/user/:serial', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         if (/^account-\d+$/.test(req.params.serial)) {
-            const [accounts] = await pool.execute('SELECT id AS account_id, username AS nickname, email, email_verified, created_at, last_login_at FROM accounts WHERE id = ?', [req.params.serial.slice(8)]);
-            return res.json(accounts.length ? {code:200,data:accounts[0]} : {code:404,msg:'未找到该账号'});
+            // 「只有账号、还没有 users 行」的注册用户：补上账号侧的全部可见字段，
+            // 让详情弹窗的「账号与验证 / 配对 / 聊天」几块有数据可渲染。
+            const [accounts] = await pool.execute(`SELECT a.id AS account_id, a.username AS nickname, a.username AS account_username, a.email, a.email_verified,
+                a.created_at, a.last_login_at, a.school AS account_school, a.school, a.invite_code, a.invited_by, a.join_matching,
+                EXISTS(SELECT 1 FROM verified_students v WHERE v.account_id=a.id) AS student_verified,
+                EXISTS(SELECT 1 FROM account_profiles pf WHERE pf.account_id=a.id) AS has_profile,
+                COALESCE((SELECT ap.join_friend_matching FROM account_preferences ap WHERE ap.account_id=a.id),0) AS join_friend_matching,
+                EXISTS(SELECT 1 FROM weekly_questionnaires w WHERE w.account_id=a.id) AS has_love,
+                EXISTS(SELECT 1 FROM deep_surveys d WHERE d.account_id=a.id) AS has_deep,
+                EXISTS(SELECT 1 FROM friend_survey f WHERE f.account_id=a.id) AS has_legacy_deep,
+                (SELECT COUNT(*) FROM friend_cards c WHERE c.account_id=a.id AND c.deleted=0) AS buddy_count,
+                (SELECT COUNT(*) FROM weekly_match_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS love_pair_count,
+                (SELECT COUNT(*) FROM deep_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS deep_pair_count,
+                (SELECT COUNT(*) FROM friend_card_pairs p WHERE p.a_id=a.id OR p.b_id=a.id) AS buddy_pair_count,
+                EXISTS(SELECT 1 FROM user_chat_messages m WHERE m.sender_id=a.id AND m.deleted_at IS NULL) AS has_chat
+                FROM accounts a WHERE a.id = ?`, [req.params.serial.slice(8)]);
+            return res.json(accounts.length ? {code:200,data:adminUsers.extractContacts(accounts[0])} : {code:404,msg:'未找到该账号'});
         }
-        const [rows] = await pool.execute(`SELECT u.*, a.join_matching, a.username as account_username, a.email as account_email, a.created_at as account_created_at FROM (SELECT a0.id AS account_id, (SELECT MAX(u0.serial_number) FROM users u0 WHERE u0.account_id=a0.id) AS serial_number FROM accounts a0 UNION ALL SELECT NULL, u0.serial_number FROM users u0 LEFT JOIN accounts a0 ON a0.id=u0.account_id WHERE a0.id IS NULL) r LEFT JOIN users u ON u.serial_number=r.serial_number LEFT JOIN accounts a ON a.id=r.account_id WHERE u.serial_number = ?`, [req.params.serial]);
+        const [rows] = await pool.execute(`SELECT ${USER_SELECT_SQL} FROM ${USER_IDENTITY_SQL} WHERE u.serial_number = ?`, [req.params.serial]);
         if (rows.length === 0) return res.json({ code: 404, msg: '未找到该用户' });
-        return res.json({ code: 200, data: rows[0] });
+        return res.json({ code: 200, data: adminUsers.extractContacts(rows[0]) });
     } catch (error) {
         console.error('Admin User Detail Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });
@@ -1419,6 +1430,65 @@ app.get('/admin/accounts/:id/materials', adminAuthMiddleware, async (req,res)=>{
  const parse=x=>typeof x==='string'?JSON.parse(x):x;
  res.json({code:200,love:love.length?{...love[0],answers:parse(love[0].answers),important:parse(love[0].important)}:null,deep:deep.length?parse(deep[0].data):old[0]||null,deep_legacy:!deep.length&&!!old.length,cards:cards.map(c=>({...c,data:parse(c.data)}))});
  }catch(e){console.error('Admin materials:',e.code||e.name);res.status(503).json({code:503,msg:'资料暂时无法读取，请重试'});}
+});
+
+// 详情弹窗的「账号 / 配对 / 聊天 / 通知 / 上传」概要（只读，按账号编号）
+app.get('/admin/accounts/:id/summary', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!/^\d+$/.test(req.params.id) || !Number.isSafeInteger(Number(req.params.id))) return res.status(400).json({ code: 400, msg: '账号编号无效' });
+    try {
+        const p = await getPool(), id = Number(req.params.id);
+        const [acct] = await p.execute('SELECT id,username,email,email_verified,school,join_matching,created_at,last_login_at,invite_code,invited_by FROM accounts WHERE id=?', [id]);
+        if (!acct.length) return res.status(404).json({ code: 404, msg: '账号不存在' });
+        const [vs] = await p.execute('SELECT email,verified_at FROM verified_students WHERE account_id=?', [id]);
+        const [pref] = await p.execute('SELECT join_matching,join_friend_matching,updated_at FROM account_preferences WHERE account_id=?', [id]);
+        const [love] = await p.execute("SELECT status,COUNT(*) c FROM weekly_match_pairs WHERE a_id=? OR b_id=? GROUP BY status", [id, id]);
+        const [deep] = await p.execute("SELECT status,COUNT(*) c FROM deep_pairs WHERE a_id=? OR b_id=? GROUP BY status", [id, id]);
+        const [buddy] = await p.execute("SELECT status,COUNT(*) c FROM friend_card_pairs WHERE a_id=? OR b_id=? GROUP BY status", [id, id]);
+        const [[sent]] = await p.execute('SELECT COUNT(*) c FROM user_chat_messages WHERE sender_id=? AND deleted_at IS NULL', [id]);
+        const [exch] = await p.execute('SELECT mode,pair_id,wechat,channel,consented_at FROM user_chat_exchange WHERE account_id=?', [id]);
+        const [prefs] = await p.execute('SELECT kind,enabled,updated_at FROM user_notification_prefs WHERE account_id=?', [id]);
+        const [[subs]] = await p.execute('SELECT COUNT(*) c FROM user_push_subscriptions WHERE account_id=?', [id]);
+        const [[ups]] = await p.execute('SELECT COUNT(*) c FROM user_uploads WHERE account_id=?', [id]);
+        const [prof] = await p.execute('SELECT profile_id,bio,tags,updated_at FROM account_profiles WHERE account_id=?', [id]);
+        const [cards] = await p.execute('SELECT COUNT(*) c FROM friend_cards WHERE account_id=? AND deleted=0', [id]);
+        res.json({ code: 200, account: acct[0], student_verified: vs[0] || null, prefs: pref[0] || null, cards: cards[0].c,
+            pairs: { love, deep, buddy }, chat: { sent: sent.c, exchanges: exch }, notifications: { prefs, subscriptions: subs.c },
+            uploads: ups.c, profile: prof[0] || null });
+    } catch (e) { console.error('Admin summary:', e.code || e.name); res.status(503).json({ code: 503, msg: '资料暂时无法读取，请重试' }); }
+});
+
+// 单个账号的联系方式汇总：管理员明确点击才调用，且落审计（.private/admin-contact-views.jsonl 0600）
+app.get('/admin/accounts/:id/contacts', adminAuthMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!/^\d+$/.test(req.params.id) || !Number.isSafeInteger(Number(req.params.id))) return res.status(400).json({ code: 400, msg: '账号编号无效' });
+    try {
+        const p = await getPool(), id = Number(req.params.id);
+        const [a] = await p.execute('SELECT id,username,email FROM accounts WHERE id=?', [id]);
+        if (!a.length) return res.status(404).json({ code: 404, msg: '账号不存在' });
+        try {
+            require('fs').appendFileSync(path.join(__dirname, '../.private/admin-contact-views.jsonl'),
+                JSON.stringify({ at: new Date().toISOString(), admin: req.admin && (req.admin.admin_account_id || req.admin.username) || 'unknown', action: 'rest_contact_view', account_id: id }) + '\n', { mode: 0o600 });
+        } catch (e) { /* 审计失败不阻断查看 */ }
+        const out = [{ 来源: '账号邮箱', 值: a[0].email }];
+        const [u] = await p.execute('SELECT contact_email,contact_info FROM users WHERE account_id=?', [id]);
+        for (const r of u) { out.push({ 来源: 'users', 邮箱: r.contact_email, 资料: r.contact_info }); }
+        const [fs2] = await p.execute('SELECT contact_email,contact_info FROM friend_survey WHERE account_id=? ORDER BY id DESC LIMIT 5', [id]);
+        for (const r of fs2) { out.push({ 来源: 'friend_survey', 邮箱: r.contact_email, 资料: r.contact_info }); }
+        const [d] = await p.execute('SELECT data FROM deep_surveys WHERE account_id=?', [id]);
+        for (const x of d) {
+            let v = x.data;
+            if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
+            out.push({ 来源: '深度交友问卷', 联系方式: (v && v.contact_entries) || [] });
+        }
+        for (const t of ['weekly_match_pairs', 'deep_pairs', 'friend_card_pairs']) {
+            const [rows] = await p.execute(`SELECT id, CASE WHEN a_id=? THEN a_wechat ELSE b_wechat END AS wechat FROM ${t} WHERE a_id=? OR b_id=? ORDER BY id DESC LIMIT 50`, [id, id, id]);
+            for (const x of rows) if (x.wechat) out.push({ 来源: t, 配对编号: x.id, 微信: x.wechat });
+        }
+        const [ex] = await p.execute('SELECT mode,pair_id,channel,wechat,consented_at FROM user_chat_exchange WHERE account_id=?', [id]);
+        for (const x of ex) out.push({ 来源: '站内交换', 渠道: x.channel, 账号: x.wechat, 同意时间: x.consented_at });
+        res.json({ code: 200, username: a[0].username, contacts: out });
+    } catch (e) { console.error('Admin contacts:', e.code || e.name); res.status(503).json({ code: 503, msg: '联系方式暂时无法读取，请重试' }); }
 });
 
 app.get('/admin/stats', adminAuthMiddleware, async (req, res) => {
@@ -1460,13 +1530,15 @@ app.get('/admin/friend-surveys', adminAuthMiddleware, async (req, res) => {
     try {
         const pool = await getPool();
         const { page = 1, pageSize = 50 } = req.query;
-        const offset = (parseInt(page) - 1) * parseInt(pageSize);
+        const safePage = Math.max(1, parseInt(page) || 1);
+        const safeSize = Math.min(200, Math.max(1, parseInt(pageSize) || 50));
+        const offset = (safePage - 1) * safeSize;
 
         const [[{total}]] = await pool.execute(`SELECT COUNT(*) as total FROM friend_survey`);
         const [rows] = await pool.execute(
-            `SELECT f.*, a.email as account_email FROM friend_survey f LEFT JOIN accounts a ON f.account_id = a.id ORDER BY f.created_at DESC LIMIT ${parseInt(pageSize)} OFFSET ${offset}`
+            `SELECT f.*, a.email as account_email FROM friend_survey f LEFT JOIN accounts a ON f.account_id = a.id ORDER BY f.created_at DESC LIMIT ${safeSize} OFFSET ${offset}`
         );
-        return res.json({ code: 200, data: rows, total, page: parseInt(page), pageSize: parseInt(pageSize) });
+        return res.json({ code: 200, data: rows, total, page: safePage, pageSize: safeSize });
     } catch (error) {
         console.error('Admin Friend Surveys Error:', error);
         return res.json({ code: 500, msg: '服务器错误' });

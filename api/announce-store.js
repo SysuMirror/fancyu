@@ -196,17 +196,20 @@ async function resolveAudience(pool, ann) {
   }
   return rows.map(r => Number(r.id));
 }
+// 把「发布时刻的人群」快照进 announcement_audience；重复调用只补新差集，返回新增行数（幂等）。
 async function snapshotAudience(pool, id) {
   const [rows] = await pool.execute('SELECT audience,audience_meta FROM announcements WHERE id=?', [id]);
   if (!rows.length) fail(404, '公告不存在');
   const ids = await resolveAudience(pool, rows[0]);
+  let added = 0;
   for (let i = 0; i < ids.length; i += CHUNK) {
     const part = ids.slice(i, i + CHUNK);
     const args = [];
     for (const a of part) args.push(id, a);
-    await pool.query(`INSERT IGNORE INTO announcement_audience(announcement_id,account_id) VALUES ${part.map(() => '(?,?)').join(',')}`, args);
+    const [r] = await pool.query(`INSERT IGNORE INTO announcement_audience(announcement_id,account_id) VALUES ${part.map(() => '(?,?)').join(',')}`, args);
+    added += Number(r.affectedRows) || 0;
   }
-  return ids.length;
+  return added;
 }
 
 /* ---------- 投递（写 user_notifications；Web Push 由 notify 的 drain 负责） ---------- */

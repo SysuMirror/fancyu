@@ -1489,11 +1489,11 @@ app.post('/admin/user-views', adminAuthMiddleware, async (req, res) => {
         await ensureUserViews(pool);
         const key = audit.adminKey(req.admin);
         const [[{ n }]] = await pool.execute('SELECT COUNT(*) n FROM admin_user_views WHERE admin_key=?', [key]);
-        const [[exist]] = await pool.execute('SELECT id FROM admin_user_views WHERE admin_key=? AND name=?', [key, name]);
-        if (!exist.length && Number(n) >= VIEW_CAP) return res.status(400).json({ code: 400, msg: `最多保存 ${VIEW_CAP} 个视图，请先删除` });
+        const [existRows] = await pool.execute('SELECT id FROM admin_user_views WHERE admin_key=? AND name=?', [key, name]);
+        if (!existRows.length && Number(n) >= VIEW_CAP) return res.status(400).json({ code: 400, msg: `最多保存 ${VIEW_CAP} 个视图，请先删除` });
         await pool.execute(`INSERT INTO admin_user_views (admin_key,name,query) VALUES (?,?,?) ON DUPLICATE KEY UPDATE query=VALUES(query)`, [key, name, query]);
         audit.write(req.admin, { action: 'user.view_save', target_type: 'view', target_id: name, method: req.method, path: req.originalUrl, status_code: 200, detail: { query } });
-        return res.json({ code: 200, msg: exist.length ? '视图已更新' : '视图已保存' });
+        return res.json({ code: 200, msg: existRows.length ? '视图已更新' : '视图已保存' });
     } catch (error) {
         console.error('Admin user-views save error:', error);
         return res.json({ code: 500, msg: '服务器错误' });

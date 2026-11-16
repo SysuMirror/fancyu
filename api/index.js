@@ -20,6 +20,29 @@ app.use((req, res, next) => {
     next();
 });
 
+// ===== 路径规范化（安全）=====
+// 折掉「重复斜杠」与「解码后才出现的斜杠」，再交给下游。
+// 否则 //photos/x.jpg、/%2Fphotos/x.jpg 这类写法会绕过下面基于 req.path 的路径黑名单：
+// 黑名单正则锚定单个前导 /，而 express 会把这些路径归一成 web/photos/x.jpg 照常发文件
+// （实测可匿名 200 读取 web/photos 下 1391 个真实用户照片/头像）。同理也顺带堵掉
+// //all_users.html → 302 Location: //all_users 这种协议相对跳转。
+// 本站没有任何合法的重复斜杠路径，故就地归一：幂等、无副作用（查询串原样保留）。
+app.use((req, res, next) => {
+    const i = req.url.indexOf('?');
+    const orig = i < 0 ? req.url : req.url.slice(0, i);
+    const qs = i < 0 ? '' : req.url.slice(i);
+    let p = orig;
+    for (let n = 0; n < 4; n++) {                 // 反复解码 + 折斜杠，直到稳定（挡住 %252F 二次编码）
+        let d = p;
+        try { d = decodeURIComponent(p); } catch (e) { break; }
+        d = ('/' + d.replace(/^\/+/, '')).replace(/\/{2,}/g, '/');
+        if (d === p) break;
+        p = d;
+    }
+    if (p !== orig) req.url = p + qs;
+    next();
+});
+
 // ===== 安全响应头：在浏览器侧兜住 XSS 升级与点击劫持 =====
 // 页面仍使用内联事件处理器（onclick=…），故 script-src 必须保留 'unsafe-inline'；
 // 但外部域脚本被禁止，配合 nosniff 可以挡掉「注入 <script src=//evil>」这类升级路径。
@@ -2400,14 +2423,18 @@ saveSurveyData = async function(email, data) {
 };
 
 // 部署补丁: 静态页面托管(放在所有 API 路由之后) + 端口取环境变量
+// 注意：路径黑名单必须看「归一后」的路径。前面的路径规范化中间件已折掉重复斜杠，
+// 这里再兜一层（万一有人在它之前改了 req.url），确保 //photos/… 这类不会漏进来。
+const normPath = s => ('/' + String(s || '').replace(/^\/+/, '')).replace(/\/{2,}/g, '/');
 app.use((req,res,next)=>{
     let decodedPath;try{decodedPath=decodeURIComponent(req.path);}catch(e){return res.status(400).end();}
+    decodedPath = normPath(decodedPath);
     if(/^\/(all_users\.html|photos(?:\/|$))/i.test(decodedPath))return res.status(403).send('请通过已授权的资料页面访问');
     if(/^\/daily\.(html|js|css)$/i.test(decodedPath))return res.status(410).set('Cache-Control','no-store').send('日常配对功能已下线，请返回首页。');
     next();
 });
 app.use((req,res,next)=>{
- let p;try{p=decodeURIComponent(req.path);}catch{return res.status(400).end();}
+ let p;try{p=normPath(decodeURIComponent(req.path));}catch{return res.status(400).end();}
  if(/^\/homepage\.(html|js|css)$/i.test(p))return res.status(410).set('Cache-Control','no-store').send('个人主页功能已下线，请返回个人中心。');
  next();
 });
@@ -2453,6 +2480,26 @@ app.use((req, res, next) => {
     const file = path.join(WEB_DIR, name);
     if (file.startsWith(WEB_DIR + path.sep) && require('fs').existsSync(file)) return res.sendFile(file);
     next();
+});
+// ===== 静态托管兜底：禁止 web/ 里的软链把「目录外的文件」变成公开静态资源 =====
+// 本站 web/photos 就是一个指向数据目录（1391 个真实用户照片）的软链，只靠路径黑名单太脆：
+// 名字换一个、或黑名单正则被绕开，就直接变成公开可下载。这里按 realpath 判定：
+// 请求命中的真实文件必须仍在 web 目录内，否则 403。WEB_DIR 自身的软链先解析成 REAL_WEB 再比，
+// 避免把正常的静态请求误判成越界。
+const fsMod = require('fs');
+let REAL_WEB = null;
+try { REAL_WEB = fsMod.realpathSync(WEB_DIR); } catch (e) { REAL_WEB = null; }
+app.use((req, res, next) => {
+    if (!REAL_WEB) return next();                                  // web 目录还没就绪：不启用（启动早期）
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    let p; try { p = normPath(decodeURIComponent(req.path)); } catch (e) { return res.status(400).end(); }
+    const abs = path.join(WEB_DIR, p);
+    if (!abs.startsWith(WEB_DIR + path.sep)) return next();
+    fsMod.realpath(abs, (err, real) => {
+        if (err || real === abs) return next();                    // 文件不存在或本就没走软链
+        if (real === REAL_WEB || real.startsWith(REAL_WEB + path.sep)) return next();
+        return res.status(403).send('请通过已授权的资料页面访问');
+    });
 });
 // 静态资源：文本类（html/css/js/json/svg/webmanifest）走 gzip + 长缓存；其余交给 express.static。
 // HTML 用 no-cache（每次协商，避免发版后拿到旧页面），资源用 ?v= 版本号，故可以放心长缓存。

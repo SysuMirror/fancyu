@@ -22,7 +22,7 @@
     if(token) {try {const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));if(p.security_version!==2||p.exp*1000<Date.now())throw Error();}
         catch(e){localStorage.removeItem('token');localStorage.removeItem('user');}}
     // 站内已知 clean URL 一级页（登录/注册后允许回跳的白名单）
-    const KNOWN_PAGES=['/','/index','/login','/register','/forgot-password','/weekly-match','/deep','/friends','/chat','/notifications','/survey','/friend_survey','/profile','/verify-student','/pay'];
+    const KNOWN_PAGES=['/','/index','/login','/register','/forgot-password','/weekly-match','/deep','/friends','/chat','/notifications','/survey','/friend_survey','/profile','/verify-student','/pay','/app-survey'];
     // 登录/注册回跳校验器：只接受白名单内的一级 clean URL（保留 query），其余回首页。
     // 防开放重定向：必须以单个 '/' 开头，字符集受限，拒绝 '//evil.com'、'/\evil.com'。
     window.fancyuSafeRedirect=function(raw){

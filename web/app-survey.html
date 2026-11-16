@@ -1,0 +1,43 @@
+<!doctype html><html lang="zh-CN" data-ui="campus"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>公告与问卷 | FancyU · 中意你</title><link rel="stylesheet" href="campus-ui.css?v=20261111b"><script src="auth-session.js?v=20261117a"></script><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=20261116b" defer></script><script src="app-survey.js?v=20261117a" defer></script>
+<meta name="description" content="查看管理员发布的公告，或填写问卷调研。"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#faf9f5">
+<style>
+body[data-ui=campus] main{max-width:760px;margin:0 auto;padding:8px 16px 64px}
+.notice-head{margin:20px 0 6px}
+.notice-head .kind{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.4px;color:var(--green,#006b3c);background:#e0ebdc;border-radius:30px;padding:4px 12px;margin-bottom:12px}
+.notice-head h1{font-size:clamp(24px,4vw,34px);line-height:1.35;margin:0;letter-spacing:-.5px}
+.notice-head .meta{color:var(--muted,#52675c);font-size:14px;margin:10px 0 0}
+.notice-body{white-space:pre-wrap;font-size:16px;line-height:1.85;color:var(--ink,#093b32);background:var(--card,#f4f6ef);border:1px solid var(--line,#cbdcc9);border-radius:14px;padding:20px 22px;margin:18px 0}
+.notice-body a{text-decoration:underline;overflow-wrap:anywhere}
+.q{border:1px solid var(--line,#cbdcc9);border-radius:14px;padding:18px 20px;margin:0 0 14px;background:#fff}
+.q > .qt{font-weight:600;font-size:16px;line-height:1.6;margin:0 0 4px}
+.q .req{color:#b3543f;font-size:13px;margin-left:6px}
+.q .hint{color:var(--muted,#52675c);font-size:13px;margin:0 0 12px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;min-height:44px;border:1px solid var(--line,#cbdcc9);border-radius:10px;padding:10px 14px;cursor:pointer}
+.opt:hover{background:#f2f6ee}
+.opt input{flex:none;width:20px;height:20px;accent-color:var(--green,#006b3c)}
+.opt.checked{border-color:#91b49b;background:#eef4e9}
+.rating{display:flex;gap:8px;flex-wrap:wrap}
+.rating button{min-width:44px;height:44px;border:1px solid var(--line,#cbdcc9);border-radius:10px;background:#fff;font-weight:600}
+.rating button.on{background:var(--green,#006b3c);border-color:var(--green,#006b3c);color:#fff}
+textarea.ans{width:100%;min-height:120px;border:1px solid var(--line,#cbdcc9);border-radius:10px;padding:12px;font:inherit;line-height:1.7;resize:vertical;box-sizing:border-box}
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:20px}
+.actions button{min-height:44px;padding:0 22px;border-radius:10px;font-size:16px;font-weight:600}
+#submit{border:1px solid var(--ink,#093b32);background:var(--ink,#093b32);color:#fff}
+#submit:disabled{opacity:.55;cursor:default}
+#backHome{border:1px solid var(--line,#cbdcc9);background:#fff}
+#msg{margin:16px 0;font-size:15px;line-height:1.7}
+#msg.ok{color:#006b3c}#msg.err{color:#b3543f}
+</style></head><body data-ui="campus">
+<header><a href="/">FancyU</a><a href="/notifications">通知中心 ↗</a></header>
+<main>
+<div id="msg" role="status" aria-live="polite">正在读取…</div>
+<div id="wrap" hidden>
+  <div class="notice-head"><span class="kind" id="kind"></span><h1 id="title"></h1><p class="meta" id="meta"></p></div>
+  <div class="notice-body" id="body"></div>
+  <form id="form" hidden><div id="questions"></div>
+    <div class="actions"><button type="submit" id="submit">提交</button><a id="backHome" href="/">返回首页</a></div>
+  </form>
+  <div class="actions" id="plainActions" hidden><a id="backHome2" href="/" style="border:1px solid var(--line,#cbdcc9);background:#fff;border-radius:10px;min-height:44px;padding:0 22px;display:inline-flex;align-items:center;font-weight:600">返回首页</a></div>
+</div>
+</main></body></html>

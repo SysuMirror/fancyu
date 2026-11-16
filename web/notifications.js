@@ -5,7 +5,7 @@
   if (!token) { location.replace('/login?redirect=' + encodeURIComponent('/notifications')); return; }
   const $ = id => document.getElementById(id);
   const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const KIND = { match: { icon: '💛', label: '配对结果' }, chat: { icon: '💬', label: '新消息' }, exchange: { icon: '🤝', label: '联系方式' }, deadline: { icon: '⏰', label: '待回应' }, batch: { icon: '📢', label: '批次进度' } };
+  const KIND = { match: { icon: '💛', label: '配对结果' }, chat: { icon: '💬', label: '新消息' }, exchange: { icon: '🤝', label: '联系方式' }, deadline: { icon: '⏰', label: '待回应' }, batch: { icon: '📢', label: '批次进度' }, notice: { icon: '📣', label: '公告通知' } };
   const date = x => new Date(x).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
   let list = [], more = false, busy = false;
 

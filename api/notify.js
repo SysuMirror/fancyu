@@ -9,7 +9,7 @@ const path = require('path');
 const TABLES = { love: 'weekly_match_pairs', deep: 'deep_pairs', buddy: 'friend_card_pairs' };
 const fail = (status, msg) => { throw Object.assign(Error(msg), { status }); };
 const stamp = d => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
-const KINDS = ['match', 'chat', 'exchange', 'deadline', 'batch'];
+const KINDS = ['match', 'chat', 'exchange', 'deadline', 'batch', 'notice'];   // 'notice' = 管理员发布的公告 / 问卷调研
 
 module.exports = function (app, { getPool, authMiddleware, now = () => new Date(), refresh = () => {} }) {
     let ready, running = false, lib;      // lib: undefined=未尝试 false=不可用 object=可用

@@ -840,6 +840,11 @@ app.use('/account/profile',(req,res)=>res.status(410).set('Cache-Control','no-st
 // 通知中心 + Web Push：各业务模块在事务里只写 user_notifications，出网推送统一由 notify 的 tick 排水。
 const chatRef={}; // 延后拿到 chat 的 WebSocket 广播函数（构造顺序在后）
 const notify=require('./notify')(app,{getPool,authMiddleware,refresh:ids=>{try{chatRef.notify&&chatRef.notify(ids);}catch(e){/* 广播失败不影响主流程 */}}});
+// 管理员发布的「通知 / 问卷调研」：人群在发布时刻快照进 announcement_audience；
+// 投递复用既有 user_notifications（写行即可，Web Push 仍由 notify 的 60s drain 负责），零新增管道。
+const announceStore=require('./announce-store');
+const announce=require('./announce')(app,{getPool,authMiddleware,store:announceStore});
+require('./admin-announcements')(app,{getPool,adminAuthMiddleware,audit});
 const weekly = require('./weekly')(app, {getPool,authMiddleware,adminAuthMiddleware,transaction:fn=>weeklyMatch.tx(fn),onSave:(c,id,clean,time)=>weeklyMatch.syncSnapshot(c,id,clean,time)});
 const weeklyMatch = require('./weekly-match')(app,{getPool,authMiddleware,adminAuthMiddleware,daily,weekly,notify,audit});
 weeklyMatch.start();
@@ -2422,6 +2427,7 @@ app.use((req, res, next) => {
     // 二级页面路由表：'<一级>/<二级>' → web 下的真实文件名
     const PAGES2 = {
         'admin/pay': 'admin-pay.html',
+        'admin/notice': 'admin-notice.html',
         'admin/weekly': 'admin-weekly.html',
         'admin/deep': 'admin-deep.html',
         'admin/buddy': 'admin-buddy.html',
@@ -2495,10 +2501,10 @@ app.use((req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '9000', 10);
-(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();await invite.ensureSchema();await perf.ensureIndexes();
+(async()=>{await weeklyMatch.ensureSchema();await deepMatch.ensureSchema();await deepDraft.ensureSchema();await userChat.ensureSchema();await uploads.ensureSchema();await notify.ensureSchema();await invite.ensureSchema();await perf.ensureIndexes();await announceStore.ensureSchema(getPool);
 // 账号处置/审计迁移必须在接流量前跑完（authMiddleware 会读 accounts.banned / force_logout_at）。
 // 刻意不 await：迁移失败只打日志，绝不因此让整站起不来；ensureSchema 内部会把失败缓存清空，下次调用自动重试。
 audit.ensureSchema().catch(e=>console.error('Audit schema:',e.code||e.name||e.message));
-notify.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
+notify.start();announce.start();const server=app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));userChat.attach(server);})().catch(e=>{console.error('Startup failed:',e.code||e.name);process.exit(1);});
 
 console.log('Function instance started successfully');

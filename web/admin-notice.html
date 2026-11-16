@@ -1,0 +1,87 @@
+<!doctype html><html lang="zh-CN" data-ui="campus"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>公告与问卷 · FancyU 管理后台</title><link rel="stylesheet" href="/campus-ui.css?v=20261112a"><link rel="stylesheet" href="/admin-ui.css?v=20261113d"><link rel="stylesheet" href="/admin-notice.css?v=20261117a"><script defer src="/admin-shell.js?v=20261117a"></script><script defer src="/ui-dialog.js?v=20261113c"></script><script defer src="/admin-notice.js?v=20261117a"></script><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
+<body data-ui="campus" data-page="admin"><div data-admin-shell></div><main>
+<header><h1>公告与问卷</h1><div class="an-head-actions"><button id="refresh">刷新</button><button id="new" class="primary">新建</button></div></header>
+<p class="notice">发布「通知」或「问卷调研」，可<strong>推送到提醒</strong>（复用站内通知中心 + 系统推送）和/或<strong>在主页展示</strong>为卡片；可选送达人群与定时生效。调研支持单选 / 多选 / 评分 / 简答，并统计回收率、每题分布与未答名单（仅用户名）。</p>
+
+<div class="an-layout">
+  <aside class="an-list"><h2>内容列表</h2><div id="list" aria-live="polite">正在读取…</div></aside>
+
+  <section class="an-editor">
+    <div id="empty" class="an-empty">从左侧选择一条内容，或点右上角「新建」。</div>
+    <div id="editor" hidden>
+      <form id="form" autocomplete="off">
+        <h2 id="editorTitle">编辑内容</h2>
+        <p id="editorMeta" class="muted"></p>
+
+        <div class="an-grid">
+          <label class="an-field">类型
+            <select name="kind" id="f-kind">
+              <option value="notice">通知（只有标题与正文）</option>
+              <option value="survey">问卷调研（带题目、可回收统计）</option>
+            </select>
+          </label>
+          <label class="an-field">送达人群
+            <select name="audience" id="f-audience">
+              <option value="all">全部用户</option>
+              <option value="verified">已通过学生邮箱验证的用户</option>
+              <option value="weekly_match">某批次每周配对报名者</option>
+              <option value="custom">指定用户名</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="an-grid" id="row-batch" hidden>
+          <label class="an-field">配对批次<input name="batch_key" id="f-batch" placeholder="如 2026-11-16"></label>
+        </div>
+        <label class="an-field" id="row-users" hidden>指定用户名（每行一个，最多 200 个）
+          <textarea name="usernames" id="f-users" rows="4" placeholder="只认账号用户名，不会显示邮箱或联系方式"></textarea>
+        </label>
+
+        <label class="an-field">标题<input name="title" id="f-title" maxlength="120" required placeholder="如：本周配对结果已发布"></label>
+        <label class="an-field">摘要（列表与首页卡片上的一句话，可空）<input name="summary" id="f-summary" maxlength="300"></label>
+        <label class="an-field">正文<textarea name="body" id="f-body" rows="6"></textarea></label>
+        <label class="an-field">跳转链接（可空；站内路径，如 /weekly-match；调研留空则默认 /app-survey?id=）<input name="link" id="f-link" maxlength="200" placeholder="/weekly-match"></label>
+
+        <div class="an-grid">
+          <div class="an-field">投递渠道
+            <label class="inline"><input type="checkbox" id="f-reminder"> 推送到提醒（通知中心 + 系统推送）</label>
+            <label class="inline"><input type="checkbox" id="f-home"> 在主页展示为卡片</label>
+          </div>
+          <div class="an-field">生效时间（留空 = 立即）
+            <div class="an-grid an-grid-tight">
+              <label class="an-field">开始<input type="datetime-local" id="f-start"></label>
+              <label class="an-field">结束<input type="datetime-local" id="f-end"></label>
+            </div>
+            <span class="hint">按北京时间填写；到点自动开始展示 / 自动停止。</span>
+          </div>
+        </div>
+
+        <div id="q-wrap">
+          <div class="an-qhead"><h3>题目</h3><button type="button" id="q-add">+ 添加题目</button></div>
+          <p class="hint">答案按「选项编号」保存：改文案不会作废已回收的答案，改编号或选项数会。</p>
+          <div id="questions"></div>
+        </div>
+
+        <div class="an-actions">
+          <button type="submit" class="primary" id="save">保存草稿</button>
+          <button type="button" id="publish">发布</button>
+          <button type="button" id="republish" hidden>重新推送</button>
+          <button type="button" id="archive" hidden>归档</button>
+          <button type="button" id="del" class="danger" hidden>删除草稿</button>
+          <span class="hint" id="formState"></span>
+        </div>
+      </form>
+
+      <section class="an-stats" id="statsWrap" hidden>
+        <h3>回收统计</h3>
+        <div id="statsCounts" class="stats"></div>
+        <div id="statsBody">…</div>
+        <div class="an-actions">
+          <button type="button" id="exp-resp">导出回答 CSV</button>
+          <button type="button" id="exp-non">导出未答名单 CSV</button>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+</main><div class="toast" id="toast" role="status" hidden></div></body></html>

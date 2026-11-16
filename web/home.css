@@ -30,3 +30,19 @@ body{background:radial-gradient(ellipse at 5% 30%,#e8dfcc66,transparent 26%),#fa
 @media(max-width:760px){.homepage .wrap,.homepage .site-header{width:calc(100% - 32px)}.homepage .site-header{height:70px}.homepage .brand{font-size:18px}.homepage .brand svg{width:27px;height:32px}.homepage .hero{min-height:425px;padding:38px 6px 135px}.homepage h1{font-size:clamp(40px,9vw,65px);letter-spacing:0}.homepage .eyebrow{font-size:15px}.homepage .intro{font-size:16px;line-height:1.7}.homepage .hero-art{top:155px;right:-45px;width:88%;height:260px;opacity:.35;object-fit:contain}.homepage .hero:after{display:none}.homepage .status-banner{margin:-20px 0 0;padding:16px;border-radius:17px;min-height:92px}.homepage .status-banner strong{font-size:16px}.homepage .status-copy{border:0;padding:0;margin:0;font-size:13px}.homepage .modes h2{font-size:28px;margin-left:0}.homepage .modes h2:after{width:45px;margin-left:8px}.homepage .section-copy{font-size:15px;margin-left:0}.homepage .mode-card{min-height:172px;padding:28px 52px 24px 118px}.homepage .mode-art{width:102px;height:112px;left:8px;top:25px}.homepage .mode-card h3{font-size:27px}.homepage .mode-card p{font-size:16px}.homepage .pill{font-size:12px;padding:7px 9px}.homepage .mode-button{width:44px;height:44px;right:12px;bottom:22px}.homepage .trust-strip{margin-top:18px}}
 
 @media(min-width:761px){.homepage .hero{min-height:420px;padding-bottom:20px}.homepage h1{font-size:clamp(55px,4.9vw,82px)}.homepage .hero:before{transform:none;border-radius:0 0 50% 0}}
+
+/* 管理员发布的「公告 / 问卷调研」首页卡片位（由 /home-notices.js 填充；空列表整块隐藏） */
+.notice-cards{display:grid;gap:14px;margin:22px 24px 0}
+.homepage .notice-cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.notice-card{position:relative;display:flex;flex-direction:column;gap:8px;background:var(--card,#eef4e9);border:1px solid var(--line,#cbdcc9);border-radius:14px;padding:20px 22px 18px;transition:border-color .18s,background .18s}
+.notice-card:hover{border-color:#91b49b;background:#eaf2e5}
+.notice-card .notice-kind{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.4px;color:var(--green,#006b3c);background:#e0ebdc;border-radius:30px;padding:4px 12px}
+.notice-card h3{font-size:19px;line-height:1.4;margin:0;font-weight:700;letter-spacing:0}
+.notice-card p{font-size:15px;line-height:1.65;color:var(--muted,#52675c);margin:0}
+.notice-card .notice-foot{display:flex;align-items:center;gap:14px;margin-top:auto;padding-top:6px}
+.notice-card .notice-link{font-size:15px;font-weight:600;color:var(--green,#006b3c)}
+.notice-card .notice-link:hover{text-decoration:underline}
+.notice-card .notice-done{font-size:13px;color:var(--muted,#52675c)}
+.notice-card .notice-close{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;font-size:20px;line-height:1;color:var(--muted,#52675c);display:grid;place-items:center}
+.notice-card .notice-close:hover{background:#e2ebdf}
+@media(max-width:760px){.notice-cards{margin:14px 0 0;gap:10px}.notice-card{padding:16px 16px 14px}.notice-card h3{font-size:17px}.notice-card .notice-close{width:44px;height:44px}}

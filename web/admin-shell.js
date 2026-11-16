@@ -12,6 +12,7 @@
     { key: 'weekly',    label: '每周配对批次', href: '/admin/weekly' },
     { key: 'pay',       label: '支付定价',     href: '/admin/pay' },
     { key: 'survey',    label: '问卷管理',     href: '/admin/survey' },
+    { key: 'notice',    label: '公告与问卷',   href: '/admin/notice' },
     { key: 'users',     label: '用户列表',     href: '/admin#users' },
     { key: 'reports',   label: '举报',         href: '/admin#reports' },
     { key: 'assistant', label: 'AI助手',       href: '/admin#assistant' }
@@ -25,6 +26,7 @@
   function activeKey() {
     var p = pathName();
     if (/\/admin\/survey$/.test(p)) return 'survey';
+    if (/\/admin\/notice$/.test(p)) return 'notice';
     if (/\/admin\/pay$/.test(p)) return 'pay';
     if (/\/admin\/weekly$/.test(p)) return 'weekly';
     if (/\/admin\/buddy$/.test(p)) return 'buddy';

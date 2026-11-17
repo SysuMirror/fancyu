@@ -236,8 +236,16 @@ assert.match(notesHtml, /id="pushToggle"/);
 assert.match(notesHtml, /role="switch"/);
 assert.match(notesHtml, /id="pushNeedInstall"/);
 assert.match(notesHtml, /查看安装指引/);
-assert.match(fs.readFileSync(path.join(web, 'pwa.js'), 'utf8'), /通知已经打开啦。有人找你的时候，我会轻轻敲一下。/);
+const pwaJs = fs.readFileSync(path.join(web, 'pwa.js'), 'utf8');
+assert.match(pwaJs, /通知已经打开啦。有人找你的时候，我会轻轻敲一下。/);
+assert.match(pwaJs, /app-version\.json/);
+assert.match(pwaJs, /controllerchange/);
+assert.match(pwaJs, /updateViaCache:\s*'none'/);
+assert.match(pwaJs, /\.update\(/);
+const appVersion = JSON.parse(fs.readFileSync(path.join(web, 'app-version.json'), 'utf8'));
+assert.equal(appVersion.version, '20261117e');
 assert.match(fs.readFileSync(path.join(web, 'sw.js'), 'utf8'), /pathname === '\/sw\.js'/);
+assert.match(fs.readFileSync(path.join(web, 'sw.js'), 'utf8'), /app-version\.json/);
 const homeCss = fs.readFileSync(path.join(web, 'home.css'), 'utf8');
 assert.match(homeCss, /:focus-visible/);
 assert.match(fs.readFileSync(path.join(web, 'dark.css'), 'utf8'), /html\[data-theme="dark"\]/);
@@ -272,7 +280,7 @@ for (const prefix of ['/api/', '/account/', '/admin/', '/oauth/', '/llm/', '/soc
 assert.match(sw, /OFFLINE\s*=\s*'\/offline'/);
 assert.match(sw, /searchParams\.has\('kill'\)/);
 assert.match(sw, /unregister\(/);
-assert.match(sw, /VERSION\s*=\s*'fancyu-v5'/);
+assert.match(sw, /VERSION\s*=\s*'fancyu-v6'/);
 assert.equal(fs.readFileSync(path.join(web, 'auth-session.js'), 'utf8').includes('prefers-color-scheme'), false);
 assert.match(fs.readFileSync(path.join(web, 'auth-session.js'), 'utf8'), /themeSaved==='dark'/);
 for (const page of ['login.html','register.html','forgot-password.html','friend_survey.html']) {
@@ -294,5 +302,5 @@ console.log('installState ios-steps', guide.installState({ installEvent: false, 
 console.log('installState unsupported', guide.installState({ installEvent: false, standalone: false, iosSafari: false }));
 console.log('vm prompt', before, '->', prompt.textContent, 'fetch', homeRealm.fetchCalls.length);
 console.log('vm decide', decide({ installEvent: true, standalone: false, iosSafari: false }), decide({ installEvent: true, standalone: true, iosSafari: false }), decide({ installEvent: false, standalone: false, iosSafari: true }), decide({ installEvent: false, standalone: false, iosSafari: false }));
-console.log('sw version fancyu-v5 bypass /api/ /account/ /admin/ /oauth/ /llm/ /socket.io/ /health offline kill');
+console.log('sw version fancyu-v6 bypass /api/ /account/ /admin/ /oauth/ /llm/ /socket.io/ /health offline kill');
 console.log('PASS: icebreaker cycle, install states, vm browser scripts, page-enter reduced motion, sw kill/bypass, manifest standalone');

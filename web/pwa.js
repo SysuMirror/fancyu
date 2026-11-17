@@ -32,8 +32,73 @@
     }
 
     if ('serviceWorker' in navigator) {
+        const VERSION_URL = '/app-version.json';
+        const VERSION_KEY = 'fancyu-app-version';
+        const RELOAD_KEY = 'fancyu-sw-reload';
+        let refreshing = false;
+        let pendingReload = false;
+
+        function pageBusy() {
+            const ae = document.activeElement;
+            if (!ae) return false;
+            const tag = ae.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+            return !!ae.isContentEditable;
+        }
+        function reloadOnce() {
+            if (refreshing) return;
+            try {
+                const prev = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+                if (Date.now() - prev < 15000) return;
+                sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+            } catch (e) { /* 私密模式写不进 session 也要能刷新一次 */ }
+            refreshing = true;
+            location.reload();
+        }
+        function requestReload() {
+            pendingReload = true;
+            if (document.visibilityState === 'hidden' || !pageBusy()) reloadOnce();
+        }
+        async function checkAppVersion() {
+            const res = await fetch(VERSION_URL, { cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json().catch(() => ({}));
+            const next = data && data.version ? String(data.version) : '';
+            if (!next) return;
+            let prev = '';
+            try { prev = sessionStorage.getItem(VERSION_KEY) || ''; } catch (e) { prev = ''; }
+            if (!prev) {
+                try { sessionStorage.setItem(VERSION_KEY, next); } catch (e) {}
+                return;
+            }
+            if (prev !== next) {
+                try { sessionStorage.setItem(VERSION_KEY, next); } catch (e) {}
+                requestReload();
+            }
+        }
+        function watch(reg) {
+            const tick = () => {
+                reg.update().catch(() => {});
+                checkAppVersion().catch(() => {});
+            };
+            tick();
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') tick();
+                else if (pendingReload) reloadOnce();
+            });
+            document.addEventListener('focusout', () => {
+                if (pendingReload && !pageBusy()) reloadOnce();
+            });
+            window.addEventListener('online', tick);
+            setInterval(() => {
+                if (document.visibilityState === 'visible') tick();
+            }, 5 * 60 * 1000);
+        }
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.addEventListener('controllerchange', requestReload);
+        }
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register(SW_URL).catch(() => { /* 注册失败不影响正常使用 */ });
+            navigator.serviceWorker.register(SW_URL, { updateViaCache: 'none' }).then(watch).catch(() => {});
         });
     }
 

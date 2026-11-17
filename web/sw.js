@@ -6,7 +6,7 @@
  * 退出机制：访问 /sw.js?kill（浏览器打开即可）会让本 SW 自我注销并清空缓存，
  * 免得万一要回退版本时，用户的浏览器还一直跑着旧 SW。
  */
-const VERSION = 'fancyu-v5';
+const VERSION = 'fancyu-v6';
 const SHELL = ['/offline', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.svg'];
 // 命中这些前缀的请求一律不拦截（有身份/实时/接口数据）
 const BYPASS = ['/api/', '/account/', '/admin/', '/oauth/', '/llm/', '/socket.io/', '/health'];
@@ -47,7 +47,7 @@ self.addEventListener('fetch', e => {
     const url = new URL(req.url);
     if (url.origin !== self.location.origin) return;
     if (bypass(url)) return;
-    if (url.pathname === '/sw.js') return;
+    if (url.pathname === '/sw.js' || url.pathname === '/app-version.json') return;
 
     // 导航请求：网络优先，断网时给离线页
     if (req.mode === 'navigate') {
@@ -63,14 +63,28 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // 静态资源：先给缓存再后台更新（stale-while-revalidate）
-    const cacheable = /\.(css|js|png|jpe?g|svg|webp|ico|woff2?|webmanifest)$/.test(url.pathname) || url.pathname === '/manifest.webmanifest';
-    if (!cacheable) return;
+    // 脚本和样式：在线时用网络上的新文件，断网才用缓存。图片仍先给缓存再后台更新。
+    const code = /\.(css|js|webmanifest)$/.test(url.pathname) || url.pathname === '/manifest.webmanifest';
+    const media = /\.(png|jpe?g|svg|webp|ico|woff2?)$/.test(url.pathname);
+    if (!code && !media) return;
     e.respondWith((async () => {
         const c = await caches.open(VERSION);
-        const hit = await c.match(req, { ignoreSearch: true });
-        const net = fetch(req).then(res => { if (res && res.ok && res.type === 'basic') c.put(req, res.clone()); return res; }).catch(() => null);
-        return hit || (await net) || Response.error();
+        if (media) {
+            const hit = await c.match(req, { ignoreSearch: true });
+            const net = fetch(req).then(res => { if (res && res.ok && res.type === 'basic') c.put(req, res.clone()); return res; }).catch(() => null);
+            return hit || (await net) || Response.error();
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 3000);
+        try {
+            const res = await fetch(req, { signal: ctrl.signal });
+            if (res && res.ok && res.type === 'basic') c.put(req, res.clone());
+            return res;
+        } catch (err) {
+            return (await c.match(req, { ignoreSearch: true })) || Response.error();
+        } finally {
+            clearTimeout(timer);
+        }
     })());
 });
 

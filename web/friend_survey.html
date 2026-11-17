@@ -7,6 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
+            color-scheme: light;
             --sysu-green: #005826;
             --sysu-green-light: #007A3D;
             --sysu-green-dark: #003D1A;
@@ -395,7 +396,8 @@
         }
 
         /* ========== 暗色模式 ========== */
-        @media (prefers-color-scheme: dark) {
+        html[data-theme="dark"] {
+            color-scheme: dark;
             body { background: #0f1a14; }
             .container { color: #e8f0eb; }
             .header { border-bottom-color: #2a4a3a; }
@@ -461,8 +463,7 @@
         }
         select[data-field="grade"] { color-scheme: light; }
     </style>
-<script src="academic-fields.js"></script><script src="deep-schema.js?v=20261112a"></script><script src="auth-session.js?v=20261117a"></script>
-<script src="survey-metrics.js?v=20261111"></script>
+<script src="academic-fields.js"></script><script src="deep-schema.js?v=20261112a"></script><script src="auth-session.js?v=20261117e"></script><script src="survey-metrics.js?v=20261111"></script>
 <script src="matching-verification.js" defer></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
 <meta name="description" content="交友问卷：告诉我们你想认识怎样的朋友。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=20261116b" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="交友问卷 | FancyU · 中意你"><meta property="og:description" content="交友问卷：告诉我们你想认识怎样的朋友。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/friend_survey"><meta name="twitter:card" content="summary_large_image"></head>

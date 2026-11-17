@@ -1,0 +1,21 @@
+/* Page enter for /, /weekly-match, /chat, /profile, /deep, /friends, /notifications.
+   Occasional navigation: a short arrival so the new page does not pop in.
+   transform + opacity only, ease-out, under 300ms. */
+@keyframes fancyu-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+main {
+  animation: fancyu-page-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  main {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Chat is opened many times a day; fading the thread on every visit makes it feel late. */
+body[data-page="chat"] main {
+  animation: none;
+}

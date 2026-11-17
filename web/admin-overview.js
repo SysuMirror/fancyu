@@ -109,6 +109,4 @@
    box.innerHTML=html;
   }catch(e){if(seq===distSeq)box.innerHTML='<p class="ov-error">'+esc(e.message||'读取失败')+'</p>';}
  }
- window.loadOperationsStats=()=>{shell();return load();};
-})();
-(()=>{const s=document.createElement('script');s.src='/school-email.js?v=2';document.head.appendChild(s);})();
+ window.loadOperationsStats=()=>{shell();return load();};})();

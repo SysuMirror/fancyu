@@ -1,8 +1,9 @@
 (() => {
-    /* 深色模式：显式选择优先，否则跟随系统。尽早写到 <html> 上，避免深色用户看到闪白。 */
+    /* 深色模式默认关闭。只有个人中心明确打开后才变暗，不跟随系统。 */
     const themeSaved=(()=>{try{return localStorage.getItem('fancyu-theme')||'';}catch(e){return '';}})();
-    const themeDark=themeSaved?themeSaved==='dark':!!(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+    const themeDark=themeSaved==='dark';
     document.documentElement.dataset.theme=themeDark?'dark':'light';
+    document.documentElement.style.colorScheme=themeDark?'dark':'light';
     const loadDarkCss=()=>{
         if(document.getElementById('fancyuDarkCss'))return;
         const l=document.createElement('link');
@@ -15,6 +16,7 @@
     window.fancyuSetTheme=dark=>{
         try{localStorage.setItem('fancyu-theme',dark?'dark':'light');}catch(e){}
         document.documentElement.dataset.theme=dark?'dark':'light';
+        document.documentElement.style.colorScheme=dark?'dark':'light';
         if(dark)loadDarkCss();
         document.dispatchEvent(new CustomEvent('fancyu:theme',{detail:{dark:!!dark}}));
     };

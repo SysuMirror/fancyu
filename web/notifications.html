@@ -7,10 +7,9 @@
 <link rel="stylesheet" href="weekly-match.css?v=20261115a">
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
 <link rel="stylesheet" href="notifications.css?v=20261116b">
-<script src="auth-session.js?v=20261117a"></script>
+<script src="auth-session.js?v=20261117e"></script>
 <script src="chat-badge.js?v=20261116b" defer></script>
-<script src="notifications.js?v=20261117a" defer></script>
-<meta name="description" content="FancyU · 中意你 通知中心：配对结果、新消息、联系方式与截止提醒。">
+<script src="notifications.js?v=20261117a" defer></script><link rel="stylesheet" href="/page-enter.css?v=20261117b"><link rel="stylesheet" href="/install-guide.css?v=20261117f"><script src="/install-guide.js?v=20261117f" defer><meta name="description" content="FancyU · 中意你 通知中心：配对结果、新消息、联系方式与截止提醒。">
 <!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="通知中心 | FancyU · 中意你"><meta property="og:description" content="FancyU · 中意你 通知中心：配对结果、新消息、联系方式与截止提醒。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/notifications"><meta name="twitter:card" content="summary_large_image"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><script src="/pwa.js?v=1" defer></script></head>
 <body data-ui="campus" data-page="notifications">
 <main>
@@ -23,6 +22,7 @@
   <button type="button" id="pushToggle" hidden disabled>开启系统通知</button>
   <p class="muted small">iPhone 需要先把「中意你」添加到主屏（Safari 分享 → 添加到主屏幕），再从主屏图标打开本页才能收到推送。</p>
 </section>
+<section class="install-guide" id="installGuide" data-install-guide aria-labelledby="installGuideTitle"><h2 id="installGuideTitle">装到主屏幕</h2><div data-install-panel="prompt" hidden><p>把中意你装到主屏幕，下次从图标直接打开。</p><button type="button" data-install-action="prompt">安装到主屏幕</button></div><div data-install-panel="ios-steps" hidden><p>在 Safari 依次点「分享 → 添加到主屏幕」。Web Push 只有从主屏幕图标打开之后才能使用。</p></div><div data-install-panel="manual"><p>把中意你装到主屏幕，下次从图标直接打开。</p><ol><li>电脑：点地址栏右侧的安装图标，或打开浏览器菜单，选择「安装应用」或「添加到主屏幕」。</li><li>手机 Chrome、Edge：点右上角菜单，选择「安装应用」或「添加到主屏幕」。</li><li>iPhone、iPad：请用 Safari，点底部「分享」，再点「添加到主屏幕」。</li></ol><p>系统通知要从主屏幕图标打开之后才会送达。</p></div></section>
 <section class="card" id="prefCard">
   <h2>通知偏好</h2>
   <p class="muted small">关掉的类别不会再推送到这台设备，但依然会出现在下面的通知中心里。</p>

@@ -226,6 +226,11 @@ function scriptSwallowsMarkup(html) {
 for (const page of pages) {
   assert.equal(scriptSwallowsMarkup(fs.readFileSync(path.join(web, page), 'utf8')), false, page);
 }
+const notesHtml = fs.readFileSync(path.join(web, 'notifications.html'), 'utf8');
+assert.ok(notesHtml.indexOf('src="/pwa.js') < notesHtml.indexOf('src="notifications.js'), 'pwa.js before notifications.js');
+const notesJs = fs.readFileSync(path.join(web, 'notifications.js'), 'utf8');
+assert.equal(notesJs.includes('本页脚本尚未加载完成'), false);
+assert.match(notesJs, /DOMContentLoaded/);
 const homeCss = fs.readFileSync(path.join(web, 'home.css'), 'utf8');
 assert.match(homeCss, /:focus-visible/);
 assert.match(fs.readFileSync(path.join(web, 'dark.css'), 'utf8'), /html\[data-theme="dark"\]/);

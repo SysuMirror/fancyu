@@ -38,7 +38,14 @@
   /* 推送开关 */
   async function paintPush() {
     const btn = $('pushToggle'), state = $('pushState');
-    if (!window.fancyuPush) { state.textContent = '本页脚本尚未加载完成，请刷新后重试。'; return; }
+    if (!window.fancyuPush) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { paintPush(); }, { once: true });
+        return;
+      }
+      state.textContent = '系统通知组件没有加载，站内通知不受影响。';
+      return;
+    }
     const s = await window.fancyuPush.status();
     btn.hidden = false;
     if (!s.supported) { btn.disabled = true; btn.textContent = '此浏览器不支持系统通知'; state.textContent = '当前环境不支持系统通知；站内通知不受影响。'; return; }

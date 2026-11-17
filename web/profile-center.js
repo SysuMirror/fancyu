@@ -42,18 +42,33 @@ document.querySelectorAll('.modal-mask').forEach(mask=>mask.addEventListener('cl
 document.addEventListener('keydown',e=>{const m=document.querySelector('.modal-mask.show');if(!m)return;if(e.key==='Escape'){e.preventDefault();closeModal(m.id);}if(e.key==='Tab'){const els=[...m.querySelectorAll('input,button,a[href]')].filter(x=>!x.disabled);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 document.querySelectorAll('[data-retry]').forEach(b=>b.addEventListener('click',()=>loadCard(b.dataset.retry)));
 $('logout').addEventListener('click',()=>{localStorage.removeItem('token');localStorage.removeItem('user');location.href='/';});
-/* ---------- 资料完善度引导 ---------- */
+/* ---------- 新手任务 ---------- */
 function profileToast(msg,isError){const el=$('toast');if(!el)return;el.textContent=msg;el.className=isError?'toast show error':'toast show';setTimeout(()=>el.classList.remove('show'),3000);}
+function appInstalled(){
+  try{if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)return true;}catch(e){}
+  return typeof navigator!=='undefined'&&navigator.standalone===true;
+}
+async function notifyTaskDone(){
+  if(!appInstalled()||!window.fancyuPush||!window.fancyuPush.status)return false;
+  try{const s=await window.fancyuPush.status();return !!(s&&s.subscribed);}catch(e){return false;}
+}
 async function loadGuide(){
   const retry=$('guideRetry'),list=$('guideList');
   retry.hidden=true;
   try{
     const d=await read('profile-guide');
-    $('guidePercent').textContent='已完成 '+d.done+'/'+d.total+'（'+d.percent+'%）';
-    $('guideBar').style.width=d.percent+'%';
-    $('guideBarWrap').setAttribute('aria-valuenow',String(d.percent));
+    const items=(d.items||[]).slice();
+    const task={key:'install',label:'安装应用并开启通知',hint:'先装到主屏幕，再打开系统通知',link:'/notifications',done:await notifyTaskDone()};
+    const at=items.findIndex(it=>it.key==='verified');
+    items.splice(at<0?items.length:at+1,0,task);
+    const done=items.filter(it=>it.done).length;
+    const total=items.length||1;
+    const percent=Math.round(done*100/total);
+    $('guidePercent').textContent='已完成 '+done+'/'+total+'（'+percent+'%）';
+    $('guideBar').style.width=percent+'%';
+    $('guideBarWrap').setAttribute('aria-valuenow',String(percent));
     list.replaceChildren();
-    (d.items||[]).forEach(it=>{
+    items.forEach(it=>{
       const li=document.createElement('li');li.className=it.done?'done':'todo';
       const mark=document.createElement('span');mark.className='guide-mark';mark.textContent=it.done?'✓':'○';mark.setAttribute('aria-hidden','true');
       const text=document.createElement('span');text.className='guide-text';

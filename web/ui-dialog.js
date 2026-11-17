@@ -10,7 +10,7 @@ const CSS=`.uidlg-mask{position:fixed;inset:0;background:rgba(10,20,15,.45);back
 .uidlg-btns button{font:inherit;font-weight:600;cursor:pointer;border-radius:12px;padding:10px 18px;min-height:44px;border:1px solid #073b32;background:#fafcf9;color:#073b32}
 .uidlg-btns .ok{background:linear-gradient(130deg,#265a48,#00362f);color:#fff;border:0}
 .uidlg-btns .ok.danger{background:linear-gradient(130deg,#a6372d,#7c241c)}
-@media(prefers-color-scheme:dark){.uidlg{background:#192d22;color:#e7eee8;border-color:#30493a}.uidlg input{background:#0f1c15;color:#e7eee8;border-color:#30493a}.uidlg-btns button{background:#192d22;color:#e7eee8;border-color:#4b6a58}}`;
+html[data-theme="dark"]{.uidlg{background:#192d22;color:#e7eee8;border-color:#30493a}.uidlg input{background:#0f1c15;color:#e7eee8;border-color:#30493a}.uidlg-btns button{background:#192d22;color:#e7eee8;border-color:#4b6a58}}`;
 let style=null;
 function ensureStyle(){if(!style){style=document.createElement('style');style.textContent=CSS;document.head.appendChild(style);}}
 function open({title='',body='',okText='确定',cancelText='取消',danger=false,placeholder='',withInput=false,validate,onlyOk=false}){

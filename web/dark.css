@@ -1,5 +1,5 @@
 /* 深色模式（可选）。只在 <html data-theme="dark"> 时生效 —— 浅色主题一分一毫都不受影响。
-   由 auth-session.js 尽早设置 data-theme 并注入本文件（显式选择优先，其次跟随系统）。 */
+   由 auth-session.js 在个人中心打开深色模式后设置 data-theme 并注入本文件。默认白天。 */
 html[data-theme="dark"]{color-scheme:dark;background:#101614}
 html[data-theme="dark"] body{background:radial-gradient(ellipse at 5% 30%,#2a3a3355,transparent 26%),#101614!important;color:#e8f0ea}
 html[data-theme="dark"] :is(h1,h2,h3,h4,h5,.page-title,.section-title,.profile-name,.modal-title,.modal-title *,.brand,.brand-text,.logo,.page-heading h1,.card-heading h3){color:#e8f0ea!important;-webkit-text-fill-color:#e8f0ea}

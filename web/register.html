@@ -9,6 +9,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
+            color-scheme: light;
             --sysu-green: #005826;
             --sysu-green-light: #007A33;
             --sysu-green-dark: #003D1A;
@@ -358,8 +359,8 @@
         }
 
         /* ========== 暗色模式 ========== */
-        @media (prefers-color-scheme: dark) {
-            :root {
+        html[data-theme="dark"] {
+            color-scheme: dark;
                 --bg-paper: #0a1210;
                 --bg-paper-warm: #0f1a14;
                 --bg-card: #142018;
@@ -371,7 +372,6 @@
                 --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
                 --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
                 --shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.4);
-            }
             .form-group input, .email-row input, .email-row select {
                 background: var(--bg-paper-warm);
                 border-color: rgba(0, 88, 38, 0.25);
@@ -434,7 +434,7 @@
             cursor: default;
         }
     </style>
-<script src="auth-session.js?v=20261116b"></script>
+<script src="auth-session.js?v=20261117e"></script>
 <link rel="stylesheet" href="campus-ui.css?v=20261111b">
 <meta name="description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="中意你"><!-- PWA：可安装 + 离线兜底 + 通知铃铛（脚本自含样式，失败静默） --><script src="/pwa.js?v=1" defer></script><script src="/notifications-badge.js?v=20261116b" defer></script><meta name="theme-color" content="#faf9f5"><meta property="og:type" content="website"><meta property="og:site_name" content="FancyU · 中意你"><meta property="og:title" content="注册 | FancyU · 中意你"><meta property="og:description" content="注册 FancyU · 中意你，用学生邮箱开启每周校园配对。"><meta property="og:image" content="https://ssemarket.cn:23028/og.png"><meta property="og:url" content="https://ssemarket.cn:23028/register"><meta name="twitter:card" content="summary_large_image"></head>
 <body data-ui="campus" data-page="auth">

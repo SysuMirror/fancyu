@@ -87,7 +87,7 @@ function copyInviteLink(){
   else window.prompt('复制这条链接发给同学：',link);
 }
 /* ---------- 深色模式开关 ---------- */
-function themeLabel(){const saved=(()=>{try{return localStorage.getItem('fancyu-theme')||'';}catch(e){return '';}})();return saved==='dark'?'已开启':saved==='light'?'已关闭':'跟随系统';}
+function themeLabel(){const saved=(()=>{try{return localStorage.getItem('fancyu-theme')||'';}catch(e){return '';}})();return saved==='dark'?'已开启':'已关闭';}
 function renderThemeState(){const el=$('themeState');if(el)el.textContent=themeLabel();}
 function toggleTheme(){if(!window.fancyuSetTheme)return;window.fancyuSetTheme(!window.fancyuTheme());renderThemeState();}
 if($('inviteEntry'))$('inviteEntry').addEventListener('click',openInviteModal);

@@ -7,3 +7,19 @@
 #operationsDashboard td{border-bottom-color:#cbdcc9;padding:13px 14px}
 #operationsDashboard tbody tr:hover{background:#e8f0e3}
 #operationsDashboard details,#operationsDashboard summary{color:#52675c}
+#operationsDashboard .ov-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--text);margin:4px 0 8px}
+#operationsDashboard .ov-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+#operationsDashboard .ov-swatch-reg{background:#245c40}
+#operationsDashboard .ov-swatch-ver{background:#6e9460}
+#operationsDashboard .ov-swatch-pair{background:#c4a15a}
+#operationsDashboard .ov-trend{display:flex;align-items:flex-end;gap:4px;height:168px;overflow-x:auto;padding-top:8px;border-bottom:1px solid var(--border);animation:ov-trend-in 180ms cubic-bezier(0.23,1,0.32,1) both}
+@keyframes ov-trend-in{from{opacity:0}to{opacity:1}}
+#operationsDashboard .ov-day{flex:1 0 18px;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px}
+#operationsDashboard .ov-col{display:block;width:100%;max-width:8px;border-radius:2px 2px 0 0;min-height:0}
+#operationsDashboard .ov-col[data-series="registrations"]{background:#245c40}
+#operationsDashboard .ov-col[data-series="verifications"]{background:#6e9460}
+#operationsDashboard .ov-col[data-series="pairs"]{background:#c4a15a}
+#operationsDashboard .ov-col.is-zero{height:0}
+@media (prefers-reduced-motion: reduce) {
+  #operationsDashboard .ov-trend { animation: none; transition: none; }
+}

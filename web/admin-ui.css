@@ -322,3 +322,10 @@ body[data-page="admin"] .sv-main{max-width:none}
 
 /* 顶栏/导航为全宽条，去掉 UA 默认 body 外边距，避免两侧 8px 白边 */
 body[data-page="admin"]{margin:0}
+
+body[data-page="admin"] .pair-title{margin:16px 0 8px}
+body[data-page="admin"] .pair-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+body[data-page="admin"] .pair-list li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #cad8c8;border-radius:12px;background:#fcfdf9}
+body[data-page="admin"] .pair-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+body[data-page="admin"] .pair-tools input{min-height:44px;padding:0 12px;border:1.5px solid #b7ccb9;border-radius:12px;background:#fcfdf9;color:var(--ink,#073b32);font:inherit;min-width:0;flex:1 1 160px}
+body[data-page="admin"] .tag{font-style:normal;font-size:12px;color:#245c40;background:#e4ebe0;border-radius:999px;padding:2px 8px}

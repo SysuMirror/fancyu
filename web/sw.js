@@ -6,7 +6,7 @@
  * 退出机制：访问 /sw.js?kill（浏览器打开即可）会让本 SW 自我注销并清空缓存，
  * 免得万一要回退版本时，用户的浏览器还一直跑着旧 SW。
  */
-const VERSION = 'fancyu-v1';
+const VERSION = 'fancyu-v4';
 const SHELL = ['/offline', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.svg'];
 // 命中这些前缀的请求一律不拦截（有身份/实时/接口数据）
 const BYPASS = ['/api/', '/account/', '/admin/', '/oauth/', '/llm/', '/socket.io/', '/health'];

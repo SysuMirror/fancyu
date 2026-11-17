@@ -37,3 +37,25 @@
 @media (prefers-reduced-motion: reduce) {
   #operationsDashboard .ov-trend { animation: none; transition: none; }
 }
+@media (max-width:840px){
+ #operationsDashboard .ov-tools{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+ #operationsDashboard .ov-tools label{min-width:0}
+ #operationsDashboard .ov-tools input,
+ #operationsDashboard .ov-tools select{max-width:none;width:100%}
+ #operationsDashboard .ov-tools button{width:100%;min-height:44px}
+ #operationsDashboard .ov-primary,
+ #operationsDashboard #ovExport{grid-column:1 / -1}
+ #operationsDashboard .ov-metric b{font-size:22px}
+ #operationsDashboard .ov-box{padding:14px}
+ #operationsDashboard .ov-scroll{overflow:visible}
+ #operationsDashboard .ov-scroll table{min-width:0;display:block}
+ #operationsDashboard .ov-scroll thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+ #operationsDashboard .ov-scroll tbody,
+ #operationsDashboard .ov-scroll tr{display:block}
+ #operationsDashboard .ov-scroll tr{background:var(--bg,#f7f8f4);border:1px solid var(--border,#cad8c8);border-radius:14px;margin:0 0 10px;padding:4px 10px}
+ #operationsDashboard .ov-scroll td{display:flex;justify-content:space-between;gap:10px;text-align:right;overflow-wrap:anywhere;border-bottom:1px solid #e6eee4}
+ #operationsDashboard .ov-scroll td::before{content:attr(data-label);flex:0 0 42%;text-align:left;font-weight:700;color:#55726a}
+ #operationsDashboard .ov-scroll td.empty-row{display:block;text-align:center}
+ #operationsDashboard .ov-scroll td.empty-row::before{content:none}
+ #operationsDashboard .ov-pie{max-width:200px}
+}

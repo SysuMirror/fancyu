@@ -8,7 +8,7 @@
  function range(days){const end=today();return {end,start:new Date(Date.parse(end+'T00:00:00Z')-(days-1)*86400000).toISOString().slice(0,10)};}
  let selected=range(30);
  const metric=(label,value)=>`<div class="ov-metric"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
- const table=(headers,rows)=>`<div class="ov-scroll"><table><thead><tr>${headers.map(x=>'<th>'+esc(x)+'</th>').join('')}</tr></thead><tbody>${rows.length?rows.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join(''):`<tr><td colspan="${headers.length}">当前范围暂无数据</td></tr>`}</tbody></table></div>`;
+ const table=(headers,rows)=>`<div class="ov-scroll"><table><thead><tr>${headers.map(x=>'<th>'+esc(x)+'</th>').join('')}</tr></thead><tbody>${rows.length?rows.map(r=>'<tr>'+r.map((x,i)=>'<td data-label="'+esc(headers[i]||'')+'">'+esc(x)+'</td>').join('')+'</tr>').join(''):'<tr><td class="empty-row" colspan="'+headers.length+'">当前范围暂无数据</td></tr>'}</tbody></table></div>`;
  const PALETTE=['#428b62','#6aa37e','#8fbf9c','#b6d5b7','#245c40','#c9a44a','#b7b06a','#7fa6c9','#a98fc9','#c98fa0'];
  const dateShort=x=>String(x||'').slice(5);
  function bars(series,key,label,note){

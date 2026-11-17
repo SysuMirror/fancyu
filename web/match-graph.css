@@ -51,3 +51,12 @@
   .mg-clip { position: static; margin: 8px 0 0; max-width: none; }
   .mg-canvas { border: 0; }
 }
+
+@media (max-width:700px){
+ .mg-head,.mg-actions,.mg-modes,.mg-ctl{width:100%}
+ .mg-actions button,.mg-mode{flex:1 1 auto;min-height:44px}
+ .mg-f{flex:1 1 100%}
+ .mg-f select,.mg-f input[type=search]{width:100%;font-size:16px}
+ .mg-f input[type=range]{width:100%}
+ #graph{height:52dvh;min-height:240px}
+}

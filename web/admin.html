@@ -6,8 +6,8 @@
     <title>FancyU · 管理后台</title>
     
 <link rel="stylesheet" href="/campus-ui.css?v=20261112a">
-<link rel="stylesheet" href="/admin-overview.css?v=20261117c">
-<link rel="stylesheet" href="/admin-ui.css?v=20261117h"><meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
+<link rel="stylesheet" href="/admin-overview.css?v=20261118c">
+<link rel="stylesheet" href="/admin-ui.css?v=20261118c"><meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
 <body data-ui="campus" data-page="admin">
 
 <div class="login-page" id="loginPage">
@@ -38,15 +38,30 @@
 
 <div class="admin-page" id="adminPage">
     <div data-admin-shell></div>
-    <script src="/admin-shell.js?v=20261118b"></script>
+    <script src="/admin-shell.js?v=20261118c"></script>
     <div class="content">
         <div class="panel active" id="panelStats">
             <div id="operationsDashboard"></div>
         </div>
         <div class="panel" id="panelUsers">
-            <div class="filters">
-                <div class="filter-row">
+            <div class="filters" id="userFilters">
+                <div class="filter-row filter-primary">
                     <input type="text" class="search-input" id="searchInput" placeholder="搜索账号/昵称/序列号/邮箱...">
+                    <label class="mobile-sort">排序
+                        <select id="mobileSort" aria-label="用户列表排序">
+                            <option value="created_at">注册时间</option>
+                            <option value="last_login_at">最近登录</option>
+                            <option value="account_id">账号 ID</option>
+                            <option value="nickname">昵称</option>
+                        </select>
+                    </label>
+                    <button class="btn-sm" onclick="loadUsers(1)">筛选</button>
+                    <button class="btn-sm" onclick="resetFilters()">重置</button>
+                    <button class="btn-sm filter-more-btn" id="userFilterToggle" type="button" aria-expanded="false">更多筛选</button>
+                    <span class="count" id="totalCount"></span>
+                </div>
+                <div class="filter-extra" id="userFilterExtra">
+                <div class="filter-row">
                     <select id="filterSex"><option value="">全部性别</option><option value="男">男</option><option value="女">女</option></select>
                     <select id="filterCampus"><option value="">全部校区</option><option value="南校园">南校园</option><option value="东校园">东校园</option><option value="北校园">北校园</option><option value="珠海">珠海</option><option value="深圳">深圳</option></select>
                     <select id="filterGrade"><option value="">全部年级</option><option value="大一">大一</option><option value="大二">大二</option><option value="大三">大三</option><option value="大四">大四</option><option value="研一">研一</option><option value="研二">研二</option><option value="研三">研三</option><option value="博士">博士</option></select>
@@ -54,15 +69,12 @@
                     <select id="filterFriendMatching"><option value="">深度交友</option><option value="1">已参与</option><option value="0">未参与</option></select>
                     <select id="filterStudentVerified"><option value="">学邮验证</option><option value="1">已通过</option><option value="0">未通过</option></select>
                     <select id="filterEmailVerified"><option value="">邮箱验证</option><option value="1">已验证</option><option value="0">未验证</option></select>
-                    <button class="btn-sm" onclick="loadUsers(1)">筛选</button>
-                    <button class="btn-sm" onclick="resetFilters()">重置</button>
                     <button class="btn-sm" id="colPickerBtn" type="button" onclick="toggleColPicker(event)">显示列 ▾</button>
                     <button class="btn-sm" type="button" onclick="exportUsersCsv()">导出 CSV</button>
                     <select id="viewSelect" title="已保存的筛选视图"><option value="">筛选视图…</option></select>
                     <button class="btn-sm" type="button" onclick="saveCurrentView()">保存视图</button>
                     <button class="btn-sm" type="button" onclick="deleteCurrentView()">删除视图</button>
                     <select id="pageSizeSelect" title="每页条数"><option value="20">20 条/页</option><option value="50">50 条/页</option><option value="100">100 条/页</option><option value="200">200 条/页</option></select>
-                    <span class="count" id="totalCount"></span>
                 </div>
                 <div class="filter-row">
                     <select id="filterLove"><option value="">恋爱问卷</option><option value="1">已填写</option><option value="0">未填写</option></select>
@@ -96,6 +108,7 @@
                     <div id="condList" class="cond-list"></div>
                     <button class="btn-sm" type="button" onclick="addCondition()">+ 添加筛选条件</button>
                     <span class="hint">可对任意字段精确筛选（最多 12 条）</span>
+                </div>
                 </div>
                 <div class="col-picker" id="colPicker" hidden>
                     <div class="col-picker-head"><strong>表格显示哪些列</strong><button class="btn-mini" type="button" onclick="closeColPicker()" aria-label="关闭">×</button></div>
@@ -166,12 +179,14 @@
             <div class="assistant-container">
                 <div class="chat-sidebar">
                     <div class="chat-sidebar-header">
+                        <button type="button" class="history-back" id="historyBack">返回对话</button>
                         <h3>对话历史</h3>
                         <button class="new-chat-btn" onclick="createNewChat()">+ 新对话</button>
                     </div>
                     <div class="chat-list" id="chatList"></div>
                 </div>
                 <div class="chat-main">
+                    <button type="button" class="history-toggle" id="historyToggle">对话列表</button>
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-message">
                             <h2>👋 你好！我是 FancyU AI 助手</h2>
@@ -207,7 +222,7 @@
     <img id="imgModalSrc" src="" alt="用户照片大图">
 </div>
 
-<script src="admin-overview.js?v=20261117c"></script>
+<script src="admin-overview.js?v=20261118c"></script>
 <script src="/ui-dialog.js?v=20261117e"></script><script>
 document.addEventListener('keydown', function (e) {
   var t = e.target;
@@ -302,6 +317,7 @@ function switchTab(tab) {
     if (tab === 'stats') loadStats();
     if (tab === 'reports') loadReports(REPORT_PAGE);
     if (tab === 'assistant') initAssistant();
+    if (window.AdminShell && AdminShell.mark) AdminShell.mark(tab);
 }
 
 async function loadStats() { return window.loadOperationsStats(); }
@@ -427,9 +443,9 @@ function renderUserRow(u) {
     var html = '<tr>';
     USER_COLUMNS.forEach(function (c) {
         if (keys.indexOf(c.key) < 0) return;
-        if (c.key === 'actions') { html += '<td class="col-actions">' + rowActions(u) + '</td>'; return; }
+        if (c.key === 'actions') { html += '<td class="col-actions" data-label="' + escAttr(c.label) + '">' + rowActions(u) + '</td>'; return; }
         var v = c.render ? c.render(u) : '-';
-        html += '<td data-colid="' + escAttr(c.key) + '">' + (v === null || v === undefined || v === '' ? '-' : v) + '</td>';
+        html += '<td data-colid="' + escAttr(c.key) + '" data-label="' + escAttr(c.label) + '">' + (v === null || v === undefined || v === '' ? '-' : v) + '</td>';
     });
     return html + '</tr>';
 }
@@ -851,13 +867,13 @@ function renderReportRow(r) {
     var handled = r.handled_at ? '<br><span class="muted">' + escHtml(String(r.handled_at).slice(0, 16)) + (r.handled_by ? ' · ' + escHtml(String(r.handled_by)) : '') + '</span>' : '';
     var reply = r.admin_reply ? '<br><span class="muted">回复：' + escHtml(String(r.admin_reply).slice(0, 120)) + '</span>' : '';
     return '<tr>'
-        + '<td>' + escHtml(String(r.created_at || '').slice(0, 16)) + '</td>'
-        + '<td>' + reportStatusTag(r.status) + handled + '</td>'
-        + '<td>' + reportWhoHtml(r.reporter_account_id ? Number(r.reporter_account_id) : 0, r.reporter_username, r.reporter_email) + '</td>'
-        + '<td>' + targetLabel + '</td>'
-        + '<td class="report-desc">' + escHtml(desc || '—') + '</td>'
-        + '<td>' + String(Number(r.target_report_count || 0)) + '</td>'
-        + '<td>' + acts + reply + '</td>'
+        + '<td data-label="时间">' + escHtml(String(r.created_at || '').slice(0, 16)) + '</td>'
+        + '<td data-label="状态">' + reportStatusTag(r.status) + handled + '</td>'
+        + '<td data-label="举报人">' + reportWhoHtml(r.reporter_account_id ? Number(r.reporter_account_id) : 0, r.reporter_username, r.reporter_email) + '</td>'
+        + '<td data-label="被举报人">' + targetLabel + '</td>'
+        + '<td class="report-desc" data-label="原因 / 描述">' + escHtml(desc || '—') + '</td>'
+        + '<td data-label="被举报次数">' + String(Number(r.target_report_count || 0)) + '</td>'
+        + '<td class="report-act" data-label="处置">' + acts + reply + '</td>'
         + '</tr>';
 }
 
@@ -1496,6 +1512,8 @@ function createNewChat() {
 }
 
 async function loadChat(chatId) {
+    var assistantBox = document.querySelector('.assistant-container');
+    if (assistantBox) assistantBox.classList.remove('show-history');
     currentChatId = chatId;
     const chat = chatHistory[chatId];
     if (!chat) return;
@@ -1747,6 +1765,30 @@ function showDashboard(token, name) {
         if (h === 'users' || h === 'assistant' || h === 'stats' || h === 'reports') switchTab(h);
     });
 }
+(function () {
+  var more = document.getElementById('userFilterToggle');
+  if (more) more.addEventListener('click', function () {
+    var box = document.getElementById('userFilters');
+    var open = box.classList.toggle('is-open');
+    more.setAttribute('aria-expanded', open ? 'true' : 'false');
+    more.textContent = open ? '收起筛选' : '更多筛选';
+  });
+  var sort = document.getElementById('mobileSort');
+  if (sort) sort.addEventListener('change', function () {
+    currentSort = sort.value || 'created_at';
+    currentOrder = 'DESC';
+    updateSortArrows();
+    loadUsers(1);
+  });
+  var historyToggle = document.getElementById('historyToggle');
+  var historyBack = document.getElementById('historyBack');
+  function showHistory(on) {
+    var box = document.querySelector('.assistant-container');
+    if (box) box.classList.toggle('show-history', !!on);
+  }
+  if (historyToggle) historyToggle.addEventListener('click', function () { showHistory(true); });
+  if (historyBack) historyBack.addEventListener('click', function () { showHistory(false); });
+})();
 (function() {
     var saved = localStorage.getItem('adminToken');
     if (saved) {

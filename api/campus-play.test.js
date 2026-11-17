@@ -202,7 +202,7 @@ assert.match(enterCss, /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{
 assert.match(enterCss, /data-page="chat"[^}]*animation:\s*none/);
 for (const page of pages) {
   const html = fs.readFileSync(path.join(web, page), 'utf8');
-  assert.match(html, /page-enter\.css/, page);
+  if (page !== 'index.html') assert.match(html, /page-enter\.css/, page);
   assert.match(html, /<main[\s>]/, page);
 }
 const homeCss = fs.readFileSync(path.join(web, 'home.css'), 'utf8');
@@ -213,10 +213,13 @@ assert.match(indexHtml, /href="\/weekly-match"/);
 assert.match(indexHtml, /href="\/deep"/);
 assert.match(indexHtml, /href="\/friends#quick"/);
 assert.match(indexHtml, /id="statusLink"/);
-assert.match(indexHtml, /id="icebreakerNext"/);
-assert.match(indexHtml, /今天食堂哪一档，值得专门绕路？/);
+assert.match(indexHtml, /id="heroTitle"/);
+assert.match(indexHtml, /id="noticeCards"/);
+assert.match(indexHtml, /id="modes"/);
+assert.equal(indexHtml.includes('icebreaker'), false);
+assert.equal(indexHtml.includes('install-guide'), false);
 
-const installHtml = ['index.html', 'notifications.html', 'profile.html'].map(name => fs.readFileSync(path.join(web, name), 'utf8'));
+const installHtml = ['notifications.html', 'profile.html'].map(name => fs.readFileSync(path.join(web, name), 'utf8'));
 for (const html of installHtml) {
   assert.match(html, /data-install-guide/);
   assert.match(html, /data-install-panel="manual"/);
@@ -225,8 +228,8 @@ for (const html of installHtml) {
   assert.match(html, /分享 → 添加到主屏幕/);
   assert.equal(html.includes('安装成功'), false);
 }
+assert.match(installHtml[0], /Web Push 只有从主屏幕图标打开之后才能使用/);
 assert.match(installHtml[1], /Web Push 只有从主屏幕图标打开之后才能使用/);
-assert.match(installHtml[2], /Web Push 只有从主屏幕图标打开之后才能使用/);
 assert.equal(fs.readFileSync(path.join(web, 'install-guide.js'), 'utf8').includes('安装成功'), false);
 
 const sw = fs.readFileSync(path.join(web, 'sw.js'), 'utf8');

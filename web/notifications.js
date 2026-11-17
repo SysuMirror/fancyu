@@ -35,7 +35,32 @@
   }
   async function markRead(ids) { if (!ids.length) return; try { await api('/read', 'POST', { ids }); } catch (e) { /* 已读失败不阻塞跳转 */ } }
 
-  /* 推送开关 */
+  /* 推送开关。脚本或环境跑不起来时，指向页面上的安装指引。 */
+  function hideInstallNeed() {
+    const note = $('pushNeedInstall');
+    if (note) note.hidden = true;
+  }
+  function pointAtInstallGuide() {
+    const note = $('pushNeedInstall');
+    if (note) note.hidden = false;
+    const guide = $('installGuide');
+    if (!guide) return;
+    guide.hidden = false;
+    const panels = [...guide.querySelectorAll('[data-install-panel]')];
+    if (panels.some(p => !p.hidden)) return;
+    let name = 'manual';
+    try {
+      const state = window.fancyuInstall && window.fancyuInstall.flags && window.fancyuInstall.flags();
+      if (state === 'ios-steps' || state === 'prompt') name = state;
+    } catch (e) { /* 指引脚本缺失时用手动步骤 */ }
+    panels.forEach(p => { p.hidden = p.getAttribute('data-install-panel') !== name; });
+  }
+  function setSwitch(btn, on, enabled) {
+    btn.checked = !!on;
+    btn.disabled = !enabled;
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.dataset.mode = on ? 'off' : 'on';
+  }
   async function paintPush() {
     const btn = $('pushToggle'), state = $('pushState');
     if (!window.fancyuPush) {
@@ -43,28 +68,44 @@
         document.addEventListener('DOMContentLoaded', () => { paintPush(); }, { once: true });
         return;
       }
-      state.textContent = '系统通知组件没有加载，站内通知不受影响。';
+      setSwitch(btn, false, false);
+      state.textContent = '请先按下面的安装指引安装，再从图标打开。';
+      pointAtInstallGuide();
       return;
     }
     const s = await window.fancyuPush.status();
-    btn.hidden = false;
-    if (!s.supported) { btn.disabled = true; btn.textContent = '此浏览器不支持系统通知'; state.textContent = '当前环境不支持系统通知；站内通知不受影响。'; return; }
-    btn.disabled = false;
-    if (s.subscribed) { btn.textContent = '关闭系统通知'; state.textContent = '已开启：配对结果、新消息与截止提醒会推送到这台设备。'; }
-    else if (s.permission === 'denied') { btn.disabled = true; btn.textContent = '通知权限被拒绝'; state.textContent = '浏览器已拒绝通知权限，可在浏览器的网站设置里重新允许。'; }
-    else { btn.textContent = '开启系统通知'; state.textContent = '开启后，离开网站也能收到配对发布、新消息与截止提醒。'; }
-    btn.dataset.mode = s.subscribed ? 'off' : 'on';
+    if (!s.supported) {
+      setSwitch(btn, false, false);
+      state.textContent = '请先按下面的安装指引安装，再从图标打开。';
+      pointAtInstallGuide();
+      return;
+    }
+    hideInstallNeed();
+    if (s.subscribed) {
+      setSwitch(btn, true, true);
+      state.textContent = '已开启：配对结果、新消息与截止提醒会推送到这台设备。';
+    } else if (s.permission === 'denied') {
+      setSwitch(btn, false, false);
+      state.textContent = '浏览器已拒绝通知权限，可在浏览器的网站设置里重新允许。';
+    } else {
+      setSwitch(btn, false, true);
+      state.textContent = '打开后，离开网站也能收到配对发布、新消息与截止提醒。';
+    }
   }
 
-  $('pushToggle').addEventListener('click', async () => {
+  $('pushToggle').addEventListener('change', async () => {
     const btn = $('pushToggle');
-    if (busy) return;
+    if (!window.fancyuPush) { setSwitch(btn, false, false); pointAtInstallGuide(); return; }
+    if (busy) { btn.checked = btn.dataset.mode === 'off'; return; }
+    const turnOn = btn.checked;
     busy = true; btn.disabled = true;
     try {
-      if (btn.dataset.mode === 'off') { await window.fancyuPush.disable(); toast('已关闭系统通知'); }
-      else { await window.fancyuPush.enable(); toast('已开启系统通知'); }
-    } catch (e) { toast(e.message); }
-    finally { busy = false; await paintPush(); }
+      if (!turnOn) { await window.fancyuPush.disable(); toast('已关闭系统通知'); }
+      else { await window.fancyuPush.enable(); toast('已开启，刚才那一下就是通知'); }
+    } catch (e) {
+      btn.checked = !turnOn;
+      toast(e.message);
+    } finally { busy = false; await paintPush(); }
   });
 
   $('readAll').addEventListener('click', async () => {

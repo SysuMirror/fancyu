@@ -58,6 +58,15 @@
             let sub = await reg.pushManager.getSubscription();
             if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(publicKey) });
             await api('/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
+            try {
+                await reg.showNotification('中意你', {
+                    body: '通知已经打开啦。有人找你的时候，我会轻轻敲一下。',
+                    icon: '/icon-192.png',
+                    badge: '/icon-96.png',
+                    tag: 'fancyu:push-hello',
+                    data: { url: '/notifications' }
+                });
+            } catch (e) { /* 订阅已成功，提示没弹出来也不撤销 */ }
             return true;
         },
         async disable() {

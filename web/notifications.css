@@ -19,3 +19,24 @@
 .pref-row:last-child{border-bottom:0}
 .pref-text{font-size:15px;color:var(--text,#073b32)}
 .pref-row input[type="checkbox"]{width:22px;height:22px;min-height:22px;accent-color:#265a48;cursor:pointer}
+
+/* 系统通知开关 */
+.push-switch{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:4px;cursor:pointer}
+.push-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.push-copy strong{font-size:15px}
+.push-control{position:relative;flex:0 0 auto;width:48px;height:28px}
+.push-control input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
+.push-control input:disabled{cursor:not-allowed}
+.push-ui{display:block;width:48px;height:28px;border-radius:999px;background:#d7ddd4;position:relative}
+.push-ui::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(7,59,50,.18);transition:transform .18s ease}
+.push-control input:checked + .push-ui{background:#265a48}
+.push-control input:checked + .push-ui::after{transform:translateX(20px)}
+.push-control input:disabled + .push-ui{opacity:.5}
+.push-control input:focus-visible + .push-ui{outline:2px solid #265a48;outline-offset:3px}
+html[data-theme="dark"] .push-ui{background:#3c4a44}
+html[data-theme="dark"] .push-control input:checked + .push-ui{background:#3f8f72}
+#pushNeedInstall{margin:10px 0 0}
+#pushNeedInstall a{color:#265a48;font-weight:600;margin-left:6px}
+@media (prefers-reduced-motion: reduce){
+  .push-ui::after{transition:none}
+}

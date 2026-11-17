@@ -6,7 +6,7 @@
  * 退出机制：访问 /sw.js?kill（浏览器打开即可）会让本 SW 自我注销并清空缓存，
  * 免得万一要回退版本时，用户的浏览器还一直跑着旧 SW。
  */
-const VERSION = 'fancyu-v4';
+const VERSION = 'fancyu-v5';
 const SHELL = ['/offline', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.svg'];
 // 命中这些前缀的请求一律不拦截（有身份/实时/接口数据）
 const BYPASS = ['/api/', '/account/', '/admin/', '/oauth/', '/llm/', '/socket.io/', '/health'];
@@ -47,6 +47,7 @@ self.addEventListener('fetch', e => {
     const url = new URL(req.url);
     if (url.origin !== self.location.origin) return;
     if (bypass(url)) return;
+    if (url.pathname === '/sw.js') return;
 
     // 导航请求：网络优先，断网时给离线页
     if (req.mode === 'navigate') {

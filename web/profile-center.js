@@ -42,6 +42,97 @@ document.querySelectorAll('.modal-mask').forEach(mask=>mask.addEventListener('cl
 document.addEventListener('keydown',e=>{const m=document.querySelector('.modal-mask.show');if(!m)return;if(e.key==='Escape'){e.preventDefault();closeModal(m.id);}if(e.key==='Tab'){const els=[...m.querySelectorAll('input,button,a[href]')].filter(x=>!x.disabled);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 document.querySelectorAll('[data-retry]').forEach(b=>b.addEventListener('click',()=>loadCard(b.dataset.retry)));
 $('logout').addEventListener('click',()=>{localStorage.removeItem('token');localStorage.removeItem('user');location.href='/';});
+
+let pendingAvatar=null;
+function openAvatarSheet(){
+  pendingAvatar=null;
+  const stage=$('avatarStage');
+  if(stage){stage.replaceChildren();stage.textContent='还没有照片';}
+  if($('avatarMeta'))$('avatarMeta').textContent='选好后会在这里预览。图片会先在这台设备上缩小。';
+  if($('avatarSave'))$('avatarSave').disabled=true;
+  openModal('avatarModal');
+}
+async function decodeAvatar(file){
+  if(window.createImageBitmap){
+    try{return await createImageBitmap(file,{imageOrientation:'from-image'});}
+    catch(e){try{return await createImageBitmap(file);}catch(e2){}}
+  }
+  const url=URL.createObjectURL(file);
+  try{
+    return await new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>resolve(img);
+      img.onerror=()=>reject(Error('unreadable'));
+      img.src=url;
+    });
+  }finally{URL.revokeObjectURL(url);}
+}
+function drawAvatar(source,edge,quality){
+  const sw=source.naturalWidth||source.width,sh=source.naturalHeight||source.height;
+  if(!sw||!sh)return Promise.reject(Error('这张图片无法读取，请换一张 JPEG、PNG 或 WebP'));
+  const side=Math.min(sw,sh);
+  const canvas=document.createElement('canvas');
+  canvas.width=edge;canvas.height=edge;
+  canvas.getContext('2d').drawImage(source,(sw-side)/2,(sh-side)/2,side,side,0,0,edge,edge);
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>blob?resolve(blob):reject(Error('压缩失败，请换一张图片')),'image/jpeg',quality);
+  });
+}
+async function compressAvatar(file){
+  if(file.size>25*1024*1024)throw Error('图片太大，请换一张较小的');
+  const source=await decodeAvatar(file).catch(()=>{throw Error('这张图片无法读取，请换一张 JPEG、PNG 或 WebP');});
+  const steps=[[720,0.82],[720,0.68],[512,0.72],[512,0.58],[384,0.6]];
+  let blob=null;
+  try{
+    for(const step of steps){
+      blob=await drawAvatar(source,step[0],step[1]);
+      if(blob.size<=200*1024)break;
+    }
+  }finally{if(source.close)source.close();}
+  if(!blob)throw Error('压缩失败，请换一张图片');
+  return blob;
+}
+async function previewAvatar(file){
+  if(!file)return;
+  $('avatarSave').disabled=true;
+  $('avatarMeta').textContent='正在这台设备上缩小图片…';
+  try{
+    const blob=await compressAvatar(file);
+    pendingAvatar=blob;
+    const url=URL.createObjectURL(blob);
+    const img=document.createElement('img');
+    img.alt='头像预览';
+    img.src=url;
+    img.onload=()=>URL.revokeObjectURL(url);
+    $('avatarStage').replaceChildren(img);
+    $('avatarMeta').textContent='已缩小到约 '+Math.max(1,Math.round(blob.size/1024))+' KB，确认后上传。';
+    $('avatarSave').disabled=false;
+  }catch(e){
+    pendingAvatar=null;
+    $('avatarMeta').textContent=e.message||'这张图片无法读取';
+  }
+}
+async function saveAvatar(){
+  if(!pendingAvatar)return;
+  const btn=$('avatarSave');
+  btn.disabled=true;
+  $('avatarMeta').textContent='正在上传…';
+  try{
+    const res=await fetch(API_URL+'/account/avatar',{method:'PUT',headers:Object.assign({'Content-Type':'image/jpeg'},getAuthHeaders()),body:pendingAvatar});
+    const result=await res.json().catch(()=>({}));
+    if(!res.ok||result.code!==200)throw Error(result.msg||'上传失败');
+    if(currentUser)currentUser.avatar=result.url||'';
+    try{localStorage.setItem('user',JSON.stringify(currentUser||{}));}catch(e){}
+    renderProfile();
+    closeModal('avatarModal');
+    profileToast('头像已更新');
+    loadGuide();
+  }catch(e){
+    $('avatarMeta').textContent=e.message||'上传失败';
+    btn.disabled=!pendingAvatar;
+  }
+}
+
 /* ---------- 新手任务 ---------- */
 function profileToast(msg,isError){const el=$('toast');if(!el)return;el.textContent=msg;el.className=isError?'toast show error':'toast show';setTimeout(()=>el.classList.remove('show'),3000);}
 function appInstalled(){
@@ -75,7 +166,10 @@ async function loadGuide(){
       const b=document.createElement('b');b.textContent=it.label;
       const hint=document.createElement('span');hint.className='muted';hint.textContent=it.done?'已完成':it.hint;
       text.append(b,hint);li.append(mark,text);
-      if(!it.done){const a=document.createElement('a');a.className='guide-go';a.href=it.link;a.textContent='去完成 →';li.append(a);}
+      if(!it.done){
+        if(it.key==='avatar'){const b=document.createElement('button');b.type='button';b.className='guide-go';b.textContent='去完成 →';b.addEventListener('click',openAvatarSheet);li.append(b);}
+        else{const a=document.createElement('a');a.className='guide-go';a.href=it.link;a.textContent='去完成 →';li.append(a);}
+      }
       list.append(li);
     });
   }catch(e){
@@ -108,5 +202,10 @@ function toggleTheme(){if(!window.fancyuSetTheme)return;window.fancyuSetTheme(!w
 if($('inviteEntry'))$('inviteEntry').addEventListener('click',openInviteModal);
 if($('themeToggle'))$('themeToggle').addEventListener('click',toggleTheme);
 if($('guideRetry'))$('guideRetry').addEventListener('click',loadGuide);
+
+if($('avatarChoose'))$('avatarChoose').addEventListener('click',()=>$('avatarPick').click());
+if($('avatarPick'))$('avatarPick').addEventListener('change',()=>{const f=$('avatarPick').files&&$('avatarPick').files[0];$('avatarPick').value='';previewAvatar(f);});
+if($('avatarSave'))$('avatarSave').addEventListener('click',saveAvatar);
+if($('avatarCancel'))$('avatarCancel').addEventListener('click',()=>closeModal('avatarModal'));
 renderThemeState();
 if(!authToken)requireLogin();else{loadIdentity();loadVerification();Object.keys(loaders).forEach(loadCard);loadGuide();loadInvite();}

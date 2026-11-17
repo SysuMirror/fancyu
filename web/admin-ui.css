@@ -406,3 +406,7 @@ body[data-page="admin"] .pair-list li{display:flex;flex-wrap:wrap;gap:8px;align-
 body[data-page="admin"] .pair-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
 body[data-page="admin"] .pair-tools input{min-height:44px;padding:0 12px;border:1.5px solid #b7ccb9;border-radius:12px;background:#fcfdf9;color:var(--ink,#073b32);font:inherit;min-width:0;flex:1 1 160px}
 body[data-page="admin"] .tag{font-style:normal;font-size:12px;color:#245c40;background:#e4ebe0;border-radius:999px;padding:2px 8px}
+
+body[data-page="admin"] .topbar a.site-return{padding:8px 16px;background:#fafcf9;color:#265a48;border:1px solid #cad8c8;border-radius:12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center;text-decoration:none;font-weight:600}
+body[data-page="admin"] .topbar a.site-return:hover{background:#e7f0e4}
+.login-box a.site-return{display:block;margin-top:14px;text-align:center;color:#265a48;font-weight:600;text-decoration:none}

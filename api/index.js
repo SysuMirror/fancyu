@@ -930,7 +930,8 @@ app.get('/account/me', authMiddleware, async (req, res) => {
                 join_friend_matching: studentVerified && !!prefs?.join_friend_matching,
                 contact_email: contactEmail,
                 avatar,
-                serials
+                serials,
+                admin: await adminAccounts.accountIsAdmin(account.id)
             }
         });
     } catch (error) {
@@ -1392,6 +1393,18 @@ function rateLimitMiddleware(req, res, next) {
 const adminAccounts = require('./admin-accounts')({getPool,secret:JWT_SECRET,legacyUsername:ADMIN_USERNAME,legacyPasswordHash:ADMIN_PASSWORD_HASH,legacyEnabled:!!ADMIN_PASSWORD});
 function adminAuthMiddleware(req,res,next) { return adminAccounts.authorize(req,res,next); }
 app.post('/admin/login',rateLimitMiddleware,(req,res)=>adminAccounts.login(req,res));
+app.post('/account/admin-entry', authMiddleware, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+        const account = await getAccountById(req.account.account_id);
+        const issued = account && await adminAccounts.entryForAccount(account);
+        if (!issued) return res.status(404).json({ code: 404, msg: '没有管理员权限' });
+        return res.json({ code: 200, username: issued.username, token: issued.token });
+    } catch (e) {
+        console.error('Admin entry:', e.code || e.name);
+        return res.status(503).json({ code: 503, msg: '暂时无法进入管理员界面' });
+    }
+});
 
 // 用户列表的字段白名单 / 筛选与排序编译器（纯模块，见 api/admin-users.js）
 const adminUsers = require('./admin-users');

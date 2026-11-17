@@ -7,7 +7,7 @@
     
 <link rel="stylesheet" href="/campus-ui.css?v=20261112a">
 <link rel="stylesheet" href="/admin-overview.css?v=20261117c">
-<link rel="stylesheet" href="/admin-ui.css?v=20261116b"><meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
+<link rel="stylesheet" href="/admin-ui.css?v=20261117h"><meta name="robots" content="noindex,nofollow"><!-- brand: icon + theme + share --><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate icon" href="/favicon.ico" sizes="any"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#faf9f5"></head>
 <body data-ui="campus" data-page="admin">
 
 <div class="login-page" id="loginPage">
@@ -32,12 +32,13 @@
         </div>
         <input type="password" id="adminPass" placeholder="密码">
         <button id="loginBtn" onclick="adminLogin()">登录</button>
+        <a class="site-return" href="/">返回用户界面</a>
     </div>
 </div>
 
 <div class="admin-page" id="adminPage">
     <div data-admin-shell></div>
-    <script src="/admin-shell.js?v=20261118a"></script>
+    <script src="/admin-shell.js?v=20261118b"></script>
     <div class="content">
         <div class="panel active" id="panelStats">
             <div id="operationsDashboard"></div>
@@ -1728,24 +1729,39 @@ function hideTypingIndicator() {
     if (indicator) indicator.remove();
 }
 
+function showDashboard(token, name) {
+    adminToken = token;
+    localStorage.setItem('adminToken', token);
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminPage').classList.add('active');
+    var nameEl = document.getElementById('adminName');
+    if (nameEl) nameEl.textContent = name || '管理员';
+    loadStats();
+    loadUsers(1);
+    loadViews();
+    initAssistant();
+    var _h = (location.hash || '').replace('#', '');
+    if (_h === 'users' || _h === 'assistant' || _h === 'stats' || _h === 'reports') switchTab(_h);
+    window.addEventListener('hashchange', function () {
+        var h = (location.hash || '').replace('#', '');
+        if (h === 'users' || h === 'assistant' || h === 'stats' || h === 'reports') switchTab(h);
+    });
+}
 (function() {
     var saved = localStorage.getItem('adminToken');
     if (saved) {
-        adminToken = saved;
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('adminPage').classList.add('active');
-        try { document.getElementById('adminName').textContent = JSON.parse(decodeURIComponent(escape(atob(saved.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))))).username || '管理员'; } catch(e) { document.getElementById('adminName').textContent = '管理员'; }
-        loadStats();
-        loadUsers(1);
-        loadViews();
-        initAssistant();
-        var _h = (location.hash || '').replace('#', '');
-        if (_h === 'users' || _h === 'assistant' || _h === 'stats' || _h === 'reports') switchTab(_h);
-        window.addEventListener('hashchange', function () {
-            var h = (location.hash || '').replace('#', '');
-            if (h === 'users' || h === 'assistant' || h === 'stats' || h === 'reports') switchTab(h);
-        });
+        var name = '管理员';
+        try { name = JSON.parse(decodeURIComponent(escape(atob(saved.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))))).username || name; } catch (e) {}
+        showDashboard(saved, name);
+        return;
     }
+    var userToken = '';
+    try { userToken = localStorage.getItem('token') || ''; } catch (e) { userToken = ''; }
+    if (!userToken) return;
+    fetch('/api/account/admin-entry', { method: 'POST', headers: { Authorization: 'Bearer ' + userToken } })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (x) { if (x.ok && x.j && x.j.code === 200 && x.j.token) showDashboard(x.j.token, x.j.username); })
+        .catch(function () {});
 })();
 </script>
 <script src="weekly-schema.js"></script><script src="friends-schema.js"></script>

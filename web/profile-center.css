@@ -156,3 +156,4 @@ button.guide-go{background:none;border:0;padding:0;font:inherit;cursor:pointer}
 #avatarMeta{min-height:1.4em;margin:0 0 12px}
 #avatarSave{margin-top:8px}
 #avatarSave:disabled{opacity:.5;cursor:not-allowed}
+.settings>[hidden]{display:none !important}

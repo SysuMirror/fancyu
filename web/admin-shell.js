@@ -73,6 +73,7 @@
     mount.innerHTML =
       '<div class="topbar"><h1>FancyU 管理后台</h1>' +
         '<div class="right"><span id="adminName"></span>' +
+        '<a class="site-return" href="/profile">用户界面</a>' +
         '<button type="button" onclick="adminShellLogout()">退出</button>' +
         '</div></div>' +
       '<div class="tabs" role="tablist">' + TABS.map(function (t) { return tabHTML(t, t.key === active); }).join('') + '</div>';

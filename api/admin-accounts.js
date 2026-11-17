@@ -23,5 +23,16 @@ module.exports=function({getPool,secret,legacyUsername,legacyPasswordHash,legacy
    return res.json({code:200,msg:'登录成功',username:claims.username,token:jwt.sign({...claims,isAdmin:true,security_version:2},secret,{expiresIn:'24h'})});
   }catch(e){console.error('Admin account login:',e.code||e.name);return res.status(503).json({code:503,msg:'管理员登录暂不可用'});}
  }
- return {ensureSchema,authorize,login};
+ async function accountIsAdmin(accountId){
+  const id=Number(accountId);
+  if(!Number.isSafeInteger(id)||id<1)return false;
+  try{await ensureSchema();const [r]=await(await getPool()).execute('SELECT 1 AS ok FROM account_admin_roles WHERE account_id=? LIMIT 1',[id]);return r.length>0;}
+  catch(e){return false;}
+ }
+ async function entryForAccount(account){
+  if(!account||!await accountIsAdmin(account.id))return null;
+  const claims={username:account.username,admin_account_id:account.id};
+  return {username:account.username,token:jwt.sign({...claims,isAdmin:true,security_version:2},secret,{expiresIn:'24h'})};
+ }
+ return {ensureSchema,authorize,login,accountIsAdmin,entryForAccount};
 };

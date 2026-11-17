@@ -111,6 +111,7 @@ function mountHome() {
       $('userAvatar').textContent = Array.from(name)[0].toUpperCase();
       $('userMenu').hidden = false;
       $('loginLink').hidden = true;
+      if (window.fancyuShowAdminEntry) window.fancyuShowAdminEntry(account.user.admin === true);
       if (verification.verified === true) status('学生邮箱已验证', '下一步：选择一种方式，开始认识新朋友', '#modes', '✓');
       else status('先验证学生邮箱', '完成验证后，即可参与三种配对', '/verify-student');
     } catch (e) {

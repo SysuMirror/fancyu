@@ -205,6 +205,27 @@ for (const page of pages) {
   if (page !== 'index.html') assert.match(html, /page-enter\.css/, page);
   assert.match(html, /<main[\s>]/, page);
 }
+function scriptSwallowsMarkup(html) {
+  const lower = html.toLowerCase();
+  let i = 0;
+  while (i < lower.length) {
+    const openAt = lower.indexOf('<script', i);
+    const closeAt = lower.indexOf('</script', i);
+    if (openAt === -1) return false;
+    if (closeAt !== -1 && closeAt < openAt) { i = closeAt + 9; continue; }
+    const gt = lower.indexOf('>', openAt);
+    if (gt === -1) return true;
+    const end = lower.indexOf('</script', gt);
+    if (end === -1) return true;
+    const chunk = lower.slice(gt + 1, end);
+    if (chunk.includes('<body') || chunk.includes('<main') || chunk.includes('</head>')) return true;
+    i = end + 9;
+  }
+  return false;
+}
+for (const page of pages) {
+  assert.equal(scriptSwallowsMarkup(fs.readFileSync(path.join(web, page), 'utf8')), false, page);
+}
 const homeCss = fs.readFileSync(path.join(web, 'home.css'), 'utf8');
 assert.match(homeCss, /:focus-visible/);
 assert.match(fs.readFileSync(path.join(web, 'dark.css'), 'utf8'), /html\[data-theme="dark"\]/);
